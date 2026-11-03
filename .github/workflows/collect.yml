@@ -3,7 +3,9 @@ name: Collect
 on:
   push:
   pull_request:
-  workflow_dispatch:   # "Run workflow" button: live collection from Temple Terrace
+  workflow_dispatch:     # "Run workflow" button
+  schedule:
+    - cron: "17 8 * * *" # nightly, 3:17 AM Eastern (standard time)
 
 jobs:
   test:
@@ -17,72 +19,102 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   live:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     needs: test
     runs-on: ubuntu-latest
+    concurrency: live-collection
     permissions:
-      contents: write   # to save results on the live-samples branch
+      contents: write   # commit data/, upload file copies, update live-samples
     env:
       OCW_CONTACT: https://github.com/${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: mkdir -p out/raw-archive
+      - run: mkdir -p out/raw-archive out/raw-agendacenter out/files data/listings
 
-      # --- CivicClerk (agendas from Oct 2025) ---
+      # --- 1. Listings. Written to out/ first; copied into data/ only on success. ---
       - name: CivicClerk schema check
         continue-on-error: true
         run: python -m opencivic.civicclerk check-schema --tenant templeterracefl 2>&1 | tee out/civicclerk-schema.txt
-      - name: CivicClerk listing (all pages)
+      - name: CivicClerk listing (agendas from Oct 2025)
         continue-on-error: true
         run: |
-          python -m opencivic.civicclerk meetings -o out/civicclerk-meetings.jsonl
+          set -o pipefail
+          python -m opencivic.civicclerk meetings -o out/civicclerk-meetings.jsonl 2>&1 | tee out/civicclerk-log.txt
           python -m opencivic.civicclerk files --format csv -o out/civicclerk-files.csv
-      - name: CivicClerk download check
+          cp out/civicclerk-meetings.jsonl out/civicclerk-files.csv data/listings/
+      - name: Archive Center listing (City Council minutes)
         continue-on-error: true
         run: |
-          python - <<'EOF' 2>&1 | tee out/civicclerk-download-check.txt
-          import csv
-          from opencivic.fetch import HttpFetcher
-          row = next(csv.DictReader(open("out/civicclerk-files.csv")))
-          data = HttpFetcher().get_bytes(row["download_url"])
-          print(row["name"], len(data), "bytes, starts with", data[:8])
-          assert data.startswith(b"%PDF"), "download_url did not return a PDF"
-          EOF
+          set -o pipefail
+          python -m opencivic.archivecenter items --save-raw out/raw-archive -o out/archive-items.jsonl 2>&1 | tee out/archive-log.txt
+          test -s out/archive-items.jsonl && cp out/archive-items.jsonl data/listings/
 
-      # --- Archive Center (minutes, agendas before Oct 2025) ---
-      - name: Archive Center listing (saves raw HTML for test fixtures)
-        continue-on-error: true
-        run: python -m opencivic.archivecenter items --save-raw out/raw-archive -o out/archive-items.jsonl 2>&1 | tee out/archive-log.txt
-      - name: Archive Center download check
+      # --- 2. Fingerprint every document and log changes (Phase 1, step 3). ---
+      - name: Fingerprint and update manifest
+        run: |
+          python -m opencivic.manifest update \
+            --civicclerk out/civicclerk-meetings.jsonl --archive out/archive-items.jsonl \
+            --data-dir data --store-dir out/files \
+            --copy-base "https://github.com/${{ github.repository }}/releases/download/files" \
+            2>&1 | tee out/manifest-log.txt
+
+      - name: Keep copies of new files in the "files" release
+        run: |
+          gh release view files >/dev/null 2>&1 || gh release create files \
+            --title "Document copies" \
+            --notes "Copies of every published document version, named by SHA-256. See data/manifest.jsonl."
+          existing=$(gh release view files --json assets -q '.assets[].name')
+          uploaded=0
+          for f in out/files/*; do
+            [ -e "$f" ] || continue
+            n=$(basename "$f")
+            if ! grep -qx "$n" <<<"$existing"; then gh release upload files "$f"; uploaded=$((uploaded+1)); fi
+          done
+          echo "uploaded $uploaded new file(s)" | tee -a out/manifest-log.txt
+
+      - name: Commit data/ (listings, manifest, state)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "no data changes"; exit 0; fi
+          git commit -q -m "Collect $(date -u +%Y-%m-%d): $(tail -n 2 out/manifest-log.txt | head -n 1)"
+          git pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push -q origin "HEAD:${GITHUB_REF_NAME}"
+
+      # --- 3. Exploration: save the AgendaCenter (possible home of pre-Oct 2025 records). ---
+      - name: Capture AgendaCenter pages
         continue-on-error: true
         run: |
-          python - <<'EOF' 2>&1 | tee out/archive-download-check.txt
-          import json
-          from opencivic.fetch import HttpFetcher
-          line = open("out/archive-items.jsonl").readline()
-          assert line, "no Archive Center items found; see out/raw-archive/index.html"
-          item = json.loads(line)
-          data = HttpFetcher().get_bytes(item["url"])
-          print(item["title"], len(data), "bytes, starts with", data[:8])
+          python - <<'EOF' 2>&1 | tee out/agendacenter-log.txt
+          from opencivic.fetch import HttpFetcher, FetchError
+          f = HttpFetcher()
+          site = "https://www.templeterrace.gov"
+          pages = {
+              "index.html": f"{site}/AgendaCenter",
+              "search-2015-2025.html": f"{site}/AgendaCenter/Search/?term=&CIDs=all&startDate=01/01/2015&endDate=12/31/2025&dateRange=&dateSelector=",
+          }
+          for name, url in pages.items():
+              try:
+                  text = f.get_text(url)
+                  open(f"out/raw-agendacenter/{name}", "w").write(text)
+                  print(name, len(text), "chars,", text.count("ViewFile"), "ViewFile links")
+              except FetchError as e:
+                  print(name, "failed:", e)
           EOF
 
-      # Results also go to the live-samples branch (replaced each run) so they can be
-      # read with plain git, without downloading the artifact.
+      # Results (minus the file copies) go to the live-samples branch for easy reading.
       - name: Save results to live-samples branch
         if: always()
         run: |
+          rm -rf out/files
           cd out
           git init -q -b live-samples
           git add -A
           git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
             commit -q -m "Live collection ${{ github.run_id }}"
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" live-samples
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: templeterrace-live
-          path: out/
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" live-samples

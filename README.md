@@ -27,6 +27,8 @@ python -m opencivic.archivecenter items --site https://www.templeterrace.gov --s
 python -m opencivic.archivecenter items --input-dir raw/ --module minutes     # offline
 ```
 
+`opencivic/manifest.py` downloads every listed document, records its SHA-256, and logs `new`, `changed`, `unlisted` and `relisted` events in `data/manifest.jsonl` (see `data/README.md`). Copies of each file version are kept in the repo's "files" release.
+
 ## Tests
 
 ```bash
@@ -35,9 +37,9 @@ python -m unittest discover -s tests -v
 
 The tests run entirely against Temple Terrace's saved responses in `tests/fixtures/`, so they never touch the network. `check-schema` compares the live `$metadata` against the fields the adapter relies on, so a CivicClerk API change fails loudly instead of quietly producing empty data.
 
-## Live check on GitHub
+## Nightly collection
 
-Open **Actions → Collect → Run workflow**. It runs the tests, then collects live from Temple Terrace: every CivicClerk meeting and file, every Archive Center document, and a test download from each source. Results and the raw Archive Center HTML are attached to the run as `templeterrace-live`.
+The **Collect** workflow runs every night at 3:17 AM Eastern (or on demand: Actions → Collect → Run workflow). It lists every CivicClerk meeting file and City Council Archive Center document, fingerprints them, commits `data/`, and uploads copies of new file versions to the "files" release. Raw pages and logs from the latest run are on the `live-samples` branch.
 
 ## Polite collection
 
@@ -45,4 +47,4 @@ Requests are spaced at least one second apart, retried with backoff on 429/5xx, 
 
 ## Status
 
-Phase 1, steps 1 and 2 (CivicClerk and Archive Center adapters) are written and tested offline. The Archive Center tests use synthetic HTML until the first live run saves real pages. Still unverified live: both download URL forms, and whether CivicClerk's `eventDate` (`…T18:00:00Z`) is local time with a stray `Z`.
+Phase 1, steps 1 to 3 are live: CivicClerk and Archive Center adapters, and the fingerprint manifest. Next: extracting text from the PDFs (step 4).

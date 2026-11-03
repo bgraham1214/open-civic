@@ -42,6 +42,7 @@ class HttpFetcher:
         self.timeout = timeout
         self._last = 0.0
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
+        self.last_content_type = ""
 
     def _allowed(self, url: str) -> bool:
         parts = urlsplit(url)
@@ -71,6 +72,7 @@ class HttpFetcher:
             self._wait()
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    self.last_content_type = resp.headers.get("Content-Type", "")
                     return resp.read()
             except urllib.error.HTTPError as e:
                 if e.code in (429, 500, 502, 503, 504) and attempt < self.retries:
@@ -87,6 +89,11 @@ class HttpFetcher:
 
     def get_bytes(self, url: str) -> bytes:
         return self._raw(url)
+
+    def download(self, url: str) -> tuple[bytes, str]:
+        """Return (body, content type)."""
+        body = self._raw(url)
+        return body, self.last_content_type
 
     def get_json(self, url: str) -> dict:
         return json.loads(self._raw(url, accept="application/json"))
