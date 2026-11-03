@@ -76,3 +76,42 @@ class Offline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+REAL = Path(__file__).parent / "fixtures" / "templeterrace_archive" / "index.html"
+
+
+class RealIndex(unittest.TestCase):
+    """Temple Terrace's real Archive.aspx, saved by the live workflow on Nov 3, 2026."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = REAL.read_text("utf-8")
+        cls.mods = {m.amid: m for m in ac.parse_modules(cls.html, SITE)}
+
+    def test_modules(self):
+        self.assertEqual(len(self.mods), 23)
+        self.assertEqual(self.mods[43].name, "Archived City Council Agendas")
+        self.assertEqual(self.mods[44].name, "Archived City Council Minutes")
+        self.assertEqual(self.mods[45].name, "Archived City Council Workshop Agendas & Minutes")
+
+    def test_minutes_dropdown(self):
+        items = ac.parse_items(self.html, self.mods[44], SITE)
+        self.assertEqual(len(items), 15)  # the "Most Recent" duplicate is skipped
+        first = {i.adid: i for i in items}[9540]
+        self.assertEqual(first.title, "September 15, 2026")
+        self.assertEqual(first.date, "2026-09-15")
+        self.assertEqual(first.url, SITE + "/Archive.aspx?ADID=9540")
+        self.assertTrue(all(i.amid == 44 for i in items))
+        self.assertTrue(all(i.date for i in items))
+
+    def test_default_filter_is_city_council(self):
+        with tempfile.TemporaryDirectory() as d:
+            raw = Path(d)
+            (raw / "index.html").write_text(self.html)
+            for amid in (43, 44, 45):
+                (raw / f"amid-{amid}.html").write_text("<html></html>")
+            out = raw / "items.jsonl"
+            self.assertEqual(ac.main(["items", "--input-dir", str(raw), "-o", str(out)]), 0)
+            rows = [json.loads(x) for x in out.read_text().splitlines()]
+        self.assertEqual({r["amid"] for r in rows}, {43, 44, 45})
