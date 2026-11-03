@@ -1,0 +1,13 @@
+[project]
+name = "opencivic"
+version = "0.1.0"
+description = "Collectors for public meeting records (Open Civic Web)"
+requires-python = ">=3.11"
+dependencies = []  # stdlib only, on purpose
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["opencivic"]
