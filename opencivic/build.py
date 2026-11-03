@@ -39,16 +39,16 @@ CREATE TABLE meetings (
   event_id INTEGER PRIMARY KEY, date TEXT, start TEXT, name TEXT, category TEXT,
   location TEXT, agenda_note TEXT, portal_url TEXT, youtube_video_id TEXT);
 CREATE TABLE documents (
-  key TEXT PRIMARY KEY, source TEXT, kind TEXT, date TEXT, title TEXT, body TEXT,
-  city_url TEXT, page_url TEXT, our_copy TEXT, sha256 TEXT, bytes INTEGER,
-  first_seen TEXT, last_changed TEXT, still_listed INTEGER, pages INTEGER, ocr_pages INTEGER);
+  date TEXT, kind TEXT, title TEXT, body TEXT, city_url TEXT, our_copy TEXT, pages INTEGER,
+  ocr_pages INTEGER, sha256 TEXT, bytes INTEGER, first_seen TEXT, last_changed TEXT,
+  still_listed INTEGER, source TEXT, page_url TEXT, key TEXT UNIQUE);
 CREATE TABLE pages (
-  id INTEGER PRIMARY KEY, document_key TEXT REFERENCES documents(key), date TEXT, kind TEXT,
-  title TEXT, page INTEGER, method TEXT, text TEXT, link TEXT);
+  id INTEGER PRIMARY KEY, date TEXT, kind TEXT, title TEXT, page INTEGER, method TEXT,
+  text TEXT, link TEXT, document_key TEXT);
 CREATE TABLE agenda_items (
-  key TEXT PRIMARY KEY, date TEXT, meeting TEXT, category TEXT, section TEXT, outline TEXT,
-  item_number TEXT, title TEXT, description TEXT, fiscal_impact TEXT, resolution_number TEXT,
-  ordinance_number TEXT, attachments INTEGER, attachment_names TEXT, agenda_link TEXT);
+  date TEXT, outline TEXT, title TEXT, description TEXT, agenda_link TEXT, section TEXT,
+  meeting TEXT, category TEXT, item_number TEXT, fiscal_impact TEXT, resolution_number TEXT,
+  ordinance_number TEXT, attachments INTEGER, attachment_names TEXT, key TEXT UNIQUE);
 CREATE TABLE changes (
   id INTEGER PRIMARY KEY, at TEXT, event TEXT, document_key TEXT, date TEXT, kind TEXT,
   title TEXT, sha256 TEXT, previous_sha256 TEXT, bytes INTEGER, city_url TEXT, our_copy TEXT);
@@ -90,27 +90,28 @@ def build_db(data: Path, db_path: Path) -> dict:
                 text = json.load(fh)
         pages = text["pages"] if text else []
         con.execute("INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            e["key"], e["source"], e["kind"], e["date"], e["title"], e.get("body", ""),
-            e["url"], e.get("page", ""), e.get("copy_url", ""), e["sha256"], e.get("bytes"),
-            e.get("first_seen"), e.get("last_changed"), int(e.get("listed", True)),
-            len(pages) or None, sum(1 for p in pages if p["method"] == "ocr") if text else None))
+            e["date"], e["kind"], e["title"], e.get("body", ""), e["url"], e.get("copy_url", ""),
+            len(pages) or None, sum(1 for p in pages if p["method"] == "ocr") if text else None,
+            e["sha256"], e.get("bytes"), e.get("first_seen"), e.get("last_changed"),
+            int(e.get("listed", True)), e["source"], e.get("page", ""), e["key"]))
         n_docs += 1
         link_base = e.get("copy_url") or e["url"]
         for p in pages:
             t = p["text"].strip()
             if not t:
                 continue
-            con.execute("INSERT INTO pages (document_key,date,kind,title,page,method,text,link) VALUES (?,?,?,?,?,?,?,?)",
-                        (e["key"], e["date"], e["kind"], e["title"], p["n"], p["method"], t,
-                         f"{link_base}#page={p['n']}"))
+            con.execute("INSERT INTO pages (date,kind,title,page,method,text,link,document_key) VALUES (?,?,?,?,?,?,?,?)",
+                        (e["date"], e["kind"], e["title"], p["n"], p["method"], t,
+                         f"{link_base}#page={p['n']}", e["key"]))
             n_pages += 1
     counts["documents"], counts["pages"] = n_docs, n_pages
 
     items = [i for i in _jsonl(data / "listings" / "civicclerk-items.jsonl") if not i["is_section"]]
-    con.executemany("INSERT OR REPLACE INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
-        (i["key"], i["date"], i["meeting"], i["category"], i["section"], i["outline"], i["item_number"],
-         i["title"], i["description"], i["fiscal_impact"], i["resolution_number"], i["ordinance_number"],
-         len(i["attachments"]), "; ".join(a["name"] for a in i["attachments"]), i["portal_url"]) for i in items])
+    items = list({i["key"]: i for i in items}.values())
+    con.executemany("INSERT INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
+        (i["date"], i["outline"], i["title"], i["description"], i["portal_url"], i["section"], i["meeting"],
+         i["category"], i["item_number"], i["fiscal_impact"], i["resolution_number"], i["ordinance_number"],
+         len(i["attachments"]), "; ".join(a["name"] for a in i["attachments"]), i["key"]) for i in items])
     counts["agenda_items"] = len(items)
 
     ev = _jsonl(data / "manifest.jsonl")
