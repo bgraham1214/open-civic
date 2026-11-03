@@ -1,0 +1,52 @@
+name: Explore
+
+# Fetch a few URLs from GitHub's network (which can reach city sites) and save the
+# responses to the "explore" branch, for designing new adapters. Manual only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "URLs to fetch, separated by spaces"
+        required: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      OCW_CONTACT: https://github.com/${{ github.repository }}
+      URLS: ${{ inputs.urls }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Fetch
+        run: |
+          mkdir -p out
+          python - <<'EOF'
+          import hashlib, json, os
+          from opencivic.fetch import HttpFetcher, FetchError
+          f = HttpFetcher()
+          index = []
+          for url in os.environ["URLS"].split():
+              name = hashlib.sha256(url.encode()).hexdigest()[:12]
+              try:
+                  body, ctype = f.download(url)
+                  ext = "json" if "json" in ctype else "html" if "html" in ctype else "pdf" if body[:5] == b"%PDF-" else "txt"
+                  open(f"out/{name}.{ext}", "wb").write(body)
+                  index.append({"url": url, "file": f"{name}.{ext}", "bytes": len(body), "content_type": ctype})
+              except FetchError as e:
+                  index.append({"url": url, "error": str(e)})
+              print(index[-1])
+          json.dump(index, open("out/index.json", "w"), indent=1)
+          EOF
+      - name: Save to explore branch
+        run: |
+          cd out
+          git init -q -b explore
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -q -m "Explore ${{ github.run_id }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" explore
