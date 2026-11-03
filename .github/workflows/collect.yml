@@ -20,6 +20,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to save results on the live-samples branch
     env:
       OCW_CONTACT: https://github.com/${{ github.repository }}
     steps:
@@ -60,10 +62,24 @@ jobs:
           python - <<'EOF' 2>&1 | tee out/archive-download-check.txt
           import json
           from opencivic.fetch import HttpFetcher
-          item = json.loads(open("out/archive-items.jsonl").readline())
+          line = open("out/archive-items.jsonl").readline()
+          assert line, "no Archive Center items found; see out/raw-archive/index.html"
+          item = json.loads(line)
           data = HttpFetcher().get_bytes(item["url"])
           print(item["title"], len(data), "bytes, starts with", data[:8])
           EOF
+
+      # Results also go to the live-samples branch (replaced each run) so they can be
+      # read with plain git, without downloading the artifact.
+      - name: Save results to live-samples branch
+        if: always()
+        run: |
+          cd out
+          git init -q -b live-samples
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
+            commit -q -m "Live collection ${{ github.run_id }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" live-samples
 
       - uses: actions/upload-artifact@v4
         if: always()
