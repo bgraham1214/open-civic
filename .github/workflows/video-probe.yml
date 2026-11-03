@@ -1,0 +1,47 @@
+name: Video probe
+
+# Manual test: can GitHub's runners read a YouTube video's details, list its channel,
+# and fetch auto-generated captions? Results go to the "explore" branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      video:
+        description: "A YouTube video URL"
+        required: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VIDEO: ${{ inputs.video }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -q yt-dlp && mkdir -p out && yt-dlp --version | tee out/version.txt
+      - name: Video details
+        continue-on-error: true
+        run: yt-dlp -J --skip-download "$VIDEO" > out/video.json 2> out/video.err; tail -3 out/video.err; python -c "import json;d=json.load(open('out/video.json'));print(d['title'], d.get('upload_date'), d.get('duration'), d.get('channel_url'))"
+      - name: Channel listing
+        continue-on-error: true
+        run: |
+          CH=$(python -c "import json;print(json.load(open('out/video.json'))['channel_url'])")
+          yt-dlp --flat-playlist -J "$CH/videos" > out/channel.json 2> out/channel.err; tail -3 out/channel.err
+          yt-dlp --flat-playlist -J "$CH/streams" > out/streams.json 2> out/streams.err; tail -3 out/streams.err
+          python -c "import json;d=json.load(open('out/channel.json'));print(len(d.get('entries',[])), 'videos')" || true
+      - name: Auto captions
+        continue-on-error: true
+        run: |
+          yt-dlp --skip-download --write-auto-subs --write-subs --sub-langs "en.*,en" --sub-format vtt -o "out/captions" "$VIDEO" > out/subs.log 2>&1; tail -5 out/subs.log
+          ls -la out
+      - name: Save to explore branch
+        if: always()
+        run: |
+          cd out
+          git init -q -b explore
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -q -m "Video probe ${{ github.run_id }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" explore
