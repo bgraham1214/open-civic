@@ -49,6 +49,19 @@ CREATE TABLE agenda_items (
   date TEXT, outline TEXT, title TEXT, description TEXT, agenda_link TEXT, section TEXT,
   meeting TEXT, category TEXT, item_number TEXT, fiscal_impact TEXT, resolution_number TEXT,
   ordinance_number TEXT, attachments INTEGER, attachment_names TEXT, key TEXT UNIQUE);
+CREATE TABLE officials (
+  name TEXT, roles TEXT, kind TEXT, meetings_present INTEGER, meetings_absent INTEGER,
+  absent_dates TEXT, first_seen TEXT, last_seen TEXT);
+CREATE TABLE votes (
+  date TEXT, item TEXT, item_title TEXT, result TEXT, tally TEXT, nays TEXT, ayes TEXT,
+  mover TEXT, seconder TEXT, roll_call INTEGER, record_number TEXT, action TEXT, minutes_link TEXT,
+  page_read_by TEXT, motion_text TEXT, agenda_item_key TEXT, key TEXT UNIQUE);
+CREATE TABLE contracts (
+  date TEXT, title TEXT, vendors TEXT, amount_stated REAL, council_vote TEXT, agenda_link TEXT,
+  cooperative_contract TEXT, solicitation TEXT, description TEXT, outline TEXT, item_number TEXT, key TEXT UNIQUE);
+CREATE TABLE vendors (
+  vendor TEXT, contracts INTEGER, first_date TEXT, last_date TEXT, amounts_stated_when_sole_vendor REAL,
+  contract_titles TEXT);
 CREATE TABLE changes (
   id INTEGER PRIMARY KEY, at TEXT, event TEXT, document_key TEXT, date TEXT, kind TEXT,
   title TEXT, sha256 TEXT, previous_sha256 TEXT, bytes INTEGER, city_url TEXT, our_copy TEXT);
@@ -121,7 +134,13 @@ def build_db(data: Path, db_path: Path) -> dict:
          x.get("previous_sha256"), x.get("bytes"), x.get("url"), x.get("copy_url")) for x in ev])
     counts["changes"] = len(ev)
 
+    counts.update(_entity_tables(con, data))
+
     con.executescript("""
+      CREATE VIRTUAL TABLE votes_fts USING fts5(item_title, motion_text, content='votes', tokenize='porter');
+      INSERT INTO votes_fts(rowid, item_title, motion_text) SELECT rowid, item_title, motion_text FROM votes;
+      CREATE VIRTUAL TABLE contracts_fts USING fts5(title, vendors, description, content='contracts', tokenize='porter');
+      INSERT INTO contracts_fts(rowid, title, vendors, description) SELECT rowid, title, vendors, description FROM contracts;
       CREATE VIRTUAL TABLE pages_fts USING fts5(title, text, content='pages', content_rowid='id', tokenize='porter');
       INSERT INTO pages_fts(rowid, title, text) SELECT id, title, text FROM pages;
       CREATE VIRTUAL TABLE agenda_items_fts USING fts5(title, description, section, content='agenda_items', tokenize='porter');
@@ -134,6 +153,39 @@ def build_db(data: Path, db_path: Path) -> dict:
     con.execute("VACUUM")
     con.close()
     return counts
+
+
+def _entity_tables(con: sqlite3.Connection, data: Path) -> dict:
+    ent = data / "entities"
+    officials = _jsonl(ent / "officials.jsonl")
+    con.executemany("INSERT INTO officials VALUES (?,?,?,?,?,?,?,?)", [
+        (o["name"], "; ".join(o["roles"]), "elected" if o["group"] == "elected" else "appointed officer",
+         o["meetings_present"], o["meetings_absent"], "; ".join(o["absent_dates"]), o["first_seen"], o["last_seen"])
+        for o in officials])
+    votes = _jsonl(ent / "votes.jsonl")
+    con.executemany("INSERT INTO votes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
+        (v["date"], v["item"], v["item_title"], v["result"], v["tally"], "; ".join(v["nays"]), "; ".join(v["ayes"]),
+         v["mover"], v["seconder"], int(v["roll_call"]), v["record_number"], v["action"], v["minutes_link"],
+         v["page_method"], v["text"], v["agenda_item_key"], v["key"]) for v in votes])
+    contracts = _jsonl(ent / "contracts.jsonl")
+    con.executemany("INSERT INTO contracts VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [
+        (c["date"], c["title"], "; ".join(c["vendors"]), c["amount_stated"], c.get("vote", ""), c["agenda_link"],
+         c["cooperative_contract"], c["solicitation"], c["description"], c["outline"], c["item_number"], c["key"])
+        for c in contracts])
+    from .entities import vendor_key
+    agg: dict[str, dict] = {}
+    for c in contracts:
+        for v in c["vendors"]:
+            a = agg.setdefault(vendor_key(v), {"names": {}, "dates": [], "amount": 0.0, "titles": []})
+            a["names"][v] = a["names"].get(v, 0) + 1
+            a["dates"].append(c["date"])
+            a["titles"].append(f"{c['date']}: {c['title']}")
+            if c["amount_stated"] and len(c["vendors"]) == 1:
+                a["amount"] += c["amount_stated"]
+    con.executemany("INSERT INTO vendors VALUES (?,?,?,?,?,?)", [
+        (max(a["names"], key=a["names"].get), len(a["dates"]), min(a["dates"]), max(a["dates"]),
+         round(a["amount"], 2) or None, "\n".join(sorted(a["titles"]))) for a in agg.values()])
+    return {"officials": len(officials), "votes": len(votes), "contracts": len(contracts), "vendors": len(agg)}
 
 
 def metadata(built_at: str) -> dict:
@@ -163,6 +215,23 @@ def metadata(built_at: str) -> dict:
                 "documents": {"description": "Every document version we hold. our_copy is our archived copy; "
                               "sha256 is its fingerprint. still_listed = 0 means the city removed it from "
                               "its listing.", "sort_desc": "date"},
+                "votes": {"description": "Every motion recorded in the minutes: who moved and seconded it, who "
+                          "voted aye and nay, and the result. Machine-read from the minutes (some pages by OCR); "
+                          "minutes_link opens the page it came from. roll_call = 0 means the minutes only say "
+                          "\"unanimously carried\", so ayes lists the members recorded as present.",
+                          "fts_table": "votes_fts", "sort_desc": "date"},
+                "contracts": {"description": "Agenda items that approve a purchase, contract or agreement. Vendor "
+                              "names and amounts are machine-extracted from the item's wording and may be missing or "
+                              "incomplete; amount_stated is the first dollar figure in the text. council_vote comes "
+                              "from the minutes. Always check the agenda_link.",
+                              "fts_table": "contracts_fts", "sort_desc": "date"},
+                "vendors": {"description": "Vendors named in agenda items, with how many items name them. "
+                            "amounts_stated_when_sole_vendor adds stated amounts only for items naming one vendor. "
+                            "Machine-extracted; spelling variants of one company may appear separately.",
+                            "sort_desc": "contracts"},
+                "officials": {"description": "Elected officials and charter officers, with attendance as recorded "
+                              "in the minutes we hold (Nov 2025 onward)."},
+                "votes_fts": {"hidden": True}, "contracts_fts": {"hidden": True},
                 "changes": {"description": "Log of documents appearing, changing, or disappearing from the "
                             "city's listings, from data/manifest.jsonl.", "sort_desc": "at"},
                 "meetings": {"description": "CivicClerk events. Times are local (Eastern).", "sort_desc": "date"},
@@ -245,11 +314,18 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
     search_items = _lite(site_url, "/templeterrace/agenda_items")
     page = INDEX.format(
         lite=_lite(site_url), pages=search_pages, items=search_items,
-        changes=_lite(site_url, "/templeterrace/changes"), docs=_lite(site_url, "/templeterrace/documents"),
+        changes=_lite(site_url, "/templeterrace/changes"),
+        votes=_lite(site_url, "/templeterrace/votes"),
+        split=_lite(site_url, "/templeterrace/votes?_where=nays%3C%3E%27%27&_sort_desc=date"),
+        contracts=_lite(site_url, "/templeterrace/contracts"), vendors=_lite(site_url, "/templeterrace/vendors"),
+        officials=_lite(site_url, "/templeterrace/officials"), docs=_lite(site_url, "/templeterrace/documents"),
         items_js=json.dumps(search_items), pages_js=json.dumps(search_pages),
         rows=rows, feeds=" · ".join(feed_links), built=built[:16].replace("T", " "),
         n_docs=counts["documents"], n_pages=counts["pages"], n_items=counts["agenda_items"])
     (out / "index.html").write_text(page, "utf-8")
+    ftm = data / "entities" / "templeterrace.ftm.jsonl"
+    if ftm.exists():
+        (out / "templeterrace.ftm.jsonl").write_bytes(ftm.read_bytes())
     (out / ".nojekyll").write_text("")
     return counts
 
@@ -277,11 +353,19 @@ Text from scanned pages (marked <code>ocr</code>) was machine-read and can conta
 page link to check the original.</p>
 <h2>Latest documents</h2>
 <table><tr><th>Date</th><th>Type</th><th>Title</th><th>Links</th></tr>{rows}</table>
+<h2>Who decided what</h2>
+<p><a href="{votes}">Every council vote</a> · <a href="{split}">Split votes only</a> ·
+<a href="{contracts}">Contracts and purchases</a> · <a href="{vendors}">Vendors</a> · <a href="{officials}">Officials and attendance</a></p>
+<p class="note">Votes, vendors and amounts are read from the minutes and agendas by software and can be wrong.
+Each row links to the page it came from.</p>
 <h2>Browse</h2>
 <p><a href="{docs}">All documents</a> · <a href="{items}">All agenda items</a> · <a href="{changes}">Change log</a>
 (documents added, edited, or removed by the city) · <a href="{lite}">Full database</a></p>
 <h2>Alerts</h2>
 <p>RSS: <a href="feed.xml">everything new</a> · {feeds}</p>
+<h2>Download</h2>
+<p><a href="templeterrace.db">SQLite database</a> · <a href="templeterrace.ftm.jsonl">FollowTheMoney entities</a>
+(people, organizations, contracts) · <a href="https://github.com/bgraham1214/open-civic/tree/main/data">raw data and change log</a></p>
 <footer>Public records from the City of Temple Terrace's CivicClerk portal and Archive Center, collected
 nightly. Each document is fingerprinted (SHA-256) and archived so changes are visible.
 <a href="https://github.com/bgraham1214/open-civic">Source and data</a>.</footer>

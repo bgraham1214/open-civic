@@ -90,6 +90,30 @@ jobs:
         continue-on-error: true
         run: python -m opencivic.extract --data-dir data --files-dir out/files --max-ocr-pages 600 2>&1 | tee out/extract-log.txt
 
+      # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
+      - name: Build entities
+        continue-on-error: true
+        run: python -m opencivic.entities --data-dir data 2>&1 | tee out/entities-log.txt
+      - name: Validate FollowTheMoney entities with the official library
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y -qq libicu-dev pkg-config >/dev/null
+          pip install -q followthemoney
+          python - <<'EOF' 2>&1 | tee out/ftm-validate.txt
+          import json
+          from followthemoney import model
+          bad = 0
+          for line in open("data/entities/templeterrace.ftm.jsonl"):
+              d = json.loads(line)
+              try:
+                  model.get_proxy(d, cleaned=False)
+              except Exception as e:
+                  bad += 1
+                  print("INVALID", d["schema"], d["id"], e)
+          print("ftm entities checked; invalid:", bad)
+          raise SystemExit(1 if bad else 0)
+          EOF
+
       - name: Commit data/ (listings, manifest, state, text)
         run: |
           git config user.name "github-actions"

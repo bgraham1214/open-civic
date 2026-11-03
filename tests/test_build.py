@@ -52,7 +52,8 @@ class Build(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             counts = build.write_site(make_data(d), d / "site", SITE)
-            self.assertEqual(counts, {"meetings": 0, "documents": 1, "pages": 2, "agenda_items": 1, "changes": 1})
+            self.assertEqual(counts, {"meetings": 0, "documents": 1, "pages": 2, "agenda_items": 1, "changes": 1,
+                                      "officials": 0, "votes": 0, "contracts": 0, "vendors": 0})
             con = sqlite3.connect(d / "site" / "templeterrace.db")
             hit = con.execute("SELECT p.page, p.method, p.link FROM pages_fts JOIN pages p ON p.id = pages_fts.rowid "
                               "WHERE pages_fts MATCH 'zoning'").fetchall()

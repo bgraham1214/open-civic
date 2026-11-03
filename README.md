@@ -33,6 +33,8 @@ python -m opencivic.archivecenter items --input-dir raw/ --module minutes     # 
 
 `opencivic/build.py` builds the public site: a SQLite database with full-text search over every page and agenda item, opened in the browser through [Datasette Lite](https://lite.datasette.io), plus RSS feeds. It is published nightly to GitHub Pages at https://bgraham1214.github.io/open-civic/.
 
+`opencivic/minutes.py` and `opencivic/entities.py` read attendance and every roll-call vote from the minutes, find contracts and vendors in agenda items, and write them to `data/entities/`, including a FollowTheMoney file (`templeterrace.ftm.jsonl`). All of it is machine-read and links back to its source page.
+
 ## Tests
 
 ```bash
