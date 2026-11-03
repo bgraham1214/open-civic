@@ -46,6 +46,13 @@ jobs:
           python -m opencivic.civicclerk meetings -o out/civicclerk-meetings.jsonl 2>&1 | tee out/civicclerk-log.txt
           python -m opencivic.civicclerk files --format csv -o out/civicclerk-files.csv
           cp out/civicclerk-meetings.jsonl out/civicclerk-files.csv data/listings/
+      - name: CivicClerk agenda items (sections, items, attachments)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.civicclerk items --meetings out/civicclerk-meetings.jsonl \
+            -o out/civicclerk-items.jsonl 2>&1 | tee out/civicclerk-items-log.txt
+          test -s out/civicclerk-items.jsonl && cp out/civicclerk-items.jsonl data/listings/
       - name: Archive Center listing (City Council minutes)
         continue-on-error: true
         run: |
@@ -76,7 +83,14 @@ jobs:
           done
           echo "uploaded $uploaded new file(s)" | tee -a out/manifest-log.txt
 
-      - name: Commit data/ (listings, manifest, state)
+      # --- 3. Text, page by page; OCR for scanned pages (Phase 1, step 4). ---
+      - name: Install PDF and OCR tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null
+      - name: Extract text
+        continue-on-error: true
+        run: python -m opencivic.extract --data-dir data --files-dir out/files --max-ocr-pages 600 2>&1 | tee out/extract-log.txt
+
+      - name: Commit data/ (listings, manifest, state, text)
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
@@ -86,7 +100,7 @@ jobs:
           git pull -q --rebase origin "${GITHUB_REF_NAME}"
           git push -q origin "HEAD:${GITHUB_REF_NAME}"
 
-      # --- 3. Exploration: save the AgendaCenter (possible home of pre-Oct 2025 records). ---
+      # --- 4. Exploration: save the AgendaCenter (possible home of pre-Oct 2025 records). ---
       - name: Capture AgendaCenter pages
         continue-on-error: true
         run: |

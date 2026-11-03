@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import json
 import re
 import sys
@@ -176,6 +177,86 @@ def crawl_events(tenant: str, fetcher: Fetcher, max_pages: int | None = None) ->
     return Crawl(meetings, pages, nxt if stopped_early else None)
 
 
+# --- agenda items (Meetings/{agendaId}) ----------------------------------------
+
+def _clean(html_text: str | None) -> str:
+    """Agenda titles and descriptions arrive as HTML fragments; reduce to plain text."""
+    if not html_text:
+        return ""
+    t = re.sub(r"<br\s*/?>|</p>|</div>|</li>", "\n", html_text, flags=re.I)
+    t = re.sub(r"<[^>]+>", "", t)
+    t = html.unescape(t).replace("\u00a0", " ")
+    t = re.sub(r"[ \t]+", " ", t)
+    return re.sub(r"\s*\n\s*", "\n", t).strip()
+
+
+def meeting_url(tenant: str, agenda_id: int) -> str:
+    return f"{api_base(tenant)}Meetings/{agenda_id}"
+
+
+def parse_agenda_items(tenant: str, meeting: Meeting, raw: dict) -> list[dict]:
+    """Flatten a Meetings/{agendaId} response into one record per section and item.
+
+    Keeps names, numbers and attachment metadata only. Attachment storage URLs are
+    dropped: the API returns them as signed links with write permission.
+    """
+    out: list[dict] = []
+
+    def walk(nodes: list[dict], section: str, parent_outline: str, depth: int) -> None:
+        for n in sorted(nodes or [], key=lambda x: x.get("sortOrder") or 0):
+            if n.get("isDeleted"):
+                continue
+            outline = (n.get("agendaObjectItemOutlineNumber") or "").strip()
+            full = f"{parent_outline}{outline}" if depth else outline
+            is_section = bool(n.get("isSection"))
+            title = _clean(n.get("agendaObjectItemName"))
+            here_section = title if is_section and depth == 0 else section
+            out.append({
+                "key": f"civicclerk:{tenant}:item:{n['id']}",
+                "item_id": n["id"],
+                "event_id": meeting.event_id,
+                "agenda_id": meeting.agenda_id,
+                "date": meeting.date,
+                "meeting": meeting.name,
+                "category": meeting.category,
+                "is_section": is_section,
+                "section": here_section,
+                "outline": full,
+                "level": depth,
+                "item_number": n.get("agendaObjectItemNumber") or "",
+                "title": title,
+                "description": _clean(n.get("agendaObjectItemDescription")),
+                "fiscal_impact": _clean(n.get("fiscalImpactSummary")),
+                "resolution_number": n.get("resolutionFormattedNumber") or "",
+                "ordinance_number": n.get("ordinanceFormattedNumber") or "",
+                "attachments": [
+                    {"id": a["id"], "name": (a.get("fileName") or "").strip(),
+                     "content_type": a.get("contentType") or "", "bytes": a.get("fileSize") or 0}
+                    for a in (n.get("attachmentsList") or []) if a.get("isPublished", True)
+                ],
+                "portal_url": meeting.portal_url.replace("/files", "/agenda"),
+            })
+            walk(n.get("childItems") or [], here_section, full, depth + 1)
+
+    walk(raw.get("items") or [], "", "", 0)
+    return out
+
+
+def crawl_items(tenant: str, meetings: list[Meeting], fetcher: Fetcher) -> tuple[list[dict], list[str]]:
+    items: list[dict] = []
+    errors: list[str] = []
+    for m in meetings:
+        if not m.agenda_id or not m.files:
+            continue
+        try:
+            raw = fetcher.get_json(meeting_url(tenant, m.agenda_id))
+        except FetchError as e:
+            errors.append(str(e))
+            continue
+        items += parse_agenda_items(tenant, m, raw)
+    return items, errors
+
+
 # --- schema drift guard -------------------------------------------------------
 
 REQUIRED_EVENT_PROPS = {"id", "eventName", "eventDate", "categoryName", "agendaId", "publishedFiles", "isDeleted"}
@@ -236,10 +317,12 @@ def write_output(rows: list[dict], fmt: str, out) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.civicclerk", description=__doc__.split("\n\n")[0])
-    ap.add_argument("what", choices=["meetings", "files", "check-schema"])
+    ap.add_argument("what", choices=["meetings", "files", "items", "check-schema"])
     ap.add_argument("--tenant", default="templeterracefl")
     ap.add_argument("--input", nargs="*", help="saved Events pages (offline); omit to fetch live")
     ap.add_argument("--metadata", help="saved $metadata file for check-schema (offline)")
+    ap.add_argument("--meetings", help="for items: meetings jsonl from a previous run (skips the Events crawl)")
+    ap.add_argument("--meetings-dir", help="for items, offline: saved Meetings responses named meeting-<agendaId>.json")
     ap.add_argument("--category", help='keep only this category, e.g. "City Council"')
     ap.add_argument("--with-files-only", action="store_true", help="drop meetings with no published files")
     ap.add_argument("--max-pages", type=int)
@@ -258,6 +341,35 @@ def main(argv: list[str] | None = None) -> int:
             print(f"SCHEMA: {p}", file=sys.stderr)
         print("schema ok" if not problems else f"{len(problems)} schema problem(s)", file=sys.stderr)
         return 1 if problems else 0
+
+    if args.what == "items":
+        if args.meetings:
+            with open(args.meetings, encoding="utf-8") as fh:
+                meetings = [Meeting(**{**r, "files": [PublishedFile(**f) for f in r["files"]]})
+                            for r in map(json.loads, fh)]
+        else:
+            meetings = crawl_events(args.tenant, HttpFetcher(), args.max_pages).meetings
+        if args.meetings_dir:
+            from pathlib import Path
+            d = Path(args.meetings_dir)
+            ifetch: Fetcher = FixtureFetcher({meeting_url(args.tenant, int(p.stem.split("-")[1])): p
+                                              for p in d.glob("meeting-*.json")})
+        else:
+            ifetch = HttpFetcher()
+        if args.category:
+            meetings = [m for m in meetings if m.category.lower() == args.category.lower()]
+        items, errors = crawl_items(args.tenant, meetings, ifetch)
+        out = open(args.output, "w", encoding="utf-8", newline="") if args.output else sys.stdout
+        try:
+            write_output(items, args.format, out)
+        finally:
+            if args.output:
+                out.close()
+        for e in errors:
+            print(f"error: {e}", file=sys.stderr)
+        n_items = sum(1 for i in items if not i["is_section"])
+        print(f"{len({i['agenda_id'] for i in items})} agendas, {n_items} items, {len(errors)} errors", file=sys.stderr)
+        return 1 if errors and not items else 0
 
     if args.input:
         fetcher: Fetcher = FixtureFetcher.from_files(api_base(args.tenant) + "Events", args.input)
