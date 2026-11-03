@@ -149,3 +149,13 @@ class Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Redaction(unittest.TestCase):
+    def test_signed_urls_redacted(self):
+        from opencivic.fetch import redact_signed_urls
+        s = '{"p":"https://civicclerk.blob.core.windows.net/stream/T/a.pdf?sv=1&sp=rw&sig=AB%3D","q":"https://x.org/a?b=1"}'
+        out = redact_signed_urls(s)
+        self.assertNotIn("sig=", out)
+        self.assertIn("https://civicclerk.blob.core.windows.net/stream/T/a.pdf?[signed-url-redacted]", out)
+        self.assertIn("https://x.org/a?b=1", out)

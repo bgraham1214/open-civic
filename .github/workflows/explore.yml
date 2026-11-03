@@ -28,7 +28,7 @@ jobs:
           mkdir -p out
           python - <<'EOF'
           import hashlib, json, os
-          from opencivic.fetch import HttpFetcher, FetchError
+          from opencivic.fetch import HttpFetcher, FetchError, redact_signed_urls
           f = HttpFetcher()
           index = []
           for url in os.environ["URLS"].split():
@@ -36,6 +36,8 @@ jobs:
               try:
                   body, ctype = f.download(url)
                   ext = "json" if "json" in ctype else "html" if "html" in ctype else "pdf" if body[:5] == b"%PDF-" else "txt"
+                  if ext != "pdf":  # never save signed storage URLs
+                      body = redact_signed_urls(body.decode("utf-8", "replace")).encode("utf-8")
                   open(f"out/{name}.{ext}", "wb").write(body)
                   index.append({"url": url, "file": f"{name}.{ext}", "bytes": len(body), "content_type": ctype})
               except FetchError as e:

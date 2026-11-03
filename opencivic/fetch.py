@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -23,6 +24,16 @@ from . import __version__
 USER_AGENT = f"OpenCivicWeb/{__version__} (public meeting records archive)"
 if os.environ.get("OCW_CONTACT"):
     USER_AGENT += f" contact: {os.environ['OCW_CONTACT']}"
+
+
+# Signed storage URLs (Azure SAS: "...?sv=...&sp=rw&sig=...") grant access to the city's
+# file storage. CivicClerk's API returns some with write permission. Never store or
+# publish them: redact the query string before anything is written to disk.
+_SIGNED_URL = re.compile(r"""(https?://[^\s"'<>?]+)\?[^\s"'<>]*?\bsig=[^\s"'<>]*""")
+
+
+def redact_signed_urls(text: str) -> str:
+    return _SIGNED_URL.sub(r"\1?[signed-url-redacted]", text)
 
 
 class Fetcher(Protocol):
