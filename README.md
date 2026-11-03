@@ -29,6 +29,10 @@ python -m opencivic.archivecenter items --input-dir raw/ --module minutes     # 
 
 `opencivic/manifest.py` downloads every listed document, records its SHA-256, and logs `new`, `changed`, `unlisted` and `relisted` events in `data/manifest.jsonl` (see `data/README.md`). Copies of each file version are kept in the repo's "files" release.
 
+`opencivic/extract.py` pulls text from every document, page by page, OCR'ing scanned pages with Tesseract (marked `ocr`). `civicclerk items` lists every agenda item from CivicClerk's Meetings API.
+
+`opencivic/build.py` builds the public site: a SQLite database with full-text search over every page and agenda item, opened in the browser through [Datasette Lite](https://lite.datasette.io), plus RSS feeds. It is published nightly to GitHub Pages at https://bgraham1214.github.io/open-civic/.
+
 ## Tests
 
 ```bash
@@ -47,4 +51,4 @@ Requests are spaced at least one second apart, retried with backoff on 429/5xx, 
 
 ## Status
 
-Phase 1, steps 1 to 3 are live: CivicClerk and Archive Center adapters, and the fingerprint manifest. Next: extracting text from the PDFs (step 4).
+Phase 1, steps 1 to 5 are built: adapters, fingerprint manifest, text extraction with OCR, agenda items, and the public search site. Next: mapping records to FollowTheMoney entities, and linking meeting videos.

@@ -100,7 +100,23 @@ jobs:
           git pull -q --rebase origin "${GITHUB_REF_NAME}"
           git push -q origin "HEAD:${GITHUB_REF_NAME}"
 
-      # --- 4. Exploration: save the AgendaCenter (possible home of pre-Oct 2025 records). ---
+      # --- 4. Public search site on GitHub Pages (Phase 1, step 5). ---
+      - name: Build site
+        run: |
+          python -m opencivic.build --data-dir data --out site \
+            --site-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          size=$(stat -c %s site/templeterrace.db); echo "database: $size bytes"
+          if [ "$size" -gt 95000000 ]; then echo "::error::database over GitHub's 100 MB file limit"; exit 1; fi
+      - name: Publish to gh-pages branch
+        run: |
+          cd site
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
+            commit -q -m "Site build ${{ github.run_id }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" gh-pages
+
+      # --- 5. Exploration: save the AgendaCenter (possible home of pre-Oct 2025 records). ---
       - name: Capture AgendaCenter pages
         continue-on-error: true
         run: |
