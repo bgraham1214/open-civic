@@ -1,0 +1,10 @@
+[
+ {
+  "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC4z9CgD1RQNAwFPMKbTKupw",
+  "error": "robots.txt disallows https://www.youtube.com/feeds/videos.xml?channel_id=UC4z9CgD1RQNAwFPMKbTKupw"
+ },
+ {
+  "url": "https://www.youtube.com/feeds/videos.xml?playlist_id=UU4z9CgD1RQNAwFPMKbTKupw",
+  "error": "robots.txt disallows https://www.youtube.com/feeds/videos.xml?playlist_id=UU4z9CgD1RQNAwFPMKbTKupw"
+ }
+]
