@@ -30,7 +30,7 @@ def make_data(d: Path) -> Path:
             {"n": 1, "text": "Resolution approving an annexation agreement", "method": "pdftotext"},
             {"n": 2, "text": "Minutes read from a scan: zoning hearing", "method": "ocr"},
             {"n": 3, "text": "   ", "method": "pdftotext"}]}, fh)
-    item = {"date": "2026-10-20", "meeting": "City Council Meeting", "category": "City Council",
+    item = {"date": "2026-10-20", "event_id": 1, "meeting": "City Council Meeting", "category": "City Council",
             "section": "Consent Agenda", "fiscal_impact": "", "resolution_number": "", "ordinance_number": "",
             "portal_url": "https://city.example/event/1/agenda"}
     (data / "listings" / "civicclerk-items.jsonl").write_text("\n".join(json.dumps(x) for x in [
@@ -53,7 +53,8 @@ class Build(unittest.TestCase):
             d = Path(d)
             counts = build.write_site(make_data(d), d / "site", SITE)
             self.assertEqual(counts, {"meetings": 0, "documents": 1, "pages": 2, "agenda_items": 1, "changes": 1,
-                                      "officials": 0, "votes": 0, "contracts": 0, "vendors": 0})
+                                      "officials": 0, "votes": 0, "contracts": 0, "vendors": 0,
+                                      "videos": 0})
             con = sqlite3.connect(d / "site" / "templeterrace.db")
             hit = con.execute("SELECT p.page, p.method, p.link FROM pages_fts JOIN pages p ON p.id = pages_fts.rowid "
                               "WHERE pages_fts MATCH 'zoning'").fetchall()

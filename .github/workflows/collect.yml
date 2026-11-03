@@ -53,6 +53,14 @@ jobs:
           python -m opencivic.civicclerk items --meetings out/civicclerk-meetings.jsonl \
             -o out/civicclerk-items.jsonl 2>&1 | tee out/civicclerk-items-log.txt
           test -s out/civicclerk-items.jsonl && cp out/civicclerk-items.jsonl data/listings/
+      - name: YouTube meeting videos (needs the YOUTUBE_API_KEY secret)
+        continue-on-error: true
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          set -o pipefail
+          python -m opencivic.video --meetings out/civicclerk-meetings.jsonl -o out/youtube-videos.jsonl 2>&1 | tee out/video-log.txt
+          if [ -s out/youtube-videos.jsonl ]; then cp out/youtube-videos.jsonl data/listings/; fi
       - name: Archive Center listing (City Council minutes)
         continue-on-error: true
         run: |

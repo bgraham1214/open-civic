@@ -47,7 +47,9 @@ class FetchError(RuntimeError):
 class HttpFetcher:
     """Rate-limited, retrying HTTP client that checks robots.txt once per host."""
 
-    def __init__(self, min_interval: float = 1.0, retries: int = 4, timeout: float = 60.0):
+    def __init__(self, min_interval: float = 1.0, retries: int = 4, timeout: float = 60.0,
+                 check_robots: bool = True):
+        self.check_robots = check_robots
         self.min_interval = min_interval
         self.retries = retries
         self.timeout = timeout
@@ -76,7 +78,7 @@ class HttpFetcher:
         self._last = time.monotonic()
 
     def _raw(self, url: str, check_robots: bool = True, accept: str = "*/*") -> bytes:
-        if check_robots and not self._allowed(url):
+        if check_robots and self.check_robots and not self._allowed(url):
             raise FetchError(f"robots.txt disallows {url}")
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
         for attempt in range(self.retries + 1):

@@ -36,8 +36,11 @@ KEYWORD_FEEDS = {
 
 SCHEMA = """
 CREATE TABLE meetings (
-  event_id INTEGER PRIMARY KEY, date TEXT, start TEXT, name TEXT, category TEXT,
-  location TEXT, agenda_note TEXT, portal_url TEXT, youtube_video_id TEXT);
+  event_id INTEGER PRIMARY KEY, date TEXT, start TEXT, name TEXT, category TEXT, video TEXT,
+  location TEXT, agenda_note TEXT, portal_url TEXT);
+CREATE TABLE videos (
+  published TEXT, title TEXT, url TEXT, minutes INTEGER, meeting_date TEXT, meeting TEXT,
+  matched_by TEXT, event_id INTEGER, description TEXT, video_id TEXT UNIQUE);
 CREATE TABLE documents (
   date TEXT, kind TEXT, title TEXT, body TEXT, city_url TEXT, our_copy TEXT, pages INTEGER,
   ocr_pages INTEGER, sha256 TEXT, bytes INTEGER, first_seen TEXT, last_changed TEXT,
@@ -46,7 +49,7 @@ CREATE TABLE pages (
   id INTEGER PRIMARY KEY, date TEXT, kind TEXT, title TEXT, page INTEGER, method TEXT,
   text TEXT, link TEXT, document_key TEXT);
 CREATE TABLE agenda_items (
-  date TEXT, outline TEXT, title TEXT, description TEXT, agenda_link TEXT, section TEXT,
+  date TEXT, outline TEXT, title TEXT, description TEXT, agenda_link TEXT, video TEXT, section TEXT,
   meeting TEXT, category TEXT, item_number TEXT, fiscal_impact TEXT, resolution_number TEXT,
   ordinance_number TEXT, attachments INTEGER, attachment_names TEXT, key TEXT UNIQUE);
 CREATE TABLE officials (
@@ -86,10 +89,23 @@ def build_db(data: Path, db_path: Path) -> dict:
     state = json.loads((data / "state.json").read_text("utf-8"))
     counts = {}
 
+    videos = _jsonl(data / "listings" / "youtube-videos.jsonl")
+    video_by_event = {}
+    for v in sorted(videos, key=lambda v: v["published_at"]):  # latest upload wins
+        if v.get("event_id"):
+            video_by_event[v["event_id"]] = v["url"]
+    con.executemany("INSERT INTO videos VALUES (?,?,?,?,?,?,?,?,?,?)", [
+        (v["published_at"][:10], v["title"], v["url"], round(v.get("duration_seconds", 0) / 60) or None,
+         v["meeting_date"], v["meeting"], v["matched_by"], v["event_id"], v["description"][:2000], v["video_id"])
+        for v in videos])
+    counts["videos"] = len(videos)
+
     meetings = _jsonl(data / "listings" / "civicclerk-meetings.jsonl")
     con.executemany("INSERT INTO meetings VALUES (?,?,?,?,?,?,?,?,?)", [
         (m["event_id"], m["date"], m["start"].replace("Z", "")[:16].replace("T", " "), m["name"], m["category"],
-         m["location"], m["agenda_note"], m["portal_url"], m["youtube_video_id"] or None) for m in meetings])
+         video_by_event.get(m["event_id"]) or (f"https://www.youtube.com/watch?v={m['youtube_video_id']}"
+                                               if m["youtube_video_id"] else None),
+         m["location"], m["agenda_note"], m["portal_url"]) for m in meetings])
     counts["meetings"] = len(meetings)
 
     n_docs = n_pages = 0
@@ -121,8 +137,9 @@ def build_db(data: Path, db_path: Path) -> dict:
 
     items = [i for i in _jsonl(data / "listings" / "civicclerk-items.jsonl") if not i["is_section"]]
     items = list({i["key"]: i for i in items}.values())
-    con.executemany("INSERT INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
-        (i["date"], i["outline"], i["title"], i["description"], i["portal_url"], i["section"], i["meeting"],
+    con.executemany("INSERT INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
+        (i["date"], i["outline"], i["title"], i["description"], i["portal_url"], video_by_event.get(i["event_id"]),
+         i["section"], i["meeting"],
          i["category"], i["item_number"], i["fiscal_impact"], i["resolution_number"], i["ordinance_number"],
          len(i["attachments"]), "; ".join(a["name"] for a in i["attachments"]), i["key"]) for i in items])
     counts["agenda_items"] = len(items)
@@ -234,7 +251,11 @@ def metadata(built_at: str) -> dict:
                 "votes_fts": {"hidden": True}, "contracts_fts": {"hidden": True},
                 "changes": {"description": "Log of documents appearing, changing, or disappearing from the "
                             "city's listings, from data/manifest.jsonl.", "sort_desc": "at"},
-                "meetings": {"description": "CivicClerk events. Times are local (Eastern).", "sort_desc": "date"},
+                "meetings": {"description": "CivicClerk events. Times are local (Eastern). video links the city's "
+                             "YouTube recording when one was matched.", "sort_desc": "date"},
+                "videos": {"description": "Uploads on the city's YouTube channel (@cityoftempleterrace), matched to "
+                           "meetings by the CivicClerk link in the description, the date in the title, or the live "
+                           "stream's start date. matched_by says which.", "sort_desc": "published"},
                 "pages_fts": {"hidden": True}, "agenda_items_fts": {"hidden": True},
             }}},
     }
@@ -318,7 +339,8 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
         votes=_lite(site_url, "/templeterrace/votes"),
         split=_lite(site_url, "/templeterrace/votes?_where=nays%3C%3E%27%27&_sort_desc=date"),
         contracts=_lite(site_url, "/templeterrace/contracts"), vendors=_lite(site_url, "/templeterrace/vendors"),
-        officials=_lite(site_url, "/templeterrace/officials"), docs=_lite(site_url, "/templeterrace/documents"),
+        officials=_lite(site_url, "/templeterrace/officials"),
+        meetings=_lite(site_url, "/templeterrace/meetings?_sort_desc=date"), docs=_lite(site_url, "/templeterrace/documents"),
         items_js=json.dumps(search_items), pages_js=json.dumps(search_pages),
         rows=rows, feeds=" · ".join(feed_links), built=built[:16].replace("T", " "),
         n_docs=counts["documents"], n_pages=counts["pages"], n_items=counts["agenda_items"])
@@ -355,7 +377,7 @@ page link to check the original.</p>
 <table><tr><th>Date</th><th>Type</th><th>Title</th><th>Links</th></tr>{rows}</table>
 <h2>Who decided what</h2>
 <p><a href="{votes}">Every council vote</a> · <a href="{split}">Split votes only</a> ·
-<a href="{contracts}">Contracts and purchases</a> · <a href="{vendors}">Vendors</a> · <a href="{officials}">Officials and attendance</a></p>
+<a href="{contracts}">Contracts and purchases</a> · <a href="{vendors}">Vendors</a> · <a href="{officials}">Officials and attendance</a> · <a href="{meetings}">Meetings and videos</a></p>
 <p class="note">Votes, vendors and amounts are read from the minutes and agendas by software and can be wrong.
 Each row links to the page it came from.</p>
 <h2>Browse</h2>
