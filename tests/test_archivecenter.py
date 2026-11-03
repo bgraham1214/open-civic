@@ -115,3 +115,15 @@ class RealIndex(unittest.TestCase):
             self.assertEqual(ac.main(["items", "--input-dir", str(raw), "-o", str(out)]), 0)
             rows = [json.loads(x) for x in out.read_text().splitlines()]
         self.assertEqual({r["amid"] for r in rows}, {43, 44, 45})
+
+
+class RealModulePage(unittest.TestCase):
+    """Archive.aspx?AMID=44 (all City Council minutes), saved live on Nov 3, 2026."""
+
+    def test_all_minutes(self):
+        html_ = (REAL.parent / "amid-44.html").read_text("utf-8")
+        mod = ac.Module(44, "Archived City Council Minutes", SITE + "/Archive.aspx?AMID=44")
+        items = ac.parse_items(html_, mod, SITE)
+        self.assertEqual(len(items), 24)
+        dates = sorted(i.date for i in items)
+        self.assertEqual((dates[0], dates[-1]), ("2025-11-04", "2026-10-06"))
