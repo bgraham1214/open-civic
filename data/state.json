@@ -1376,7 +1376,7 @@
   "date": "2025-11-04",
   "body": "Archived City Council Minutes",
   "page": "https://www.templeterrace.gov/Archive.aspx?AMID=44",
-  "listed": true,
+  "listed": false,
   "last_checked": "2026-11-03T21:10:17Z",
   "sha256": "a96afa726b8c6a11c0b19be34f5b90336704c6e2d599f7b928fdb1ba68009112",
   "bytes": 235812,
@@ -1384,7 +1384,8 @@
   "ext": "pdf",
   "last_changed": "2026-11-03T21:10:17Z",
   "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/a96afa726b8c6a11c0b19be34f5b90336704c6e2d599f7b928fdb1ba68009112.pdf",
-  "first_seen": "2026-11-03T21:10:17Z"
+  "first_seen": "2026-11-03T21:10:17Z",
+  "unlisted_at": "2026-11-04T16:24:18Z"
  },
  "civicplus_archive:www.templeterrace.gov:9093": {
   "key": "civicplus_archive:www.templeterrace.gov:9093",
