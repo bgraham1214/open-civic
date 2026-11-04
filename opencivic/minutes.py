@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Read attendance and roll-call votes out of Temple Terrace City Council minutes.
 
 The clerk's minutes follow a steady house style, which this module relies on:

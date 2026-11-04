@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Offline tests: run against Temple Terrace's saved CivicClerk responses.
 
     python -m unittest discover -s tests -v

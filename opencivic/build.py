@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Build the public search database and static site (Phase 1, step 5).
 
 Produces, in --out (default site/):

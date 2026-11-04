@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Site build: database, full-text search, feeds, landing page."""
 
 import gzip

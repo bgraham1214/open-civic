@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Adapter for CivicClerk's new public portal (`{tenant}.portal.civicclerk.com`).
 
 The portal is backed by a public OData v4 API at `https://{tenant}.api.civicclerk.com/v1/`.

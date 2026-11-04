@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Extract text from every fingerprinted document, page by page (Phase 1, step 4).
 
 For each document version in data/state.json without text yet, writes

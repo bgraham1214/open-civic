@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Archive Center tests.
 
 The HTML below is SYNTHETIC, written to the CivicPlus link convention. Replace it with

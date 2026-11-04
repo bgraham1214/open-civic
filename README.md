@@ -54,3 +54,10 @@ Requests are spaced at least one second apart, retried with backoff on 429/5xx, 
 ## Status
 
 Phase 1, steps 1 to 5 are built: adapters, fingerprint manifest, text extraction with OCR, agenda items, and the public search site. Next: mapping records to FollowTheMoney entities, and linking meeting videos.
+
+## License
+
+- **The project as a whole** is under the [GNU AGPL v3.0 or later](LICENSE). Anyone who runs a modified version as a public service must share their changes.
+- **The city adapters** (`opencivic/civicclerk.py`, `opencivic/archivecenter.py`, `opencivic/fetch.py` and their tests) are under the [Apache License 2.0](LICENSES/Apache-2.0.txt), the same license as [civic-scraper](https://github.com/biglocalnews/civic-scraper), so they can be contributed upstream.
+
+Each source file starts with an `SPDX-License-Identifier` line saying which one applies. The documents in `data/` are public records of the City of Temple Terrace.

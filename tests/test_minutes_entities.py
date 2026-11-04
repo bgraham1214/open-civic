@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Minutes parsing (attendance, roll-call votes) and contract/vendor extraction.
 
 The minutes text below copies the formats seen in Temple Terrace's real minutes,

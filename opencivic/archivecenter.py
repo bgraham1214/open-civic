@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Adapter for the CivicPlus Archive Center (`{site}/Archive.aspx`).
 
 Temple Terrace keeps minutes and pre-Oct 2025 agendas here. The page is rendered on

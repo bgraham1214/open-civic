@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Manifest tests: listings come from the saved Temple Terrace fixtures; downloads are faked."""
 
 import json

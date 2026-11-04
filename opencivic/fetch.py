@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Brock Graham and Open Civic Web contributors
 """Fetchers: a polite live HTTP client and an offline fixture reader.
 
 Every adapter takes a fetcher instead of calling the network directly, so the
