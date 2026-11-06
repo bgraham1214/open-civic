@@ -1,0 +1,1 @@
+{"done": 0, "already": 100, "deferred_ocr": 0, "errors": 0, "pages": 0, "ocr_pages": 0, "ocr_available": true}

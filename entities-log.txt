@@ -1,0 +1,1 @@
+{"officials": 10, "votes": 183, "split_votes": 11, "votes_linked_to_items": 152, "contracts": 66, "contracts_with_vendor": 47, "ftm_entities": 309, "schemata": {"PublicBody": 2, "Person": 10, "Membership": 5, "Employment": 5, "Event": 24, "Document": 100, "Contract": 66, "Organization": 17, "ContractAward": 54, "Company": 26}}
