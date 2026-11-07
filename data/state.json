@@ -1899,5 +1899,24 @@
   "last_changed": "2026-11-03T21:10:43Z",
   "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/6d7b4759d34b5b44c6979b0a5181de272db3b196dcf05e8cf88b82becb5e4372.pdf",
   "first_seen": "2026-11-03T21:10:43Z"
+ },
+ "civicplus_archive:www.templeterrace.gov:9579": {
+  "key": "civicplus_archive:www.templeterrace.gov:9579",
+  "source": "civicplus_archive",
+  "url": "https://www.templeterrace.gov/Archive.aspx?ADID=9579",
+  "title": "October 20, 2026",
+  "kind": "Minutes",
+  "date": "2026-10-20",
+  "body": "Archived City Council Minutes",
+  "page": "https://www.templeterrace.gov/Archive.aspx?AMID=44",
+  "listed": true,
+  "last_checked": "2026-11-07T14:56:15Z",
+  "sha256": "6d7b4759d34b5b44c6979b0a5181de272db3b196dcf05e8cf88b82becb5e4372",
+  "bytes": 295647,
+  "content_type": "application/pdf",
+  "ext": "pdf",
+  "last_changed": "2026-11-07T14:56:15Z",
+  "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/6d7b4759d34b5b44c6979b0a5181de272db3b196dcf05e8cf88b82becb5e4372.pdf",
+  "first_seen": "2026-11-07T14:56:15Z"
  }
 }
