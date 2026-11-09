@@ -39,7 +39,8 @@ from urllib.parse import quote
 from .fetch import Fetcher, FetchError, HttpFetcher
 
 # Guardrail (public roles only): these hearings mostly concern private residents.
-PRIVATE_BODIES = ("Value Adjustment Board", "Special Master", "Code Enforcement", "I Messed Up")
+PRIVATE_BODIES = ("Value Adjustment Board", "Special Master", "Special Magistrate", "Code Enforcement",
+                  "Code Compliance", "I Messed Up")
 
 PAGE = 1000          # Legistar's maximum $top
 RECENT_DAYS = 60     # always refresh items for meetings this recent

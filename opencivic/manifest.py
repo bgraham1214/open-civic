@@ -39,7 +39,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .fetch import FetchError, HttpFetcher
-from .jurisdictions import JURISDICTIONS, group_of, jurisdiction_of
+from .jurisdictions import COUNTIES, JURISDICTIONS, group_of, jurisdiction_of
 
 # Guard: if a source's listing shrinks below this share of what was listed before,
 # assume a partial fetch and don't mark the missing documents as unlisted.
@@ -58,6 +58,11 @@ class Doc:
     page: str      # human-facing page that links the document
 
 
+def _private(m: dict) -> bool:
+    from .legistar import is_private_body
+    return is_private_body(m.get("category", "")) or is_private_body(m.get("name", ""))
+
+
 def _skip_kinds(key: str) -> set[str]:
     return set(JURISDICTIONS.get(jurisdiction_of(key) or "", {}).get("skip_kinds", []))
 
@@ -68,6 +73,8 @@ def docs_from_civicclerk(path: Path) -> list[Doc]:
     for line in path.read_text("utf-8").splitlines():
         m = json.loads(line)
         skip = _skip_kinds(f"civicclerk:{m['tenant']}:")
+        if jurisdiction_of(f"civicclerk:{m['tenant']}:") in COUNTIES and _private(m):
+            continue
         for f in m["files"]:
             if f["kind"] in skip:
                 continue

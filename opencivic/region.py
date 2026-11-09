@@ -22,6 +22,7 @@ import sqlite3
 from pathlib import Path
 
 from .jurisdictions import COUNTIES, JURISDICTIONS, civicclerk_tenants, jurisdiction_of, legistar_clients
+from .legistar import is_private_body
 
 LITE = "https://lite.datasette.io/"
 
@@ -132,7 +133,8 @@ def load(data: Path) -> dict:
     out = {"meetings": [], "items": [], "votes": [], "docs": [], "changes": []}
     for client, slug in legistar_clients().items():
         for e in _jsonl(lst / f"legistar-{client}-events.jsonl"):
-            out["meetings"].append({**e, "county": slug})
+            if not is_private_body(e["body"]):
+                out["meetings"].append({**e, "county": slug})
         for i in _jsonl(lst / f"legistar-{client}-items.jsonl"):
             out["items"].append({**i, "county": slug})
         for v in _jsonl(lst / f"legistar-{client}-votes.jsonl"):
@@ -140,7 +142,11 @@ def load(data: Path) -> dict:
     for tenant, slug in civicclerk_tenants().items():
         if slug not in COUNTIES:
             continue
+        private_events = set()
         for m in _jsonl(lst / f"civicclerk-{tenant}-meetings.jsonl"):
+            if is_private_body(m.get("category", "")) or is_private_body(m.get("name", "")):
+                private_events.add(m["event_id"])
+                continue
             files = {f["kind"]: f for f in m["files"]}
             out["meetings"].append({
                 "county": slug, "key": f"civicclerk:{tenant}:event:{m['event_id']}", "date": m["date"],
@@ -151,7 +157,7 @@ def load(data: Path) -> dict:
                 "minutes_url": m["portal_url"] if "Minutes" in files else "",
                 "portal_url": m["portal_url"], "comment": ""})
         for i in _jsonl(lst / f"civicclerk-{tenant}-items.jsonl"):
-            if i.get("is_section"):
+            if i.get("is_section") or i.get("event_id") in private_events or is_private_body(i.get("category", "")):
                 continue
             out["items"].append({
                 "county": slug, "key": i["key"], "date": i["date"], "body": i["meeting"],
@@ -163,9 +169,14 @@ def load(data: Path) -> dict:
     _load_hillsclerk(lst, out)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
-                   if jurisdiction_of(k) in COUNTIES and e.get("sha256")]
-    out["changes"] = [{**x, "county": jurisdiction_of(x["key"])} for x in _jsonl(data / "manifest.jsonl")
-                      if jurisdiction_of(x["key"]) in COUNTIES]
+                   if jurisdiction_of(k) in COUNTIES and e.get("sha256") and not is_private_body(e.get("body", ""))]
+    events = [x for x in _jsonl(data / "manifest.jsonl") if jurisdiction_of(x["key"]) in COUNTIES]
+    # Documents excluded under the public-roles rule: hide their earlier events (titles, links to
+    # copies) and keep only the exclusion itself, with its reason.
+    excluded = {x["key"] for x in events if x["event"] == "excluded"}
+    out["changes"] = [{**x, "county": jurisdiction_of(x["key"]),
+                       **({"title": x.get("reason", ""), "url": "", "copy_url": ""} if x["event"] == "excluded" else {})}
+                      for x in events if x["key"] not in excluded or x["event"] == "excluded"]
     return out
 
 
@@ -370,7 +381,9 @@ are made by their county commission, so this page follows those commissions.</p>
 Actions, results and votes are as each county recorded them; follow the links to check the county's own record.</p>
 {sections}
 <footer>Public records from Hillsborough County (Legistar), Pasco County (CivicClerk) and Hernando County
-(Legistar), collected nightly. <a href="{lite}">Full database</a> · <a href="counties.db">download</a> ·
+(Legistar), plus the Hillsborough Clerk's Master Voting Record, collected nightly.
+<a href="{lite}">Full database</a> · <a href="counties.db">download</a> ·
+<a href="counties.ftm.jsonl">FollowTheMoney entities</a> ·
 <a href="https://github.com/bgraham1214/open-civic">Source and data</a>.</footer>
 <script>
 document.getElementById('f').addEventListener('submit', function (e) {{
@@ -387,6 +400,9 @@ def write(data: Path, out: Path, site_url: str, built: str, rss) -> dict:
     """rss(title, link, desc, entries) -> str, from build.py, with entries carrying 'pub'."""
     from .build import _pub
     counts = build_db(data, out / "counties.db")
+    ftm = data / "entities" / "counties.ftm.jsonl"
+    if ftm.exists():
+        (out / "counties.ftm.jsonl").write_bytes(ftm.read_bytes())
     (out / "counties-metadata.json").write_text(json.dumps(metadata(built), indent=1), "utf-8")
     (out / "feeds").mkdir(parents=True, exist_ok=True)
 

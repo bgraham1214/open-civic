@@ -339,6 +339,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--meetings-dir", help="for items, offline: saved Meetings responses named meeting-<agendaId>.json")
     ap.add_argument("--category", help='keep only this category, e.g. "City Council"')
     ap.add_argument("--with-files-only", action="store_true", help="drop meetings with no published files")
+    ap.add_argument("--exclude-private", action="store_true",
+                    help="drop boards whose hearings mostly concern private residents (Value Adjustment Board, "
+                         "Special Magistrates, code enforcement); see legistar.PRIVATE_BODIES")
     ap.add_argument("--max-pages", type=int)
     ap.add_argument("--since", help="only events from this date (YYYY-MM-DD), filtered by the API")
     ap.add_argument("--format", choices=["jsonl", "csv"], default="jsonl")
@@ -396,6 +399,9 @@ def main(argv: list[str] | None = None) -> int:
     meetings = crawl.meetings
     if args.category:
         meetings = [m for m in meetings if m.category.lower() == args.category.lower()]
+    if args.exclude_private:
+        from .legistar import is_private_body
+        meetings = [m for m in meetings if not (is_private_body(m.category) or is_private_body(m.name))]
     if args.with_files_only:
         meetings = [m for m in meetings if m.files]
 

@@ -129,6 +129,40 @@ class Region(unittest.TestCase):
                              {"Yes", "X"})
             con.close()
 
+    def test_private_boards_never_shown(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            data, out = make_data(d), d / "site"
+            out.mkdir()
+            lst = data / "listings"
+            vab = {"tenant": "pascocofl", "event_id": 77, "date": "2025-06-02", "start": "2025-06-02T09:00:00Z",
+                   "name": "Value Adjustment Board 2024 Final Meeting", "category": "Value Adjustment Board",
+                   "location": "", "portal_url": "p", "files": [{"kind": "Agenda", "file_id": 8613}]}
+            with (lst / "civicclerk-pascocofl-meetings.jsonl").open("a") as fh:
+                fh.write(json.dumps(vab) + "\n")
+            (lst / "civicclerk-pascocofl-items.jsonl").write_text(jl([{
+                "key": "civicclerk:pascocofl:item:1", "event_id": 77, "is_section": False, "date": "2025-06-02",
+                "meeting": "VAB", "category": "Value Adjustment Board", "outline": "1", "title": "Petition 123",
+                "portal_url": "p"}]))
+            with (data / "manifest.jsonl").open("a") as fh:
+                fh.write(json.dumps({"event": "new", "key": "civicclerk:pascocofl:8613", "at": "a",
+                                     "title": "VAB Agenda", "copy_url": "https://c/x.pdf"}) + "\n")
+                fh.write(json.dumps({"event": "excluded", "key": "civicclerk:pascocofl:8613", "at": "b",
+                                     "reason": "Value Adjustment Board hearing"}) + "\n")
+            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
+            self.assertEqual(counts["by_county"]["pasco"]["meetings"], 1)
+            self.assertEqual(counts["by_county"]["pasco"]["agenda_items"], 0)
+            con = sqlite3.connect(out / "counties.db")
+            rows = con.execute("SELECT event, title, our_copy FROM changes WHERE document_key='civicclerk:pascocofl:8613'").fetchall()
+            self.assertEqual(rows, [("excluded", "Value Adjustment Board hearing", "")])
+            con.close()
+            # and the manifest never lists them again
+            from opencivic import manifest as mf
+            only_vab = d / "vab.jsonl"
+            only_vab.write_text(json.dumps({**vab, "files": [{**vab["files"][0], "name": "Agenda",
+                                                               "download_url": "u"}]}) + "\n")
+            self.assertEqual(mf.docs_from_civicclerk(only_vab), [])
+
     def test_full_names(self):
         full = {"Christine Miller", "Donna Cameron Cepeda", "Ken Hagan", "Kevin Hagan"}
         m = region.full_names(["C. Miller", "Cameron Cepeda", "Hagan", "Cohen"], full)

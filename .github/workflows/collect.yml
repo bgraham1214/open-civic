@@ -73,7 +73,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python -m opencivic.civicclerk meetings --tenant pascocofl --since 2025-01-01 --with-files-only \
+          python -m opencivic.civicclerk meetings --tenant pascocofl --since 2025-01-01 --with-files-only --exclude-private \
             -o out/civicclerk-pascocofl-meetings.jsonl 2>&1 | tee out/pasco-log.txt
           test -s out/civicclerk-pascocofl-meetings.jsonl
           cp out/civicclerk-pascocofl-meetings.jsonl data/listings/
@@ -144,7 +144,9 @@ jobs:
       # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
       - name: Build entities
         continue-on-error: true
-        run: python -m opencivic.entities --data-dir data 2>&1 | tee out/entities-log.txt
+        run: |
+          python -m opencivic.entities --data-dir data 2>&1 | tee out/entities-log.txt
+          python -m opencivic.county_entities --data-dir data 2>&1 | tee -a out/entities-log.txt
       - name: Validate FollowTheMoney entities with the official library
         continue-on-error: true
         run: |
@@ -154,13 +156,17 @@ jobs:
           import json
           from followthemoney import model
           bad = 0
-          for line in open("data/entities/templeterrace.ftm.jsonl"):
-              d = json.loads(line)
-              try:
-                  model.get_proxy(d, cleaned=False)
-              except Exception as e:
-                  bad += 1
-                  print("INVALID", d["schema"], d["id"], e)
+          import os
+          for path in ("data/entities/templeterrace.ftm.jsonl", "data/entities/counties.ftm.jsonl"):
+              if not os.path.exists(path):
+                  continue
+              for line in open(path):
+                  d = json.loads(line)
+                  try:
+                      model.get_proxy(d, cleaned=False)
+                  except Exception as e:
+                      bad += 1
+                      print("INVALID", path, d["schema"], d["id"], e)
           print("ftm entities checked; invalid:", bad)
           raise SystemExit(1 if bad else 0)
           EOF
