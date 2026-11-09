@@ -105,6 +105,36 @@ class Region(unittest.TestCase):
             self.assertEqual(counts["votes"], 14)
             self.assertTrue(all(len(v["key"].split(":")) == 5 for v in votes))
 
+    def test_clerk_roll_calls(self):
+        from opencivic import hillsclerk as hc
+        fx = Path(__file__).parent / "fixtures" / "hillsclerk" / "bocc-vote-comparison-2025-p1-2-69.txt"
+        rows, _ = hc.parse_report(fx.read_text(), "hillsclerk:bocc-votes:2025", "https://www.hillsclerk.com/r.pdf")
+        rows[1]["subject"] += " Bloomingdale Ave, Brandon."
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            data, out = make_data(d), d / "site"
+            out.mkdir()
+            (data / "listings" / "hillsclerk-bocc-votes.jsonl").write_text(jl(rows))
+            region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
+            con = sqlite3.connect(out / "counties.db")
+            people = {r[0] for r in con.execute("SELECT person FROM votes WHERE key LIKE 'hillsclerk%'")}
+            # names matched to Legistar's full names where one fits; others kept as printed
+            self.assertIn("Ken Hagan", people)
+            self.assertIn("Gwen Myers", people)
+            self.assertEqual(con.execute("SELECT count(*) FROM agenda_items WHERE key LIKE 'hillsclerk%'").fetchone()[0],
+                             len(rows))
+            self.assertEqual(con.execute("SELECT areas FROM agenda_items WHERE file_number='RCS 4693'").fetchone()[0],
+                             "Brandon")
+            self.assertEqual({r[0] for r in con.execute("SELECT DISTINCT vote FROM votes WHERE key LIKE 'hillsclerk%'")},
+                             {"Yes", "X"})
+            con.close()
+
+    def test_full_names(self):
+        full = {"Christine Miller", "Donna Cameron Cepeda", "Ken Hagan", "Kevin Hagan"}
+        m = region.full_names(["C. Miller", "Cameron Cepeda", "Hagan", "Cohen"], full)
+        self.assertEqual(m, {"C. Miller": "Christine Miller", "Cameron Cepeda": "Donna Cameron Cepeda",
+                             "Hagan": "Hagan", "Cohen": "Cohen"})  # two Hagans: ambiguous, kept
+
     def test_city_site_ignores_county_records(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)

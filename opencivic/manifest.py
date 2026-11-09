@@ -82,6 +82,16 @@ def docs_from_civicclerk(path: Path) -> list[Doc]:
 ARCHIVE_KINDS = {"agenda": "Agenda", "minutes": "Minutes"}
 
 
+def docs_from_hillsclerk(path: Path) -> list[Doc]:
+    """The Hillsborough Clerk's yearly BOCC Master Voting Record PDFs (see hillsclerk.py)."""
+    out = []
+    for line in path.read_text("utf-8").splitlines():
+        d = json.loads(line)
+        out.append(Doc(key=d["key"], source="hillsclerk", url=d["url"], title=d["title"], kind=d["kind"],
+                       date=d["date"], body=d["body"], page=d["page"]))
+    return out
+
+
 def docs_from_archive(path: Path) -> list[Doc]:
     out = []
     for line in path.read_text("utf-8").splitlines():
@@ -224,6 +234,7 @@ def update(docs: list[Doc], data_dir: Path, fetcher, *, recheck_days: float = 7.
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.manifest")
     ap.add_argument("what", choices=["update"])
+    ap.add_argument("--hillsclerk", type=Path, help="hillsclerk vote-report listing jsonl")
     ap.add_argument("--civicclerk", type=Path, nargs="*", default=[],
                     help="civicclerk meetings jsonl, one per tenant")
     ap.add_argument("--archive", type=Path, help="archivecenter items jsonl")
@@ -239,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
     inputs = [(p, docs_from_civicclerk, "civicclerk") for p in args.civicclerk]
     if args.archive is not None:
         inputs.append((args.archive, docs_from_archive, "civicplus_archive"))
+    if args.hillsclerk is not None:
+        inputs.append((args.hillsclerk, docs_from_hillsclerk, "hillsclerk"))
     for path, loader, source in inputs:
         if path.exists() and path.stat().st_size > 0:
             loaded = loader(path)

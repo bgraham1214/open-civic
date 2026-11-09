@@ -80,9 +80,50 @@ def _vote_key(v: dict) -> str:
     """Unique per item. Listings saved before Nov 9, 2026 keyed votes by VoteId alone, which
     repeats when one roll call covers several items."""
     k = v["key"]
+    if not k.startswith("legistar:"):
+        return k
     item_id = v["item_key"].rsplit(":", 1)[-1]
     parts = k.split(":")
     return k if len(parts) == 5 else ":".join(parts[:3] + [item_id, parts[3]])
+
+
+def full_names(short: list[str], full: set[str]) -> dict[str, str]:
+    """Map the Clerk's column names ("C. Miller", "Cameron Cepeda") to full names seen in
+    Legistar ("Christine Miller", "Donna Cameron Cepeda") when exactly one matches."""
+    out = {}
+    for s in short:
+        initial, _, rest = s.partition(". ") if re.match(r"^[A-Z]\. ", s) else ("", "", s)
+        hits = [f for f in full if (f == rest or f.endswith(" " + rest)) and (not initial or f.startswith(initial))]
+        out[s] = hits[0] if len(hits) == 1 else s
+    return out
+
+
+def _load_hillsclerk(lst: Path, out: dict) -> None:
+    """Roll calls from the Hillsborough Clerk's Master Voting Record (hillsclerk.py)."""
+    rows = _jsonl(lst / "hillsclerk-bocc-votes.jsonl")
+    if not rows:
+        return
+    from .hillsclerk import BODY, CODES, PAGE
+    seen = {v["person"] for v in out["votes"] if v["county"] == "hillsborough"}
+    names = full_names(sorted({v["name"] for r in rows for v in r["votes"]}), seen)
+    for d in sorted({r["date"] for r in rows}):
+        n = sum(1 for r in rows if r["date"] == d)
+        out["meetings"].append({
+            "county": "hillsborough", "key": f"hillsclerk:bocc-votes:meeting:{d}", "date": d, "time": "",
+            "body": f"{BODY} ({n} roll calls, Clerk's voting record)", "location": "",
+            "agenda_status": "", "minutes_status": "", "agenda_url": "", "minutes_url": "",
+            "portal_url": PAGE, "comment": ""})
+    for r in rows:
+        out["items"].append({
+            "county": "hillsborough", "key": r["key"], "date": r["date"], "body": BODY,
+            "number": r["item"] or f"RCS {r['rcs']}", "title": r["subject"], "file_number": f"RCS {r['rcs']}",
+            "matter_type": r["category_name"], "action": "Roll call", "result": "", "mover": "", "seconder": "",
+            "action_text": "", "consent": False, "attachments": [], "matter_url": r["doc_url"], "portal_url": PAGE})
+        for v in r["votes"]:
+            out["votes"].append({
+                "county": "hillsborough", "key": f"{r['key']}:{v['name']}", "item_key": r["key"], "date": r["date"],
+                "body": BODY, "person": names.get(v["name"], v["name"]), "vote": CODES.get(v["code"], v["code"]),
+                "sort": 0})
 
 
 def load(data: Path) -> dict:
@@ -119,6 +160,7 @@ def load(data: Path) -> dict:
                 "action_text": i.get("description", ""), "consent": "consent" in (i.get("section", "").lower()),
                 "attachments": [a["name"] for a in i.get("attachments", [])], "matter_url": "",
                 "portal_url": i["portal_url"]})
+    _load_hillsclerk(lst, out)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
                    if jurisdiction_of(k) in COUNTIES and e.get("sha256")]
@@ -218,7 +260,10 @@ def metadata(built_at: str) -> dict:
                          "county recorded them. votes summarises the roll call; nays names anyone voting no. "
                          "areas lists Brandon, Lutz, Wesley Chapel or Spring Hill when the item's text names them.",
                          "fts_table": "agenda_items_fts", "sort_desc": "date"},
-        "votes": {"description": "Each commissioner's or member's vote on each item, from the county's Legistar.",
+        "votes": {"description": "Each commissioner's or member's vote on each item, from the county's Legistar "
+                  "or, for Hillsborough's full Commission, the Clerk's Master Voting Record. The Clerk's report "
+                  "uses Y and N (shown as Yes and No) and also X and A, which it does not define; they are "
+                  "shown exactly as printed.",
                   "sort_desc": "date"},
         "documents": {"description": "County documents we archive (Pasco agendas and minutes). our_copy is our "
                       "copy; sha256 is its fingerprint.", "sort_desc": "date"},

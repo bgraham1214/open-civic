@@ -42,12 +42,14 @@ python -m opencivic.legistar events --client hernandocountyfl --since 2025-01-01
 python -m opencivic.legistar items --client hernandocountyfl --events events.jsonl --items-out items.jsonl --votes-out votes.jsonl
 ```
 
+`opencivic/hillsclerk.py` reads the Hillsborough Clerk's BOCC Master Voting Record PDFs (one per year, updated monthly) into roll calls: RCS number, item, date, category, subject and each commissioner's vote code.
+
 `opencivic/jurisdictions.py` says which sources belong to which government. `opencivic/region.py` builds `counties.db` and `counties.html` with per-county and per-area (Brandon, Lutz, Wesley Chapel, Spring Hill) RSS feeds.
 
 | Area | Governed by | Source | What we collect |
 | --- | --- | --- | --- |
 | Temple Terrace | City Council | CivicClerk + Archive Center | Agendas, packets, minutes (archived), items, votes, contracts |
-| Brandon, Lutz | Hillsborough County | Legistar (`hillsboroughcounty`) | Land-use and zoning hearings: items, actions, votes. Regular BOCC agendas are on eagenda.hillsboroughcounty.org, whose robots.txt disallows all robots, so they are not collected. |
+| Brandon, Lutz | Hillsborough County | Clerk's BOCC Master Voting Record + Legistar (`hillsboroughcounty`) | Every Commission roll call (subject, category, each commissioner's vote) from the Clerk's yearly reports, archived; land-use and zoning hearings from Legistar. Full regular agendas are on eagenda.hillsboroughcounty.org, whose robots.txt disallows all robots, so they are not collected. |
 | Wesley Chapel | Pasco County | CivicClerk (`pascocofl`) | Agendas and minutes (archived), agenda items, from 2025 |
 | Spring Hill | Hernando County | Legistar (`hernandocountyfl`) | Meetings, items, actions, votes, from 2025 |
 
@@ -74,6 +76,6 @@ Phase 1 (Temple Terrace) is complete. Phase 2 has started with three county comm
 ## License
 
 - **The project as a whole** is under the [GNU AGPL v3.0 or later](LICENSE). Anyone who runs a modified version as a public service must share their changes.
-- **The city adapters** (`opencivic/civicclerk.py`, `opencivic/archivecenter.py`, `opencivic/legistar.py`, `opencivic/fetch.py` and their tests) are under the [Apache License 2.0](LICENSES/Apache-2.0.txt), the same license as [civic-scraper](https://github.com/biglocalnews/civic-scraper), so they can be contributed upstream.
+- **The city adapters** (`opencivic/civicclerk.py`, `opencivic/archivecenter.py`, `opencivic/legistar.py`, `opencivic/hillsclerk.py`, `opencivic/fetch.py` and their tests) are under the [Apache License 2.0](LICENSES/Apache-2.0.txt), the same license as [civic-scraper](https://github.com/biglocalnews/civic-scraper), so they can be contributed upstream.
 
 Each source file starts with an `SPDX-License-Identifier` line saying which one applies. The documents in `data/` are public records of the City of Temple Terrace and of Hillsborough, Pasco and Hernando counties.

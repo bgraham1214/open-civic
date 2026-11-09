@@ -20,11 +20,13 @@ JURISDICTIONS: dict[str, dict] = {
     },
     "hillsborough": {
         "name": "Hillsborough County", "short": "Hillsborough", "body": "Board of County Commissioners",
-        "areas": ["Brandon", "Lutz"], "groups": ["legistar:hillsboroughcounty"], "since": "2025-01-01",
-        "coverage": ("Land-use and zoning hearings (BOCC Land Use, Zoning Hearing Master, Land Use Hearing "
-                     "Officer, Land Development Code), from Hillsborough's Legistar. The county's regular "
-                     "commission agendas are on a separate site that asks automated tools not to collect it, "
-                     "so they are not here."),
+        "areas": ["Brandon", "Lutz"], "groups": ["legistar:hillsboroughcounty", "hillsclerk:bocc-votes"],
+        "since": "2025-01-01",
+        "coverage": ("Every roll-call vote of the County Commission, from the Clerk's Master Voting Record "
+                     "(updated monthly by the Clerk, so the newest meetings appear a few weeks late), plus "
+                     "land-use and zoning hearings (BOCC Land Use, Zoning Hearing Master, Land Use Hearing "
+                     "Officer) from Hillsborough's Legistar. The county's regular agendas are on a site that "
+                     "asks automated tools not to collect it, so full agendas are not here."),
     },
     "pasco": {
         "name": "Pasco County", "short": "Pasco", "body": "Board of County Commissioners",

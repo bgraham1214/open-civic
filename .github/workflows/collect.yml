@@ -97,12 +97,16 @@ jobs:
             cp "out/legistar-$c-events.jsonl" "out/legistar-$c-items.jsonl" "out/legistar-$c-votes.jsonl" data/listings/
           done
 
+      - name: Hillsborough Clerk BOCC voting record (list the yearly reports)
+        continue-on-error: true
+        run: python -m opencivic.hillsclerk list --since 2025 -o out/hillsclerk-listing.jsonl
+
       # --- 2. Fingerprint every document and log changes (Phase 1, step 3). ---
       - name: Fingerprint and update manifest
         run: |
           python -m opencivic.manifest update \
             --civicclerk out/civicclerk-meetings.jsonl out/civicclerk-pascocofl-meetings.jsonl \
-            --archive out/archive-items.jsonl --max-downloads 500 \
+            --archive out/archive-items.jsonl --hillsclerk out/hillsclerk-listing.jsonl --max-downloads 500 \
             --data-dir data --store-dir out/files \
             --copy-base "https://github.com/${{ github.repository }}/releases/download/files" \
             2>&1 | tee out/manifest-log.txt
@@ -124,6 +128,15 @@ jobs:
       # --- 3. Text, page by page; OCR for scanned pages (Phase 1, step 4). ---
       - name: Install PDF and OCR tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null
+      - name: Hillsborough Clerk BOCC roll calls (parse the reports)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          test -s out/hillsclerk-listing.jsonl
+          python -m opencivic.hillsclerk votes --listing out/hillsclerk-listing.jsonl \
+            -o out/hillsclerk-bocc-votes.jsonl 2>&1 | tee out/hillsclerk-log.txt
+          cp out/hillsclerk-bocc-votes.jsonl data/listings/
+
       - name: Extract text
         continue-on-error: true
         run: python -m opencivic.extract --data-dir data --files-dir out/files --max-ocr-pages 600 2>&1 | tee out/extract-log.txt
