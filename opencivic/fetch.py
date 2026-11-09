@@ -46,10 +46,21 @@ class FetchError(RuntimeError):
     pass
 
 
-class HttpFetcher:
-    """Rate-limited, retrying HTTP client that checks robots.txt once per host."""
+class HostDown(FetchError):
+    """A host stopped answering (timeouts or connection errors after every retry).
 
-    def __init__(self, min_interval: float = 1.0, retries: int = 4, timeout: float = 60.0,
+    The fetcher then refuses further requests to that host for the rest of the run, so
+    one unreachable city website costs one retry cycle instead of one per URL.
+    """
+
+
+class HttpFetcher:
+    """Rate-limited, retrying HTTP client that checks robots.txt once per host.
+
+    Gives up on a host for the rest of the run once it stops answering (see HostDown).
+    """
+
+    def __init__(self, min_interval: float = 1.0, retries: int = 4, timeout: float = 30.0,
                  check_robots: bool = True):
         self.check_robots = check_robots
         self.min_interval = min_interval
@@ -57,6 +68,7 @@ class HttpFetcher:
         self.timeout = timeout
         self._last = 0.0
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
+        self._down: dict[str, str] = {}  # host -> first network error seen
         self.last_content_type = ""
 
     def _allowed(self, url: str) -> bool:
@@ -68,6 +80,8 @@ class HttpFetcher:
                 body = self._raw(host + "/robots.txt", check_robots=False)
                 rp.parse(body.decode("utf-8", "replace").splitlines())
                 self._robots[host] = rp
+            except HostDown:
+                raise  # unreachable is not "no robots.txt"; don't fetch the page either
             except FetchError:
                 self._robots[host] = None  # no robots.txt: allowed
         rp = self._robots[host]
@@ -80,6 +94,9 @@ class HttpFetcher:
         self._last = time.monotonic()
 
     def _raw(self, url: str, check_robots: bool = True, accept: str = "*/*") -> bytes:
+        netloc = urlsplit(url).netloc
+        if netloc in self._down:
+            raise HostDown(f"{netloc} unreachable earlier this run ({self._down[netloc]}); skipped {url}")
         if check_robots and self.check_robots and not self._allowed(url):
             raise FetchError(f"robots.txt disallows {url}")
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
@@ -95,11 +112,12 @@ class HttpFetcher:
                     time.sleep(float(retry_after) if retry_after.isdigit() else 2 ** (attempt + 1))
                     continue
                 raise FetchError(f"HTTP {e.code} for {url}") from e
-            except (urllib.error.URLError, TimeoutError) as e:
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
                 if attempt < self.retries:
                     time.sleep(2 ** (attempt + 1))
                     continue
-                raise FetchError(f"{e} for {url}") from e
+                self._down[netloc] = str(e)
+                raise HostDown(f"{e} for {url}") from e
         raise FetchError(f"gave up on {url}")
 
     def get_bytes(self, url: str) -> bytes:

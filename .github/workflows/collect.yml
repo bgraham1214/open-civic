@@ -11,8 +11,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: Offline tests (saved samples)
@@ -29,11 +29,11 @@ jobs:
       OCW_CONTACT: https://github.com/${{ github.repository }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - run: mkdir -p out/raw-archive out/raw-agendacenter out/files data/listings
+      - run: mkdir -p out/raw-archive out/files data/listings
 
       # --- 1. Listings. Written to out/ first; copied into data/ only on success. ---
       - name: CivicClerk schema check
@@ -147,27 +147,6 @@ jobs:
           git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
             commit -q -m "Site build ${{ github.run_id }}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" gh-pages
-
-      # --- 5. Exploration: save the AgendaCenter (possible home of pre-Oct 2025 records). ---
-      - name: Capture AgendaCenter pages
-        continue-on-error: true
-        run: |
-          python - <<'EOF' 2>&1 | tee out/agendacenter-log.txt
-          from opencivic.fetch import HttpFetcher, FetchError
-          f = HttpFetcher()
-          site = "https://www.templeterrace.gov"
-          pages = {
-              "index.html": f"{site}/AgendaCenter",
-              "search-2015-2025.html": f"{site}/AgendaCenter/Search/?term=&CIDs=all&startDate=01/01/2015&endDate=12/31/2025&dateRange=&dateSelector=",
-          }
-          for name, url in pages.items():
-              try:
-                  text = f.get_text(url)
-                  open(f"out/raw-agendacenter/{name}", "w").write(text)
-                  print(name, len(text), "chars,", text.count("ViewFile"), "ViewFile links")
-              except FetchError as e:
-                  print(name, "failed:", e)
-          EOF
 
       # Results (minus the file copies) go to the live-samples branch for easy reading.
       - name: Save results to live-samples branch

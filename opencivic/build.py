@@ -333,6 +333,18 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
         f"<tr><td>{e['date']}</td><td>{html.escape(e['kind'])}</td><td>{html.escape(e['title'])}</td>"
         f"<td><a href=\"{html.escape(e['url'])}\">city</a> · <a href=\"{html.escape(e.get('copy_url', ''))}\">our copy</a></td></tr>"
         for e in recent)
+    gone = sorted((e for e in state.values() if e.get("sha256") and not e.get("listed", True)),
+                  key=lambda e: e.get("unlisted_at", ""), reverse=True)
+    removed = (
+        "<h2>Removed from the city's website</h2>\n"
+        "<p>The city no longer lists these documents. Our archived copies are still here, unchanged.</p>\n"
+        "<table><tr><th>Meeting date</th><th>Type</th><th>Title</th><th>Removed (first noticed)</th><th>Links</th></tr>"
+        + "".join(
+            f"<tr><td>{e['date']}</td><td>{html.escape(e['kind'])}</td><td>{html.escape(e['title'])}</td>"
+            f"<td>{html.escape(e.get('unlisted_at', '')[:10])}</td>"
+            f"<td><a href=\"{html.escape(e.get('copy_url', ''))}\">our copy</a></td></tr>"
+            for e in gone)
+        + "</table>\n") if gone else ""
     search_pages = _lite(site_url, "/templeterrace/pages")
     search_items = _lite(site_url, "/templeterrace/agenda_items")
     page = INDEX.format(
@@ -344,7 +356,7 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
         officials=_lite(site_url, "/templeterrace/officials"),
         meetings=_lite(site_url, "/templeterrace/meetings?_sort_desc=date"), docs=_lite(site_url, "/templeterrace/documents"),
         items_js=json.dumps(search_items), pages_js=json.dumps(search_pages),
-        rows=rows, feeds=" · ".join(feed_links), built=built[:16].replace("T", " "),
+        rows=rows, removed=removed, feeds=" · ".join(feed_links), built=built[:16].replace("T", " "),
         n_docs=counts["documents"], n_pages=counts["pages"], n_items=counts["agenda_items"])
     (out / "index.html").write_text(page, "utf-8")
     ftm = data / "entities" / "templeterrace.ftm.jsonl"
@@ -377,7 +389,7 @@ Text from scanned pages (marked <code>ocr</code>) was machine-read and can conta
 page link to check the original.</p>
 <h2>Latest documents</h2>
 <table><tr><th>Date</th><th>Type</th><th>Title</th><th>Links</th></tr>{rows}</table>
-<h2>Who decided what</h2>
+{removed}<h2>Who decided what</h2>
 <p><a href="{votes}">Every council vote</a> · <a href="{split}">Split votes only</a> ·
 <a href="{contracts}">Contracts and purchases</a> · <a href="{vendors}">Vendors</a> · <a href="{officials}">Officials and attendance</a> · <a href="{meetings}">Meetings and videos</a></p>
 <p class="note">Votes, vendors and amounts are read from the minutes and agendas by software and can be wrong.

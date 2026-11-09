@@ -298,8 +298,8 @@ def ftm_entities(b: dict) -> list[dict]:
 
     for e, t, f in b["parsed"]:
         add("Event", _id("meeting", e["date"]), name=f"{COUNCIL} meeting {e['date']}", date=e["date"],
-            organizer=council, involved=[b["officials"][n]["id"] for n in
-                                         {o["name"] for o in b["officials"].values() if e["date"] in o["present"]}],
+            organizer=council, involved=sorted({o["id"] for o in b["officials"].values()
+                                                if e["date"] in o["present"]}),
             sourceUrl=e["url"])
 
     for e in b["state"].values():
