@@ -8454,5 +8454,43 @@
   "last_changed": "2026-11-07T14:56:15Z",
   "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/6d7b4759d34b5b44c6979b0a5181de272db3b196dcf05e8cf88b82becb5e4372.pdf",
   "first_seen": "2026-11-07T14:56:15Z"
+ },
+ "hillsclerk:bocc-votes:2025": {
+  "key": "hillsclerk:bocc-votes:2025",
+  "source": "hillsclerk",
+  "url": "https://www.hillsclerk.com/documents/d/guest/bocc-vote-comparison-2025-pdf?download=true",
+  "title": "BOCC Master Voting Record, 2025",
+  "kind": "Vote record",
+  "date": "2025-12-31",
+  "body": "Board of County Commissioners",
+  "page": "https://www.hillsclerk.com/en/Records-and-Reports/BOCC",
+  "listed": true,
+  "last_checked": "2026-11-09T12:53:22Z",
+  "sha256": "542221fb1334191f20116975500933396855f20354e5a1dba48fa05e16b9fbff",
+  "bytes": 533728,
+  "content_type": "application/pdf",
+  "ext": "pdf",
+  "last_changed": "2026-11-09T12:53:22Z",
+  "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/542221fb1334191f20116975500933396855f20354e5a1dba48fa05e16b9fbff.pdf",
+  "first_seen": "2026-11-09T12:53:22Z"
+ },
+ "hillsclerk:bocc-votes:current": {
+  "key": "hillsclerk:bocc-votes:current",
+  "source": "hillsclerk",
+  "url": "https://www.hillsclerk.com/documents/d/guest/bocc-vote-comparison?download=true",
+  "title": "BOCC Master Voting Record, current year",
+  "kind": "Vote record",
+  "date": "2026-12-31",
+  "body": "Board of County Commissioners",
+  "page": "https://www.hillsclerk.com/en/Records-and-Reports/BOCC",
+  "listed": true,
+  "last_checked": "2026-11-09T12:53:23Z",
+  "sha256": "a8302c52e27dd5aaea7057159edbb49225e90a7b146739b88b17eb03b20dddaf",
+  "bytes": 417230,
+  "content_type": "application/pdf",
+  "ext": "pdf",
+  "last_changed": "2026-11-09T12:53:23Z",
+  "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/a8302c52e27dd5aaea7057159edbb49225e90a7b146739b88b17eb03b20dddaf.pdf",
+  "first_seen": "2026-11-09T12:53:23Z"
  }
 }
