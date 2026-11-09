@@ -90,6 +90,21 @@ class Region(unittest.TestCase):
                       "lite.datasette.io/?url=" + SITE + "counties.db"):
                 self.assertIn(s, page)
 
+    def test_one_roll_call_on_several_items_keeps_every_vote(self):
+        # Seen live: Legistar returns the same VoteId under each item a single motion covers.
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            data, out = make_data(d), d / "site"
+            out.mkdir()
+            lst = data / "listings" / "legistar-hillsboroughcounty-votes.jsonl"
+            votes = [json.loads(x) for x in lst.read_text().splitlines()]
+            other = "legistar:hillsboroughcounty:item:131876"
+            old_style = [{**v, "key": "legistar:hillsboroughcounty:vote:" + v["key"].rsplit(":", 1)[-1]} for v in votes]
+            lst.write_text(jl(votes + [{**v, "item_key": other} for v in old_style]))
+            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
+            self.assertEqual(counts["votes"], 14)
+            self.assertTrue(all(len(v["key"].split(":")) == 5 for v in votes))
+
     def test_city_site_ignores_county_records(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)

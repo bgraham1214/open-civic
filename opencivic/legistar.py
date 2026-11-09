@@ -143,7 +143,9 @@ def parse_item(client: str, event: dict, raw: dict) -> dict:
 
 def parse_votes(client: str, item: dict, raw: list[dict]) -> list[dict]:
     return [{
-        "source": "legistar", "client": client, "key": f"legistar:{client}:vote:{v['VoteId']}",
+        # One roll call can cover several items (e.g. a consent agenda), and Legistar then returns
+        # the same VoteId under each item, so the key includes the item.
+        "source": "legistar", "client": client, "key": f"legistar:{client}:vote:{item['item_id']}:{v['VoteId']}",
         "item_key": item["key"], "event_id": item["event_id"], "date": item["date"], "body": item["body"],
         "person": (v.get("VotePersonName") or "").strip(), "vote": v.get("VoteValueName") or "",
         "sort": v.get("VoteSort") or 0,

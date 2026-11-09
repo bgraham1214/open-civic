@@ -76,6 +76,15 @@ def _vote_summary(votes: list[dict]) -> tuple[str, str]:
     return ", ".join(f"{n} {k.lower()}" for k, n in sorted(counts.items(), key=lambda kv: -kv[1])), "; ".join(nays)
 
 
+def _vote_key(v: dict) -> str:
+    """Unique per item. Listings saved before Nov 9, 2026 keyed votes by VoteId alone, which
+    repeats when one roll call covers several items."""
+    k = v["key"]
+    item_id = v["item_key"].rsplit(":", 1)[-1]
+    parts = k.split(":")
+    return k if len(parts) == 5 else ":".join(parts[:3] + [item_id, parts[3]])
+
+
 def load(data: Path) -> dict:
     """Everything county-level from data/listings and data/state.json."""
     lst = data / "listings"
@@ -148,7 +157,7 @@ def build_db(data: Path, db_path: Path) -> dict:
          item_by_key.get(v["item_key"], {}).get("number", ""), item_by_key.get(v["item_key"], {}).get("title", "")[:500],
          item_by_key.get(v["item_key"], {}).get("result", ""),
          item_by_key.get(v["item_key"], {}).get("matter_url", "") or item_by_key.get(v["item_key"], {}).get("portal_url", ""),
-         v["item_key"], v["key"]) for v in d["votes"]])
+         v["item_key"], _vote_key(v)) for v in d["votes"]])
     n_pages = 0
     for e in sorted(d["docs"], key=lambda e: (e.get("date", ""), e["key"])):
         text = None
