@@ -163,19 +163,32 @@ def plain(item: dict, depth: int) -> str:
         more = f' <a href="{_e(src)}">Source</a>.' if src else ""
         means += (f'<details class="means"><summary>What does “{_e(name)}” mean?</summary>'
                   f'<p>{_e(text)}{more} <a href="{"../" * depth}learn/{"money" if t in ("millage", "contract", "grant", "budget", "cdd") else "land"}.html">More</a></p></details>')
-    official = (f'<details class="official"><summary>Official wording</summary><p>{_e(e["official"][:1500])}'
-                + (f'<br>The motion: {_e(e["motion"])}' if e["motion"] else "") + "</p></details>")
+    full = re.sub(r"\s+", " ", item["title"] or "").strip()
+    official = (f'<details class="official"><summary>Official wording</summary><p>{_e(full[:4000])}'
+                f'{"…" if len(full) > 4000 else ""}</p></details>')
     return (f'<p class="headline">{_e(e["headline"])}</p>'
             + (f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
             + (f'<ul class="facts">{facts}</ul>' if facts else "") + means + official)
 
 
+def record_link(it: dict) -> str:
+    """Link to the official record. For Legistar that's the meeting page, so name the item to look for."""
+    link = it.get("matter_url") or it.get("portal_url") or ""
+    if not link:
+        return ""
+    if "MeetingDetail.aspx" in link:
+        ref = it.get("file_number") or it.get("number") or ""
+        hint = f" (look for item {_e(ref)})" if ref else ""
+        return f'<p class="src"><a href="{_e(link)}">Official meeting record</a>{hint}</p>'
+    if "hillsclerk" in link:
+        return f'<p class="src"><a href="{_e(link)}">Official record</a> (the Clerk\'s vote report, {_e(it.get("file_number", ""))})</p>'
+    return f'<p class="src"><a href="{_e(link)}">Official record</a></p>'
+
+
 def decision(row: dict, me: str) -> str:
     it = row["item"]
-    link = it.get("matter_url") or it.get("portal_url") or ""
     return (f'<li><p class="when">{_e(long_date(it["date"]))}</p>'
-            + plain(it, 2) + tally(row, me)
-            + (f'<p class="src"><a href="{_e(link)}">Official record</a></p>' if link else "") + "</li>")
+            + plain(it, 2) + tally(row, me) + record_link(it) + "</li>")
 
 
 def listing(rows: list[dict], me: str, empty: str, show: int = 15) -> str:

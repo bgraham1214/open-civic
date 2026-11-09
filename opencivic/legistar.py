@@ -110,10 +110,10 @@ def votes_url(client: str, item_id: int) -> str:
 
 
 def matter_url(client: str, raw: dict) -> str:
-    if not raw.get("EventItemMatterId"):
-        return ""
-    return (f"https://{client}.legistar.com/LegislationDetail.aspx?ID={raw['EventItemMatterId']}"
-            f"&GUID={raw.get('EventItemMatterGuid') or ''}")
+    """No per-item link. Checked Nov 9, 2026: LegislationDetail.aspx?ID={MatterId}&GUID={MatterGuid}
+    answers "Invalid parameters!" on both hernandocountyfl and hillsboroughcounty (the website's
+    ids differ from the API's). The meeting page (EventInSiteURL) works; pages link to that."""
+    return ""
 
 
 def wants_votes(raw: dict) -> bool:

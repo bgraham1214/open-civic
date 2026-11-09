@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .explain import TERMS, TOPICS, dollars, explain, money
 from .jurisdictions import JURISDICTIONS
-from .people import _e, _times, commission_votes, decision_facts, kind, long_date, outcome, page, plain
+from .people import _e, _times, commission_votes, decision_facts, kind, long_date, outcome, page, plain, record_link
 from .region import load
 
 
@@ -113,9 +113,7 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
             continue
         lis = []
         for r in items:
-            link = r["item"].get("matter_url") or r["item"].get("portal_url") or ""
-            lis.append("<li>" + plain(r["item"], 2) + _vote_line(r)
-                       + (f'<p class="src"><a href="{_e(link)}">Official record</a></p>' if link else "") + "</li>")
+            lis.append("<li>" + plain(r["item"], 2) + _vote_line(r) + record_link(r["item"]) + "</li>")
         block = f'<ol class="decisions">{"".join(lis)}</ol>'
         if t == "routine":
             sections.append(f'<h2>{TOPICS[t]}</h2><details><summary>Show {len(items)} routine '

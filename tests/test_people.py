@@ -29,6 +29,19 @@ class People(unittest.TestCase):
         self.assertEqual(pp.decision_facts({"result": ""}, [{"vote": "Y"}, {"vote": "N"}])["passed"], None)
         self.assertEqual(pp.decision_facts({"result": "Pass"}, [{"vote": "Aye"}])["passed"], True)
 
+    def test_record_links(self):
+        meeting = "https://hernandocountyfl.legistar.com/MeetingDetail.aspx?LEGID=1494&GID=881&G=X"
+        html_ = pp.record_link({"matter_url": "", "portal_url": meeting, "file_number": "17960"})
+        self.assertIn("Official meeting record", html_)
+        self.assertIn("look for item 17960", html_)
+        self.assertNotIn("LegislationDetail", html_)
+        clerk = pp.record_link({"matter_url": "https://www.hillsclerk.com/r.pdf", "file_number": "RCS 4692"})
+        self.assertIn("the Clerk's vote report, RCS 4692", clerk)
+
+    def test_official_wording_is_verbatim(self):
+        text = "Chair Hagan sought a motion for each person to be given two minutes. Moved to approve."
+        self.assertIn(text, pp.plain({"title": text}, 2))
+
     def test_pages(self):
         rows, _ = hc.parse_report(FX.read_text(), "hillsclerk:bocc-votes:2025", "https://www.hillsclerk.com/r.pdf")
         rows[3]["votes"][0]["code"] = "N"   # Boles votes no on one item

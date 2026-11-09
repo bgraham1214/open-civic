@@ -178,7 +178,8 @@ def load(data: Path) -> dict:
             if not is_private_body(e["body"]):
                 out["meetings"].append({**e, "county": slug})
         for i in _jsonl(lst / f"legistar-{client}-items.jsonl"):
-            out["items"].append({**i, "county": slug})
+            # listings saved before Nov 9, 2026 carry LegislationDetail links that Legistar rejects
+            out["items"].append({**i, "county": slug, "matter_url": ""})
         for v in _jsonl(lst / f"legistar-{client}-votes.jsonl"):
             out["votes"].append({**v, "county": slug})
     for tenant, slug in civicclerk_tenants().items():

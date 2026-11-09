@@ -63,6 +63,20 @@ class Explain(unittest.TestCase):
         self.assertEqual((e["topic"], e["headline"]), ("other", "Board Discussion and Flagging Process"))
         self.assertTrue(e["motion"].startswith("Made the motion"))
 
+    def test_reported_on_phone_nov_9(self):
+        # "motion" mid-sentence is not where the motion starts
+        e = ex("Chair Hagan sought a motion for each person to be given two minutes. Moved to approve.")
+        self.assertEqual(e["headline"], "Chair Hagan sought a motion for each person to be given two minutes")
+        self.assertEqual(e["motion"], "Moved to approve.")
+        # the company, not the lead-in
+        e = ex("Award of Sole Source Purchase From Brehmer Mfg, Inc., for Truck Tire Derimmer Unit for Fleet "
+               "Management Department (Contract No. 26-SS01397; Amount: $54,103.00)")
+        self.assertIn("Company or group named: Brehmer Mfg, Inc.", e["facts"])
+        self.assertIn("Amount: $54,103.00)", e["subject"])          # not cut off
+        e = ex("Main Services Agreement With EMS Technology Solutions, LLC, d/b/a Operative IQ for Narcotics "
+               "Inventory and Asset Management System for Hernando County Fire Rescue (Amount: $50,640)")
+        self.assertIn("Company or group named: EMS Technology Solutions, LLC", e["facts"])
+
     def test_routine(self):
         self.assertEqual(ex("Approval of changes to the agenda. Moved for approval.")["topic"], "routine")
         self.assertEqual(ex("Approval of Consent Agenda. So moved.")["terms"], ["consent"])

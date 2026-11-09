@@ -66,7 +66,9 @@ class Items(unittest.TestCase):
         self.assertEqual((cont["action"], cont["result"], cont["mover"], cont["seconder"]),
                          ("Continued", "Pass", "Gwen Myers", "Chris Boles"))
         self.assertEqual(cont["file_number"], "MM 26-0062")
-        self.assertIn("LegislationDetail.aspx?ID=4824", cont["matter_url"])
+        # LegislationDetail links built from API ids are rejected by Legistar ("Invalid parameters!")
+        self.assertEqual(cont["matter_url"], "")
+        self.assertIn("MeetingDetail.aspx", cont["portal_url"])
         self.assertTrue(cont["attachments"])
         self.assertNotIn("\t", cont["title"])
         self.assertEqual(len([v for v in votes if v["item_key"] == cont["key"]]), 7)

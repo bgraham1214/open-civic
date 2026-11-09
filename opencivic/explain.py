@@ -119,7 +119,9 @@ HOMES_RX = re.compile(r"(up to )?(\d{1,3}(?:,\d{3})*|\d+)\s+(?:single[- ]family\
 SQFT_RX = re.compile(r"(\d{1,3}(?:,\d{3})+|\d+)\s*(?:square feet|sq\.?\s?ft\.?|sf)\s+(?:of\s+)?([a-z/ -]{3,40}?)(?:\s+uses?)?(?=[,.;)]|\s+(?:and|on|in|at|with)\b)", re.I)
 FLU_CHANGE_RX = re.compile(r"from\s+(.{3,80}?)\s*\(([A-Z/]{1,4})\s?-\s?([\d./]+(?:\(\d\))?)\)\s+to\s+(.{3,80}?)\s*\(([A-Z/]{1,4})\s?-\s?([\d./]+(?:\(\d\))?)\)", re.I)
 COMPANY_RX = re.compile(r"((?:(?:[A-Z][\w&.'-]*|&|of|and|for|the)\s){0,9}?[A-Z][\w&.'-]*,?\s(?:Inc|LLC|L\.L\.C|Corp|Corporation|Company|Co|LP|LLP|LLLP|P\.?A|PLLC|Ltd)\.?)(?=\W|$)")
-MOTION_RX = re.compile(r"\s(Moved\b.*|So moved\.?|Made (?:a|the) motion\b.*|Motion(?:ed)?\b.*)$", re.I)
+# The Clerk ends each subject with the motion ("... Boyette Rd. Moved approval."). Split only where a
+# sentence starts with it; "Chair Hagan sought a motion for ..." is one sentence and stays whole.
+MOTION_RX = re.compile(r"(?<=[.;:!?)])\s+((?:Moved|So [Mm]oved|Made (?:a|the) motion|Motion(?:ed)?)\b.*)$")
 SITE_RX = re.compile(r"(\b(?:N|S|E|W|NE|NW|SE|SW|North|South|East|West)\.?\s+(?:side|corner)\b.*|\b\d[\d,]*\s*(?:ft|feet)\b.*|\b\d+\s+[A-Z][\w.]*\s.*)")
 
 
@@ -162,6 +164,8 @@ def strip_motion(text: str) -> tuple[str, str]:
     m = MOTION_RX.search(text or "")
     if m and m.start() > 15:
         return text[:m.start()].strip(), m.group(1).strip()
+    if re.match(r"^(Moved|So moved|Made (?:a|the) motion|Motion(?:ed)?)\b", text or ""):
+        return "", text.strip()   # the whole entry is the motion ("Motioned to ask for ...")
     return (text or "").strip(), ""
 
 
@@ -183,7 +187,8 @@ def _place(text: str) -> str:
 def _companies(text: str) -> list[str]:
     seen = []
     for m in COMPANY_RX.finditer(text):
-        c = re.sub(r"^(?:(?:to|with|and|from|by|the|for|of|&)\s+)+", "", m.group(1).strip(" ,"), flags=re.I)
+        c = re.split(r"\s(?:from|with|to|by|between)\s", m.group(1).strip(" ,"), flags=re.I)[-1]
+        c = re.sub(r"^(?:(?:to|with|and|from|by|the|for|of|&)\s+)+", "", c, flags=re.I)
         if c and c not in seen and len(c) < 70:
             seen.append(c)
     return seen
@@ -292,8 +297,8 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
         if cos:
             facts.append("Company or group named: " + "; ".join(cos[:3]))
 
-    first = re.split(r"(?<=[a-z0-9)])\.\s+(?=[A-Z])", what, maxsplit=1)[0].rstrip(".")
-    short = first[:150] + ("…" if len(first) > 150 else "")
+    first = re.split(r"(?<=[a-z0-9)])\.\s+(?=[A-Z])", what or motion, maxsplit=1)[0].rstrip(".")
+    short = first if len(first) <= 320 else first[:320].rsplit(" ", 1)[0] + "…"
     if not headline:
         headline = short
     # The specific item, so look-alike headlines ("Community Development District") can be told apart.
