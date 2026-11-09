@@ -117,7 +117,7 @@ class Region(unittest.TestCase):
             (data / "listings" / "hillsclerk-bocc-votes.jsonl").write_text(jl(rows))
             region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
             con = sqlite3.connect(out / "counties.db")
-            people = {r[0] for r in con.execute("SELECT person FROM votes WHERE key LIKE 'hillsclerk%'")}
+            people = {r[0] for r in con.execute("SELECT person FROM votes WHERE item_key LIKE 'hillsclerk%'")}
             # names matched to Legistar's full names where one fits; others kept as printed
             self.assertIn("Ken Hagan", people)
             self.assertIn("Gwen Myers", people)
@@ -125,7 +125,7 @@ class Region(unittest.TestCase):
                              len(rows))
             self.assertEqual(con.execute("SELECT areas FROM agenda_items WHERE file_number='RCS 4693'").fetchone()[0],
                              "Brandon")
-            self.assertEqual({r[0] for r in con.execute("SELECT DISTINCT vote FROM votes WHERE key LIKE 'hillsclerk%'")},
+            self.assertEqual({r[0] for r in con.execute("SELECT DISTINCT vote FROM votes WHERE item_key LIKE 'hillsclerk%'")},
                              {"Yes", "X"})
             con.close()
 

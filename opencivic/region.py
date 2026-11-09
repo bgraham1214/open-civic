@@ -35,8 +35,7 @@ CREATE TABLE agenda_items (
   action TEXT, result TEXT, mover TEXT, seconder TEXT, votes TEXT, nays TEXT, action_text TEXT,
   consent INTEGER, attachments TEXT, areas TEXT, item_link TEXT, meeting_page TEXT, key TEXT UNIQUE);
 CREATE TABLE votes (
-  county TEXT, date TEXT, body TEXT, person TEXT, vote TEXT, item_number TEXT, item_title TEXT,
-  result TEXT, item_link TEXT, item_key TEXT, key TEXT UNIQUE);
+  county TEXT, date TEXT, person TEXT, vote TEXT, item_number TEXT, item_title TEXT, item_key TEXT);
 CREATE TABLE documents (
   county TEXT, date TEXT, kind TEXT, title TEXT, body TEXT, county_url TEXT, our_copy TEXT, pages INTEGER,
   ocr_pages INTEGER, sha256 TEXT, bytes INTEGER, first_seen TEXT, last_changed TEXT, still_listed INTEGER,
@@ -248,12 +247,15 @@ def build_db(data: Path, db_path: Path) -> dict:
                      "; ".join(i.get("attachments", [])), "; ".join(areas_in(f"{i['title']} {i.get('action_text', '')}", rx)),
                      i.get("matter_url", "") or i.get("portal_url", ""), i.get("portal_url", ""), i["key"]))
     con.executemany("INSERT OR REPLACE INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
-    con.executemany("INSERT OR REPLACE INTO votes VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
-        (v["county"], v["date"], v["body"], v["person"], v["vote"],
-         item_by_key.get(v["item_key"], {}).get("number", ""), item_by_key.get(v["item_key"], {}).get("title", "")[:500],
-         item_by_key.get(v["item_key"], {}).get("result", ""),
-         item_by_key.get(v["item_key"], {}).get("matter_url", "") or item_by_key.get(v["item_key"], {}).get("portal_url", ""),
-         v["item_key"], _vote_key(v)) for v in d["votes"]])
+    # Slim on purpose: 70,000+ rows, and Datasette Lite downloads the whole file to the browser.
+    # The full title and links live once per decision in agenda_items (join on item_key).
+    vote_rows = {}
+    for v in d["votes"]:
+        it = item_by_key.get(v["item_key"], {})
+        title = (it.get("title") or "").replace("\n", " ")
+        vote_rows[_vote_key(v)] = (v["county"], v["date"], v["person"], v["vote"], it.get("number", ""),
+                                   title[:100] + ("…" if len(title) > 100 else ""), v["item_key"])
+    con.executemany("INSERT INTO votes VALUES (?,?,?,?,?,?,?)", list(vote_rows.values()))
     n_pages = 0
     for e in sorted(d["docs"], key=lambda e: (e.get("date", ""), e["key"])):
         text = None
@@ -287,7 +289,8 @@ def build_db(data: Path, db_path: Path) -> dict:
       CREATE VIRTUAL TABLE pages_fts USING fts5(title, text, content='pages', content_rowid='id', tokenize='porter');
       INSERT INTO pages_fts(rowid, title, text) SELECT id, title, text FROM pages;
       CREATE INDEX items_county_date ON agenda_items(county, date);
-      CREATE INDEX votes_person ON votes(person);
+      CREATE INDEX votes_person ON votes(person, date);
+      CREATE INDEX items_key ON agenda_items(key);
       CREATE INDEX meetings_county_date ON meetings(county, date);
     """)
     con.commit()
@@ -314,7 +317,8 @@ def metadata(built_at: str) -> dict:
                          "county recorded them. votes summarises the roll call; nays names anyone voting no. "
                          "areas lists Brandon, Lutz, Wesley Chapel or Spring Hill when the item's text names them.",
                          "fts_table": "agenda_items_fts", "sort_desc": "date"},
-        "votes": {"description": "Each commissioner's or member's vote on each item, from the county's Legistar "
+        "votes": {"description": "Each commissioner's or member's vote on each item (item_title is shortened; "
+                  "the full wording and links are in agenda_items, matched by item_key), from the county's Legistar "
                   "or, for Hillsborough's full Commission, the Clerk's Master Voting Record. The Clerk's report "
                   "uses Y and N (shown as Yes and No) and also X and A, which it does not define; they are "
                   "shown exactly as printed.",
@@ -387,6 +391,7 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
 <p class="sub">{c['meetings']} meetings · {c['agenda_items']} agenda items · {c['votes']} recorded votes ·
 {c['documents']} archived documents · {c['first']} to {c['last']}</p>
 <p class="note">{html.escape(j['coverage'])}</p>
+{('<p class="who"><a href="commissioners/' + slug + '.html">How each ' + html.escape(j['short']) + ' commissioner voted</a></p>') if slug in ('hillsborough', 'hernando') else ''}
 <p><a href="{lite(site_url, f'/counties/agenda_items?_where={w}&_sort_desc=date')}">Agenda items</a> ·
 <a href="{lite(site_url, f'/counties/votes?_where={w}&_sort_desc=date')}">Votes</a> ·
 <a href="{lite(site_url, f'/counties/agenda_items?_where={w}%20and%20nays%3C%3E%27%27&_sort_desc=date')}">Items with a no vote</a> ·
@@ -409,6 +414,7 @@ COUNTIES_PAGE = """<!DOCTYPE html>
  form{{display:flex;gap:.5rem;margin:1.2rem 0}} input[type=search]{{flex:1;font-size:1rem;padding:.6rem;border:1px solid #bbb;border-radius:6px}}
  button{{font-size:1rem;padding:.6rem 1rem;border:0;border-radius:6px;background:#1f5fbf;color:#fff;cursor:pointer}}
  label{{margin-right:1rem}} table{{border-collapse:collapse;width:100%;font-size:.92rem}} td,th{{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #e5e5e5;vertical-align:top}}
+ .who{{font-size:1.15rem;font-weight:600}}
  .note{{background:#f6f6f2;border-left:4px solid #c9a227;padding:.6rem .9rem;font-size:.92rem}} footer{{color:#666;font-size:.85rem;margin-top:2rem}}
 </style></head><body>
 <p><a href="index.html">← Temple Terrace City Council</a></p>

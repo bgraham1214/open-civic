@@ -44,6 +44,8 @@ python -m opencivic.legistar items --client hernandocountyfl --events events.jso
 
 `opencivic/hillsclerk.py` reads the Hillsborough Clerk's BOCC Master Voting Record PDFs (one per year, updated monthly) into roll calls: RCS number, item, date, category, subject and each commissioner's vote code.
 
+`opencivic/people.py` writes a plain-language page for each Hillsborough and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda, and set in Atkinson Hyperlegible (SIL OFL, self-hosted, no Google Fonts).
+
 `opencivic/jurisdictions.py` says which sources belong to which government. `opencivic/region.py` builds `counties.db` and `counties.html` with per-county and per-area (Brandon, Lutz, Wesley Chapel, Spring Hill) RSS feeds.
 
 | Area | Governed by | Source | What we collect |

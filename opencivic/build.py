@@ -440,6 +440,8 @@ def main(argv: list[str] | None = None) -> int:
     built = _now().isoformat().replace("+00:00", "Z")
     try:  # a county problem must not stop the city site from publishing
         print(json.dumps({"counties": region.write(args.data_dir, args.out, site_url, built, _rss)}))
+        from . import people
+        print(json.dumps({"commissioner_pages": people.write(args.data_dir, args.out, site_url)}))
     except Exception as e:  # noqa: BLE001
         import traceback
         traceback.print_exc()

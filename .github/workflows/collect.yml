@@ -188,6 +188,9 @@ jobs:
             --site-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           size=$(stat -c %s site/templeterrace.db); echo "database: $size bytes"
           if [ "$size" -gt 95000000 ]; then echo "::error::database over GitHub's 100 MB file limit"; exit 1; fi
+          csize=$(stat -c %s site/counties.db 2>/dev/null || echo 0); echo "counties database: $csize bytes"
+          if [ "$csize" -gt 95000000 ]; then echo "::error::counties.db over GitHub's 100 MB file limit"; exit 1; fi
+          if [ "$csize" -gt 50000000 ]; then echo "::warning::counties.db is $csize bytes; Datasette Lite loads it whole, which is slow on phones"; fi
       - name: Publish to gh-pages branch
         run: |
           cd site
