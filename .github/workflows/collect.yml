@@ -97,9 +97,9 @@ jobs:
             cp "out/legistar-$c-events.jsonl" "out/legistar-$c-items.jsonl" "out/legistar-$c-votes.jsonl" data/listings/
           done
 
-      - name: Hillsborough Clerk BOCC voting record (list the yearly reports)
+      - name: Hillsborough Clerk BOCC voting record (list the yearly reports, 2014 on)
         continue-on-error: true
-        run: python -m opencivic.hillsclerk list --since 2025 -o out/hillsclerk-listing.jsonl
+        run: python -m opencivic.hillsclerk list --since 2014 -o out/hillsclerk-listing.jsonl
 
       # --- 2. Fingerprint every document and log changes (Phase 1, step 3). ---
       - name: Fingerprint and update manifest

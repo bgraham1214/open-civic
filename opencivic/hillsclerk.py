@@ -44,13 +44,28 @@ CATEGORIES = {
     "3": "Land Excavation", "4": "Mining Operation", "5": "Ordinances",
     "6": "Comprehensive Plan Amendments", "7": "Taxation", "8": "Transportation", "9": "Zoning",
 }
+# Members whose full names appear in neither the 2014-2017 reports nor Legistar. Public record:
+# elected Nov 2018 and left Nov 2022 (Smith, Overman); elected Nov 2022 (Owen). Sources:
+# ballotpedia.org/Municipal_elections_in_Hillsborough_County,_Florida_(2018);
+# archive.planhillsborough.org/tpo-welcomes-new-board-members-and-officers (Jan 2023)
+EXTRA_FULL_NAMES = ["Mariella Smith", "Kimberly Overman", "Michael Owen"]
 CODES = {"Y": "Yes", "N": "No"}  # X and A are undefined by the clerk; kept as printed
 
 LINK_RX = re.compile(r'href="(/documents/d/guest/bocc[-_]vote[^"]*)"', re.I)
-# category is blank on some rows (e.g. RCS 4722, 5288)
-ROW_RX = re.compile(r"^\s*(\d{3,6})\s+(?:(\S+)\s+)?(\d\d/\d\d/\d{4})\s+(\d{1,2}:\d\d\s?[AP]M)\s+(?:(\d)\s+)?((?:[A-Z]\s+)*[A-Z])\s*$")
-HEADER_RX = re.compile(r"RCS\s*#.*Cat\.")
-SKIP_RX = re.compile(r"^\s*(Hillsborough County Commissioners|Vote Comparison|Item #|Printed:.*|End of \w+|\d{1,3})\s*$")
+# One row per roll call. Two layouts:
+#   2018 on (Reporting Services):  "4692      C-1   01/07/2025   9:03AM   0   Y  Y  X  Y ..."
+#   2014-2017 (Acrobat):           "68  CHANGES  1/8/2014 9:19 AM 0   Y  Y  X ..."
+# The category may be blank or carry a stray dot ("9."); old times can be cut short ("10:16 A");
+# vote cells are blank where a member wasn't on the board yet or anymore.
+ROW_RX = re.compile(r"^\s*(\d{1,6})\s+(?:(\S.*?)\s+)?(\d{1,2}/\d{1,2}/\d{4})\s+(\d{1,2}:\d\d\s?(?:[AP]M?)?)"
+                    r"(?:\s+(\d)\.?)?(?:\s+((?:[A-Za-z]\s+)*[A-Za-z]))?\s*$")  # 2016 has some lowercase codes
+HEADER_RX = re.compile(r"RCS\s*#.*(Cat\.|Subject\s*\S?\s*Action)")  # scans misread "/" as "I" or "!"
+LEGACY_NAME_RX = re.compile(r"([A-Z][\w'-]+(?: [A-Z][\w'-]+)?)\. ([A-Z][\w'-]+)")
+# 2014-2017 reports end with the search settings used to print them
+SUMMARY_RX = re.compile(r"Begin Date:|End Date:|Vote Types:|Sort Order:|Bills: ALL|Subjects: ALL")
+VOID_RX = re.compile(r"\bVOID\b.*\btest", re.I)  # clerk test entries, e.g. "RCS #4228 - VOID – Test run"
+SKIP_RX = re.compile(r"^\s*(Hillsborough County Commissioners|Vote Comparison|Item #|Printed:.*|End of \w+|"
+                     r"St\w{3,6} Session.*|Selected Members.*|\d{1,3})\s*$")  # scans misread "Starting" ("Stalling")
 
 
 def list_documents(html: str, since: int, today: date | None = None) -> list[dict]:
@@ -73,58 +88,172 @@ def list_documents(html: str, since: int, today: date | None = None) -> list[dic
     return sorted(out.values(), key=lambda d: d["label"])
 
 
-def _columns(header: str, continuation: str | None) -> list[str]:
-    """Commissioner names from the header row, joined with any second line beneath them."""
+def _is_name_line(line: str) -> bool:
+    """The staggered member names above a 2014-2017 header ("Crist. Victor   Hagan. Ken"): deeply
+    indented. Subject text ("...the Agenda. Moved approval.") is not."""
+    return len(line) - len(line.lstrip()) > 40 and bool(LEGACY_NAME_RX.search(line))
+
+
+def _columns(header: str, continuation: str | None) -> list[tuple[float, str]]:
+    """(center x, name) per member column of a 2018-on header, with any second line joined."""
     start = header.index("Cat.") + len("Cat.")
     cols = [(m.start() + start, m.group(0)) for m in re.finditer(r"\S+(?: \S+)*", header[start:])]
     names = [n for _, n in cols]
     if continuation:
         for m in re.finditer(r"\S+", continuation):
-            # attach each word to the column it sits under (nearest column start to its left)
             i = max((k for k, (pos, _) in enumerate(cols) if pos <= m.start() + 2), default=0)
             names[i] = f"{names[i]} {m.group(0)}"
-    return names
+    return [(pos + len(cols[k][1]) / 2, names[k]) for k, (pos, _) in enumerate(cols)]
+
+
+def _legacy_columns(lines: list[str]) -> list[tuple[float, str]]:
+    """(center x, "First Last") from a 2014-2017 header, whose names are staggered over two lines."""
+    out = []
+    for line in lines:
+        for m in LEGACY_NAME_RX.finditer(line):
+            out.append((m.start() + (m.end() - m.start()) / 2, f"{m.group(2)} {m.group(1)}"))
+    return sorted(out)
+
+
+def _place(rows: list[dict], cols: list[tuple[float, str]], problems: list[str]) -> None:
+    """Give each code in each row its column, by position under the page's header.
+
+    Rows sit a few characters off the header, by a page-wide amount; that shift is found
+    first (the one that puts codes closest to column centres), then each code goes to the
+    nearest shifted centre. A code that isn't clearly nearer one column, or two codes
+    landing in one column, makes the row a problem rather than a guess.
+    """
+    if not rows:
+        return
+    if not cols:
+        for r in rows:
+            problems.append(f"RCS {r['rcs']}: no header on its page")
+            r["votes"] = None
+        return
+    centers = [c for c, _ in cols]
+    xs = [x for r in rows for x, _ in r["_codes"]]
+
+    def cost(shift: float) -> float:
+        return sum(min(abs(x - c - shift) for c in centers) for x in xs)
+
+    shift = min((s / 2 for s in range(-40, 41)), key=cost)
+    gaps = [b - a for a, b in zip(centers, centers[1:])] or [20]
+    tol = min(gaps) / 2
+    for r in rows:
+        votes, used, bad = [], set(), False
+        for x, code in r["_codes"]:
+            d = sorted((abs(x - c - shift), j) for j, c in enumerate(centers))
+            if d[0][0] > tol or (len(d) > 1 and d[1][0] - d[0][0] < 1.0) or d[0][1] in used:
+                bad = True
+                break
+            used.add(d[0][1])
+            votes.append({"name": cols[d[0][1]][1], "code": code})
+        known = {"Y", "N", "X", "A"}
+        if not bad and any(v["code"] not in known for v in votes):
+            # the Clerk's reports use Y, N, X and A; anything else is a misread scan ("V" for "Y")
+            problems.append(f"RCS {r['rcs']}: unreadable vote code {sorted({v['code'] for v in votes} - known)}")
+            r["votes"] = None
+            continue
+        if bad or not votes:
+            problems.append(f"RCS {r['rcs']}: votes don't line up with the {len(cols)} member columns")
+            r["votes"] = None
+        else:
+            r["votes"] = sorted(votes, key=lambda v: [n for _, n in cols].index(v["name"]))
 
 
 def parse_report(text: str, doc_key: str = "", doc_url: str = "") -> tuple[list[dict], list[str]]:
-    """Rows and problems (lines that look like rows but don't match the columns)."""
+    """Roll calls, and problems (rows that couldn't be read with confidence; never guessed)."""
     rows: list[dict] = []
     problems: list[str] = []
-    lines = text.splitlines()
-    names: list[str] = []
+    lines = [ln.replace("\f", "") for ln in text.splitlines()]
+    cols: list[tuple[float, str]] = []
+    page: list[dict] = []
     cur: dict | None = None
+    layout = "modern"
     i = 0
     while i < len(lines):
-        line = lines[i].replace("\f", "")
+        line = lines[i]
         if HEADER_RX.search(line):
-            nxt = lines[i + 1].replace("\f", "") if i + 1 < len(lines) else ""
-            cont = nxt if nxt.strip() and not ROW_RX.match(nxt) and len(nxt) - len(nxt.lstrip()) > 40 else None
-            names = _columns(line, cont)
-            i += 2 if cont else 1
+            _place(page, cols, problems)
+            page = []
+            layout = "modern" if "Cat." in line else "legacy"
+            if "Cat." in line:
+                nxt = lines[i + 1] if i + 1 < len(lines) else ""
+                cont = nxt if nxt.strip() and not ROW_RX.match(nxt) and len(nxt) - len(nxt.lstrip()) > 40 else None
+                cols = _columns(line, cont)
+                i += 2 if cont else 1
+            else:
+                prev = next((lines[k] for k in range(i - 1, max(i - 4, -1), -1) if LEGACY_NAME_RX.search(lines[k])), "")
+                cols = _legacy_columns([prev, line])
+                i += 1
+            # keep `cur`: a roll call split across pages continues its subject on the next page
             continue
         m = ROW_RX.match(line)
-        if m:
-            codes = m.group(6).split()
-            if len(codes) != len(names):
-                problems.append(f"RCS {m.group(1)}: {len(codes)} codes for {len(names)} columns")
-                cur = None
-            else:
-                mm, dd, yyyy = m.group(3).split("/")
-                cur = {
-                    "key": f"hillsclerk:bocc-votes:rcs:{m.group(1)}", "rcs": int(m.group(1)),
-                    "item": m.group(2) or "", "date": f"{yyyy}-{mm}-{dd}", "time": m.group(4).replace(" ", ""),
-                    "category": m.group(5) or "", "category_name": CATEGORIES.get(m.group(5) or "", ""),
-                    "subject": "", "votes": [{"name": n, "code": c} for n, c in zip(names, codes)],
-                    "doc_key": doc_key, "doc_url": doc_url,
-                }
-                rows.append(cur)
-        elif re.match(r"^\s*\d{3,6}\s+.*\d\d/\d\d/\d{4}", line):
+        if m and m.group(6):
+            mo, dd, yyyy = m.group(3).split("/")
+            t = m.group(4).replace(" ", "")
+            t = t + "M" if t.endswith(("A", "P")) else t
+            codes = [(m.start(6) + k.start(), k.group(0).upper()) for k in re.finditer(r"[A-Za-z]", m.group(6))]
+            cur = {
+                "key": f"hillsclerk:bocc-votes:rcs:{yyyy}-{m.group(1)}", "rcs": int(m.group(1)),
+                "item": (m.group(2) or "").strip(), "date": f"{yyyy}-{int(mo):02d}-{int(dd):02d}", "time": t,
+                "category": m.group(5) or "", "category_name": CATEGORIES.get(m.group(5) or "", ""),
+                "subject": "", "votes": [], "_codes": codes, "doc_key": doc_key, "doc_url": doc_url,
+                "layout": layout,  # "legacy" (2014-2017) prints full names; "modern" prints surnames
+            }
+            rows.append(cur)
+            page.append(cur)
+        elif m or re.match(r"^\s*\d{1,6}\s+.*\d{1,2}/\d{1,2}/\d{4}", line):
             problems.append(f"unparsed row: {line.strip()[:120]}")
             cur = None
-        elif cur is not None and line.strip() and not SKIP_RX.match(line):
-            cur["subject"] = f"{cur['subject']} {line.strip()}".strip()
+        elif SUMMARY_RX.search(line):
+            cur = None
+        elif cur is not None and line.strip() and not SKIP_RX.match(line) and not _is_name_line(line):
+            # the carried-over part repeats the roll call's number: "4863      Oral Vote - EPC - ..."
+            cont = re.match(rf"^\s*{cur['rcs']}\s+(\S.*)$", line)
+            text_ = cont.group(1) if cont else line.strip()
+            cur["subject"] = f"{cur['subject']} {text_}".strip()
         i += 1
-    return rows, problems
+    _place(page, cols, problems)
+    for r in rows:
+        r.pop("_codes", None)
+    good: dict[str, dict] = {}
+    for r in rows:
+        if not r["votes"]:
+            continue
+        prev = good.get(r["key"])
+        if prev is None:
+            good[r["key"]] = r
+            continue
+        # Years with more members than fit on a page (2020: White; 2022: White, Wostal) print
+        # every roll call again with the remaining columns. Merge; a member can't differ.
+        have = {v["name"]: v["code"] for v in prev["votes"]}
+        clash = [v["name"] for v in r["votes"] if v["name"] in have and have[v["name"]] != v["code"]]
+        if clash:
+            problems.append(f"RCS {r['rcs']} ({r['date']}): passes disagree for {', '.join(clash)}; kept the first")
+        prev["votes"] += [v for v in r["votes"] if v["name"] not in have]
+        prev["subject"] = prev["subject"] or r["subject"]
+    out = [r for r in good.values() if not VOID_RX.search(r["subject"])]
+    _clean_names(out)
+    return out, problems
+
+
+def _clean_names(rows: list[dict]) -> None:
+    """Fix names misread in scanned pages ("Victor Grist", "At Higginbotham") by matching them
+    to a name printed at least ten times as often in the same report."""
+    import difflib
+    counts: dict[str, int] = {}
+    for r in rows:
+        for v in r["votes"]:
+            counts[v["name"]] = counts.get(v["name"], 0) + 1
+    fix = {}
+    for n, k in counts.items():
+        better = [m for m, km in counts.items() if km >= 10 * k and difflib.SequenceMatcher(None, n, m).ratio() >= 0.8]
+        if better:
+            fix[n] = max(better, key=lambda m: counts[m])
+    for r in rows:
+        for v in r["votes"]:
+            v["name"] = fix.get(v["name"], v["name"])
 
 
 def pdf_text(pdf: Path) -> str:
@@ -150,7 +279,9 @@ def collect_votes(listing: list[dict], fetcher: Fetcher) -> tuple[list[dict], li
             problems += [f"{doc['label']}: {p}" for p in probs]
             for r in got:  # a year can appear in both its own report and the current one
                 rows.setdefault(r["key"], r)
-    return sorted(rows.values(), key=lambda r: r["rcs"]), problems
+    out = sorted(rows.values(), key=lambda r: (r["date"], r["rcs"]))
+    _clean_names(out)  # across years too: 2016's scan reads "Al" as "AI" throughout
+    return out, problems
 
 
 def main(argv: list[str] | None = None) -> int:

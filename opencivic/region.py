@@ -88,15 +88,45 @@ def _vote_key(v: dict) -> str:
     return k if len(parts) == 5 else ":".join(parts[:3] + [item_id, parts[3]])
 
 
+def _days(a: str, b: str) -> int:
+    from datetime import date
+    return abs((date.fromisoformat(a) - date.fromisoformat(b)).days)
+
+
+def name_resolver(known: dict[str, tuple[str, str]]):
+    """Resolve a printed name ("Hagan", "C. Miller", "Cameron Cepeda") on a given date to a full
+    name, using full names with the dates they were seen ({name: (first, last)}; ("", "") = any).
+
+    A candidate must share the printed surname (and first initial, if printed). If several
+    fit, the one seen nearest that date wins, but only by at least 180 days; otherwise the printed
+    name stands. Example: "Miller" in 2019 is Lesley Miller (seen to 2017), not Christine
+    Miller (from 2024); "C. Miller" is Christine Miller.
+    """
+    def resolve(printed: str, on: str) -> str:
+        if printed in known:
+            return printed
+        m = re.match(r"^([A-Z])\. (.+)$", printed)
+        initial, rest = (m.group(1), m.group(2)) if m else ("", printed)
+        cands = [f for f in known if (f.endswith(" " + rest)) and (not initial or f.startswith(initial))]
+        if not cands:
+            return printed
+
+        def dist(f: str) -> int:
+            a, b = known[f]
+            if not a:
+                return 0
+            return 0 if a <= on <= b else min(_days(on, a), _days(on, b))
+        ranked = sorted(cands, key=dist)
+        if len(ranked) == 1 or dist(ranked[1]) - dist(ranked[0]) >= 180:
+            return ranked[0]
+        return printed
+    return resolve
+
+
 def full_names(short: list[str], full: set[str]) -> dict[str, str]:
-    """Map the Clerk's column names ("C. Miller", "Cameron Cepeda") to full names seen in
-    Legistar ("Christine Miller", "Donna Cameron Cepeda") when exactly one matches."""
-    out = {}
-    for s in short:
-        initial, _, rest = s.partition(". ") if re.match(r"^[A-Z]\. ", s) else ("", "", s)
-        hits = [f for f in full if (f == rest or f.endswith(" " + rest)) and (not initial or f.startswith(initial))]
-        out[s] = hits[0] if len(hits) == 1 else s
-    return out
+    """Printed names -> full names when exactly one full name fits (no dates)."""
+    r = name_resolver({f: ("", "") for f in full})
+    return {s: r(s, "2000-01-01") for s in short}
 
 
 def _load_hillsclerk(lst: Path, out: dict) -> None:
@@ -104,9 +134,22 @@ def _load_hillsclerk(lst: Path, out: dict) -> None:
     rows = _jsonl(lst / "hillsclerk-bocc-votes.jsonl")
     if not rows:
         return
-    from .hillsclerk import BODY, CODES, PAGE
-    seen = {v["person"] for v in out["votes"] if v["county"] == "hillsborough"}
-    names = full_names(sorted({v["name"] for r in rows for v in r["votes"]}), seen)
+    from .hillsclerk import BODY, CODES, EXTRA_FULL_NAMES, PAGE
+    known: dict[str, tuple[str, str]] = {}
+
+    def seen(name: str, d: str) -> None:
+        a, b = known.get(name, (d, d))
+        known[name] = (min(a, d), max(b, d))
+    for v in out["votes"]:
+        if v["county"] == "hillsborough":
+            seen(v["person"], v["date"])
+    for r in rows:
+        if r.get("layout") == "legacy":
+            for v in r["votes"]:
+                seen(v["name"], r["date"])
+    for n in EXTRA_FULL_NAMES:
+        known.setdefault(n, ("", ""))
+    resolve = name_resolver(known)
     for d in sorted({r["date"] for r in rows}):
         n = sum(1 for r in rows if r["date"] == d)
         out["meetings"].append({
@@ -123,7 +166,7 @@ def _load_hillsclerk(lst: Path, out: dict) -> None:
         for v in r["votes"]:
             out["votes"].append({
                 "county": "hillsborough", "key": f"{r['key']}:{v['name']}", "item_key": r["key"], "date": r["date"],
-                "body": BODY, "person": names.get(v["name"], v["name"]), "vote": CODES.get(v["code"], v["code"]),
+                "body": BODY, "person": resolve(v["name"], r["date"]), "vote": CODES.get(v["code"], v["code"]),
                 "sort": 0})
 
 

@@ -169,6 +169,18 @@ class Region(unittest.TestCase):
         self.assertEqual(m, {"C. Miller": "Christine Miller", "Cameron Cepeda": "Donna Cameron Cepeda",
                              "Hagan": "Hagan", "Cohen": "Cohen"})  # two Hagans: ambiguous, kept
 
+    def test_name_resolver_by_date(self):
+        known = {"Lesley Miller": ("2014-01-08", "2017-09-20"), "Christine Miller": ("2025-01-07", "2026-11-03"),
+                 "Ken Hagan": ("2014-01-08", "2026-11-03"), "Mariella Smith": ("", "")}
+        r = region.name_resolver(known)
+        self.assertEqual(r("Miller", "2019-05-01"), "Lesley Miller")
+        self.assertEqual(r("Miller", "2020-11-16"), "Lesley Miller")
+        self.assertEqual(r("C. Miller", "2024-12-10"), "Christine Miller")
+        self.assertEqual(r("Miller", "2021-05-15"), "Miller")       # midway between the two: left as printed
+        self.assertEqual(r("Hagan", "2019-01-01"), "Ken Hagan")
+        self.assertEqual(r("Smith", "2020-01-01"), "Mariella Smith")
+        self.assertEqual(r("Owen", "2023-01-01"), "Owen")           # no full name known: as printed
+
     def test_city_site_ignores_county_records(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
