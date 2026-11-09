@@ -134,6 +134,32 @@ class Manifest(unittest.TestCase):
         s = self.run_update()
         self.assertEqual(s["new"], 28)
 
+    def test_one_tenant_failing_does_not_unlist_another(self):
+        # Temple Terrace and a second CivicClerk tenant; the second's listing fails next run.
+        other = [mf.Doc(key=f"civicclerk:pascocofl:{n}", source="civicclerk", url=f"https://p.example/{n}",
+                        title="Agenda", kind="Agenda", date="2025-02-01", body="BOCC", page="") for n in range(5)]
+        for d in other:
+            self.bodies[d.url] = b"%PDF-1.7 " + d.key.encode()
+        self.run_update(docs=self.docs + other)
+        tt_groups = {"civicclerk:templeterracefl", "civicplus_archive:www.templeterrace.gov"}
+        self.run_update(docs=self.docs, sources_ok=tt_groups)
+        self.assertFalse([e for e in events(self.data) if e["event"] == "unlisted"])
+        # ...but a Temple Terrace document that really disappeared is still caught
+        self.run_update(docs=self.docs[1:], sources_ok=tt_groups)
+        self.assertEqual([e["key"] for e in events(self.data) if e["event"] == "unlisted"], [self.docs[0].key])
+
+    def test_skip_kinds_per_jurisdiction(self):
+        line = {"tenant": "pascocofl", "date": "2025-03-01", "name": "BOCC", "category": "BOCC",
+                "portal_url": "https://pascocofl.portal.civicclerk.com/event/1/files",
+                "files": [{"file_id": 1, "kind": "Agenda", "name": "Agenda", "download_url": "u1"},
+                          {"file_id": 2, "kind": "Agenda Packet", "name": "Packet", "download_url": "u2"},
+                          {"file_id": 3, "kind": "Minutes", "name": "Minutes", "download_url": "u3"}]}
+        path = self.d / "pasco.jsonl"
+        path.write_text(json.dumps(line) + "\n")
+        self.assertEqual([d.kind for d in mf.docs_from_civicclerk(path)], ["Agenda", "Minutes"])
+        # Temple Terrace keeps its packets
+        self.assertIn("Agenda Packet", {d.kind for d in self.docs})
+
 
 if __name__ == "__main__":
     unittest.main()

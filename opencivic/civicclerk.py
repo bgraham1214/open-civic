@@ -165,11 +165,23 @@ def iter_event_pages(fetcher: Fetcher, first_url: str, max_pages: int | None = N
         url = nxt
 
 
-def crawl_events(tenant: str, fetcher: Fetcher, max_pages: int | None = None) -> Crawl:
+def events_url(tenant: str, since: str | None = None) -> str:
+    """First Events page; with `since` (YYYY-MM-DD), only events starting that day or later.
+
+    The OData filter form was checked live against pascocofl on Nov 8, 2026; its
+    @odata.nextLink keeps the filter and pages by $skiptoken=startDateTime-...,id-N.
+    """
+    if not since:
+        return api_base(tenant) + "Events"
+    return (api_base(tenant) + f"Events?$filter=startDateTime%20ge%20{since}T00:00:00Z"
+            "&$orderby=startDateTime")
+
+
+def crawl_events(tenant: str, fetcher: Fetcher, max_pages: int | None = None, since: str | None = None) -> Crawl:
     by_id: dict[int, Meeting] = {}
     pages = 0
     nxt = None
-    for page, nxt in iter_event_pages(fetcher, api_base(tenant) + "Events", max_pages):
+    for page, nxt in iter_event_pages(fetcher, events_url(tenant, since), max_pages):
         pages += 1
         for raw in page.get("value", []):
             mtg = parse_event(tenant, raw)
@@ -328,6 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--category", help='keep only this category, e.g. "City Council"')
     ap.add_argument("--with-files-only", action="store_true", help="drop meetings with no published files")
     ap.add_argument("--max-pages", type=int)
+    ap.add_argument("--since", help="only events from this date (YYYY-MM-DD), filtered by the API")
     ap.add_argument("--format", choices=["jsonl", "csv"], default="jsonl")
     ap.add_argument("-o", "--output", help="write here instead of stdout")
     args = ap.parse_args(argv)
@@ -350,7 +363,7 @@ def main(argv: list[str] | None = None) -> int:
                 meetings = [Meeting(**{**r, "files": [PublishedFile(**f) for f in r["files"]]})
                             for r in map(json.loads, fh)]
         else:
-            meetings = crawl_events(args.tenant, HttpFetcher(), args.max_pages).meetings
+            meetings = crawl_events(args.tenant, HttpFetcher(), args.max_pages, args.since).meetings
         if args.meetings_dir:
             from pathlib import Path
             d = Path(args.meetings_dir)
@@ -379,7 +392,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         fetcher, max_pages = HttpFetcher(), args.max_pages
 
-    crawl = crawl_events(args.tenant, fetcher, max_pages)
+    crawl = crawl_events(args.tenant, fetcher, max_pages, None if args.input else args.since)
     meetings = crawl.meetings
     if args.category:
         meetings = [m for m in meetings if m.category.lower() == args.category.lower()]

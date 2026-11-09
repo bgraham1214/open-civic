@@ -1,0 +1,93 @@
+[
+ {
+  "VoteId": 19598,
+  "VoteGuid": "3EB4C9C4-D3BB-4F86-8C63-899643243D96",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.343",
+  "VoteRowVersion": "AAAAAACJIho=",
+  "VotePersonId": 228,
+  "VotePersonName": "Ken Hagan",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 70,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ },
+ {
+  "VoteId": 19599,
+  "VoteGuid": "97BEF7D3-800F-43C1-8A47-D2D2ADF4B277",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.343",
+  "VoteRowVersion": "AAAAAACJIhs=",
+  "VotePersonId": 263,
+  "VotePersonName": "Gwen Myers",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 71,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ },
+ {
+  "VoteId": 19600,
+  "VoteGuid": "5ABD6319-80E9-446D-83E1-8B5AB1956330",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.343",
+  "VoteRowVersion": "AAAAAACJIhw=",
+  "VotePersonId": 269,
+  "VotePersonName": "Donna Cameron Cepeda",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 72,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ },
+ {
+  "VoteId": 19601,
+  "VoteGuid": "7C870BEB-1197-4C9C-9EA1-AA4B81C89CED",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.347",
+  "VoteRowVersion": "AAAAAACJIh0=",
+  "VotePersonId": 262,
+  "VotePersonName": "Harry Cohen",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 73,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ },
+ {
+  "VoteId": 19602,
+  "VoteGuid": "1A66560B-AC8D-42AD-9E77-821016C3BE48",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.347",
+  "VoteRowVersion": "AAAAAACJIh4=",
+  "VotePersonId": 270,
+  "VotePersonName": "Joshua Wostal",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 76,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ },
+ {
+  "VoteId": 19603,
+  "VoteGuid": "DD7C2950-2017-4505-835D-597846C1EEFD",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.347",
+  "VoteRowVersion": "AAAAAACJIh8=",
+  "VotePersonId": 274,
+  "VotePersonName": "Christine Miller",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 77,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ },
+ {
+  "VoteId": 19604,
+  "VoteGuid": "09286B69-7736-4AE0-B5E0-2490537045EC",
+  "VoteLastModifiedUtc": "2026-10-13T20:08:24.347",
+  "VoteRowVersion": "AAAAAACJIiA=",
+  "VotePersonId": 275,
+  "VotePersonName": "Chris Boles",
+  "VoteValueId": 16,
+  "VoteValueName": "In Favor",
+  "VoteSort": 78,
+  "VoteResult": 1,
+  "VoteEventItemId": 131875
+ }
+]

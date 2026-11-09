@@ -68,11 +68,41 @@ jobs:
           python -m opencivic.archivecenter items --save-raw out/raw-archive -o out/archive-items.jsonl 2>&1 | tee out/archive-log.txt
           test -s out/archive-items.jsonl && cp out/archive-items.jsonl data/listings/
 
+      # --- Counties (Phase 2): Pasco on CivicClerk, Hillsborough and Hernando on Legistar. ---
+      - name: Pasco County listing and agenda items (CivicClerk, from 2025)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.civicclerk meetings --tenant pascocofl --since 2025-01-01 --with-files-only \
+            -o out/civicclerk-pascocofl-meetings.jsonl 2>&1 | tee out/pasco-log.txt
+          test -s out/civicclerk-pascocofl-meetings.jsonl
+          cp out/civicclerk-pascocofl-meetings.jsonl data/listings/
+          python -m opencivic.civicclerk items --tenant pascocofl --meetings out/civicclerk-pascocofl-meetings.jsonl \
+            -o out/civicclerk-pascocofl-items.jsonl 2>&1 | tee -a out/pasco-log.txt
+          test -s out/civicclerk-pascocofl-items.jsonl && cp out/civicclerk-pascocofl-items.jsonl data/listings/
+      - name: Hillsborough (land use) and Hernando (Legistar API, from 2025)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          for c in hillsboroughcounty hernandocountyfl; do
+            python -m opencivic.legistar events --client "$c" --since 2025-01-01 \
+              -o "out/legistar-$c-events.jsonl" 2>&1 | tee -a out/legistar-log.txt || continue
+            test -s "out/legistar-$c-events.jsonl" || continue
+            # unchanged older meetings are reused from the last run; the request cap spreads the first run out
+            python -m opencivic.legistar items --client "$c" --events "out/legistar-$c-events.jsonl" \
+              --previous-items "data/listings/legistar-$c-items.jsonl" \
+              --previous-votes "data/listings/legistar-$c-votes.jsonl" --max-requests 1500 \
+              --items-out "out/legistar-$c-items.jsonl" --votes-out "out/legistar-$c-votes.jsonl" \
+              2>&1 | tee -a out/legistar-log.txt || continue
+            cp "out/legistar-$c-events.jsonl" "out/legistar-$c-items.jsonl" "out/legistar-$c-votes.jsonl" data/listings/
+          done
+
       # --- 2. Fingerprint every document and log changes (Phase 1, step 3). ---
       - name: Fingerprint and update manifest
         run: |
           python -m opencivic.manifest update \
-            --civicclerk out/civicclerk-meetings.jsonl --archive out/archive-items.jsonl \
+            --civicclerk out/civicclerk-meetings.jsonl out/civicclerk-pascocofl-meetings.jsonl \
+            --archive out/archive-items.jsonl --max-downloads 500 \
             --data-dir data --store-dir out/files \
             --copy-base "https://github.com/${{ github.repository }}/releases/download/files" \
             2>&1 | tee out/manifest-log.txt

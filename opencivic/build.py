@@ -25,6 +25,8 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
+from .jurisdictions import COUNTIES, jurisdiction_of
+
 LITE = "https://lite.datasette.io/"
 
 # Topic feeds: an item or document matches if any term appears in its title/description.
@@ -83,12 +85,18 @@ def _jsonl(path: Path) -> list[dict]:
     return [json.loads(x) for x in path.read_text("utf-8").splitlines() if x.strip()]
 
 
+def _city_state(data: Path) -> dict[str, dict]:
+    """Temple Terrace's documents: everything except what belongs to a county."""
+    return {k: e for k, e in json.loads((data / "state.json").read_text("utf-8")).items()
+            if jurisdiction_of(k) not in COUNTIES}
+
+
 def build_db(data: Path, db_path: Path) -> dict:
     if db_path.exists():
         db_path.unlink()
     con = sqlite3.connect(db_path)
     con.executescript(SCHEMA)
-    state = json.loads((data / "state.json").read_text("utf-8"))
+    state = _city_state(data)
     counts = {}
 
     videos = _jsonl(data / "listings" / "youtube-videos.jsonl")
@@ -146,7 +154,7 @@ def build_db(data: Path, db_path: Path) -> dict:
          len(i["attachments"]), "; ".join(a["name"] for a in i["attachments"]), i["key"]) for i in items])
     counts["agenda_items"] = len(items)
 
-    ev = _jsonl(data / "manifest.jsonl")
+    ev = [x for x in _jsonl(data / "manifest.jsonl") if jurisdiction_of(x["key"]) not in COUNTIES]
     con.executemany("INSERT INTO changes (at,event,document_key,date,kind,title,sha256,previous_sha256,bytes,city_url,our_copy) "
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
         (x["at"], x["event"], x["key"], x.get("date"), x.get("kind"), x.get("title"), x.get("sha256"),
@@ -289,7 +297,7 @@ def _pub(ts: str | None) -> str:
 
 def feed_entries(data: Path) -> list[dict]:
     """New documents (from the manifest) and agenda items, newest first."""
-    state = json.loads((data / "state.json").read_text("utf-8"))
+    state = _city_state(data)
     out = []
     for e in state.values():
         if not e.get("first_seen"):
@@ -327,7 +335,7 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
             f"Agenda items and documents mentioning: {', '.join(terms)}.", sel), "utf-8")
         feed_links.append(f'<a href="feeds/{topic}.xml">{topic.replace("-", " ")}</a>')
 
-    state = json.loads((data / "state.json").read_text("utf-8"))
+    state = _city_state(data)
     recent = sorted((e for e in state.values() if e.get("sha256")), key=lambda e: e["date"], reverse=True)[:15]
     rows = "".join(
         f"<tr><td>{e['date']}</td><td>{html.escape(e['kind'])}</td><td>{html.escape(e['title'])}</td>"
@@ -387,6 +395,8 @@ INDEX = """<!DOCTYPE html>
 <p class="note">Search opens in Datasette Lite, which runs in your browser and takes a few seconds to load.
 Text from scanned pages (marked <code>ocr</code>) was machine-read and can contain errors; follow the
 page link to check the original.</p>
+<p>Nearby: <a href="counties.html">county commission records for Brandon and Lutz (Hillsborough),
+Wesley Chapel (Pasco) and Spring Hill (Hernando)</a>.</p>
 <h2>Latest documents</h2>
 <table><tr><th>Date</th><th>Type</th><th>Title</th><th>Links</th></tr>{rows}</table>
 {removed}<h2>Who decided what</h2>
@@ -423,8 +433,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, default=Path("site"))
     ap.add_argument("--site-url", default="https://bgraham1214.github.io/open-civic/")
     args = ap.parse_args(argv)
-    counts = write_site(args.data_dir, args.out, args.site_url.rstrip("/") + "/")
+    site_url = args.site_url.rstrip("/") + "/"
+    counts = write_site(args.data_dir, args.out, site_url)
     print(json.dumps(counts))
+    from . import region
+    built = _now().isoformat().replace("+00:00", "Z")
+    try:  # a county problem must not stop the city site from publishing
+        print(json.dumps({"counties": region.write(args.data_dir, args.out, site_url, built, _rss)}))
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        print(f"::warning::county pages not built: {e}")
     return 0
 
 

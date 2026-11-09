@@ -39,6 +39,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .fetch import FetchError, HttpFetcher
+from .jurisdictions import JURISDICTIONS, group_of, jurisdiction_of
 
 # Guard: if a source's listing shrinks below this share of what was listed before,
 # assume a partial fetch and don't mark the missing documents as unlisted.
@@ -57,11 +58,19 @@ class Doc:
     page: str      # human-facing page that links the document
 
 
+def _skip_kinds(key: str) -> set[str]:
+    return set(JURISDICTIONS.get(jurisdiction_of(key) or "", {}).get("skip_kinds", []))
+
+
 def docs_from_civicclerk(path: Path) -> list[Doc]:
+    """Documents in a CivicClerk meetings listing, minus the kinds its jurisdiction skips."""
     out = []
     for line in path.read_text("utf-8").splitlines():
         m = json.loads(line)
+        skip = _skip_kinds(f"civicclerk:{m['tenant']}:")
         for f in m["files"]:
+            if f["kind"] in skip:
+                continue
             out.append(Doc(
                 key=f"civicclerk:{m['tenant']}:{f['file_id']}", source="civicclerk",
                 url=f["download_url"], title=f["name"], kind=f["kind"], date=m["date"],
@@ -187,12 +196,16 @@ def update(docs: list[Doc], data_dir: Path, fetcher, *, recheck_days: float = 7.
         else:
             event("changed", doc, entry, retrieved_at=retrieved, content_type=ctype, previous_sha256=old)
 
-    # Unlisted: only for sources whose listing looks complete.
-    for source in sources_ok:
-        prev = [k for k, e in state.items() if e["source"] == source and e.get("listed", True)]
-        current = {k for k in seen_keys if state[k]["source"] == source}
+    # Unlisted: only for groups (one account on one platform, e.g. civicclerk:pascocofl)
+    # whose listing loaded this run and looks complete. sources_ok may name groups or
+    # whole sources.
+    groups = sorted({group_of(k) for k, e in state.items()
+                     if group_of(k) in sources_ok or e["source"] in sources_ok})
+    for group in groups:
+        prev = [k for k, e in state.items() if group_of(k) == group and e.get("listed", True)]
+        current = {k for k in seen_keys if group_of(k) == group}
         if prev and len(current) < MIN_LISTING_RATIO * len(prev):
-            print(f"warning: {source} listing shrank from {len(prev)} to {len(current)}; "
+            print(f"warning: {group} listing shrank from {len(prev)} to {len(current)}; "
                   "not marking documents unlisted this run", file=sys.stderr)
             continue
         for k in prev:
@@ -211,7 +224,8 @@ def update(docs: list[Doc], data_dir: Path, fetcher, *, recheck_days: float = 7.
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.manifest")
     ap.add_argument("what", choices=["update"])
-    ap.add_argument("--civicclerk", type=Path, help="civicclerk meetings jsonl")
+    ap.add_argument("--civicclerk", type=Path, nargs="*", default=[],
+                    help="civicclerk meetings jsonl, one per tenant")
     ap.add_argument("--archive", type=Path, help="archivecenter items jsonl")
     ap.add_argument("--data-dir", type=Path, default=Path("data"))
     ap.add_argument("--store-dir", type=Path, help="save each distinct file as <sha256>.<ext>")
@@ -222,13 +236,17 @@ def main(argv: list[str] | None = None) -> int:
 
     docs: list[Doc] = []
     ok: set[str] = set()
-    for path, loader, source in ((args.civicclerk, docs_from_civicclerk, "civicclerk"),
-                                 (args.archive, docs_from_archive, "civicplus_archive")):
-        if path is None:
-            continue
+    inputs = [(p, docs_from_civicclerk, "civicclerk") for p in args.civicclerk]
+    if args.archive is not None:
+        inputs.append((args.archive, docs_from_archive, "civicplus_archive"))
+    for path, loader, source in inputs:
         if path.exists() and path.stat().st_size > 0:
-            docs += loader(path)
-            ok.add(source)
+            loaded = loader(path)
+            docs += loaded
+            # mark the listing's groups as complete; a tenant whose file failed stays untouched
+            ok |= {group_of(d.key) for d in loaded}
+            if source == "civicclerk":
+                ok |= {f"civicclerk:{json.loads(x)['tenant']}" for x in path.read_text("utf-8").splitlines() if x.strip()}
         else:
             print(f"warning: {path} missing or empty; {source} skipped this run", file=sys.stderr)
 

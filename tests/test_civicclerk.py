@@ -149,9 +149,6 @@ class Cli(unittest.TestCase):
         self.assertEqual(cc.main(["check-schema", "--metadata", str(FIX / "metadata.xml")]), 0)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class Redaction(unittest.TestCase):
     def test_signed_urls_redacted(self):
@@ -161,3 +158,23 @@ class Redaction(unittest.TestCase):
         self.assertNotIn("sig=", out)
         self.assertIn("https://civicclerk.blob.core.windows.net/stream/T/a.pdf?[signed-url-redacted]", out)
         self.assertIn("https://x.org/a?b=1", out)
+
+
+class Since(unittest.TestCase):
+    def test_since_url_matches_live_form(self):
+        # the exact form fetched live from pascocofl on Nov 8, 2026
+        self.assertEqual(cc.events_url("pascocofl", "2025-01-01"),
+                         "https://pascocofl.api.civicclerk.com/v1/Events?$filter=startDateTime%20ge%20"
+                         "2025-01-01T00:00:00Z&$orderby=startDateTime")
+        self.assertEqual(cc.events_url("templeterracefl"), BASE + "Events")
+
+    def test_crawl_uses_since(self):
+        url = cc.events_url(TENANT, "2025-10-01")
+        f = FixtureFetcher({url: FIX / "Events.json"})
+        crawl = cc.crawl_events(TENANT, f, max_pages=1, since="2025-10-01")
+        self.assertEqual(f.requested, [url])
+        self.assertEqual(len(crawl.meetings), 15)
+
+
+if __name__ == "__main__":
+    unittest.main()
