@@ -391,6 +391,7 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
 <p class="sub">{c['meetings']} meetings · {c['agenda_items']} agenda items · {c['votes']} recorded votes ·
 {c['documents']} archived documents · {c['first']} to {c['last']}</p>
 <p class="note">{html.escape(j['coverage'])}</p>
+<p class="who"><a href="meetings/{slug}.html">What happened at each meeting, in plain language</a></p>
 {('<p class="who"><a href="commissioners/' + slug + '.html">How each ' + html.escape(j['short']) + ' commissioner voted</a></p>') if slug in ('hillsborough', 'hernando') else ''}
 <p><a href="{lite(site_url, f'/counties/agenda_items?_where={w}&_sort_desc=date')}">Agenda items</a> ·
 <a href="{lite(site_url, f'/counties/votes?_where={w}&_sort_desc=date')}">Votes</a> ·
@@ -422,6 +423,8 @@ COUNTIES_PAGE = """<!DOCTYPE html>
 <p class="sub">Brandon and Lutz (Hillsborough) · Wesley Chapel (Pasco) · Spring Hill (Hernando) · updated {built} UTC</p>
 <p>Brandon, Lutz, Wesley Chapel and Spring Hill have no city government of their own. Their local decisions
 are made by their county commission, so this page follows those commissions.</p>
+<p class="who">New to this? <a href="learn/land.html">How building and land decisions work</a> ·
+<a href="learn/money.html">How county money works</a></p>
 <form id="f"><input type="search" id="q" placeholder="Search all three counties, e.g. rezoning" required>
 <button>Search</button></form>
 <p><label><input type="radio" name="w" value="items" checked> Agenda items</label>

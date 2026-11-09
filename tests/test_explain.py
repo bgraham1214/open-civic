@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright 2026 Brock Graham and Open Civic Web contributors
+"""The plain-language decoder, on real agenda wording from Hillsborough, Pasco and Hernando."""
+
+import unittest
+
+from opencivic.explain import TERMS, density, dollars, explain, money
+
+
+def ex(text):
+    return explain(text)
+
+
+class Explain(unittest.TestCase):
+    def test_land_use_map_change(self):
+        e = ex("HC/CPA 25-07 Comprehensive Plan Map Amendment - Proposed change on ± 470.9 acres from "
+               "Agricultural/Rural-1/5 (A/R-1/5) to Residential-4 (RES- 4) - Location: 16410 Balm Wimauma Road. Moved approval.")
+        self.assertEqual(e["topic"], "land")
+        self.assertEqual(e["headline"], "Change to the future land-use map at 16410 Balm Wimauma Road")
+        self.assertIn("Land-use change: from Agricultural/Rural (up to 1 home per 5 acres) to Residential "
+                      "(up to 4 homes per acre)", e["facts"])
+        self.assertIn("Size: about 470.9 acres", e["facts"])
+        self.assertEqual(e["motion"], "Moved approval.")
+
+    def test_zoning_codes(self):
+        self.assertEqual(ex("PRS 25-0077; River Springs LLC; 13420 Boyette Rd. Moved approval.")["headline"],
+                         "Small change to an approved development at 13420 Boyette Rd")
+        self.assertEqual(ex("MM 26-0063 - ASHLEY GLOBAL RETAIL, LLC, W. side of Broadway Center Blvd & Williams Rd. "
+                            "Intersection. Moved approval.")["headline"],
+                         "Big change to an approved development at W. side of Broadway Center Blvd & Williams Rd. Intersection")
+        e = ex("Related Item- PD 23-0472, Existing Zoning: Residential Single Family Conventional 6, Request - Planned "
+               "Development to allow for 52 single family units. So moved.")
+        self.assertEqual((e["topic"], e["facts"]), ("land", ["Homes: 52"]))
+        self.assertEqual(ex("Rezoning Petition Submitted by Lisa L. Tabbert as Trustee, for Property Located on "
+                            "Pineda Avenue (H2546)")["topic"], "land")
+
+    def test_money(self):
+        e = ex("Award & execute the agreement for Bid ITB-C-0029-0-2014/DV, traffic pavement marking term contract to "
+               "AKCA Inc. in the amount of $1,118,176 for Public Works. Moved approval.")
+        self.assertEqual(e["headline"], "Contract or purchase: $1.1 million")
+        self.assertNotIn("Money: $1.1 million", e["facts"])  # already in the headline
+        self.assertIn("Company or group named: AKCA Inc.", e["facts"])
+        e = ex("Task Order No. TED26-0028 – WSP USA Inc. – Design and Post Design Services for Zimmerman Road "
+               "Sidewalk – $184,975.67")
+        self.assertEqual(e["headline"], "Contract or purchase: $184,976")   # not rounded to look exact
+        e = ex("Approve a Resolution allocating up to $450,000 in funding to United Food Bank & Services of Plant "
+               "City, Inc. (United Food Bank) for demolition. Moved approval.")
+        self.assertIn("Company or group named: United Food Bank & Services of Plant City, Inc.", e["facts"])
+        self.assertEqual(ex("Setting the TRIM Millage Rates. Moved the Board set the proposed millages")["terms"], ["millage"])
+
+    def test_no_false_labels(self):
+        # mentions a budget, a law or the attorney, but isn't a budget change, a law or staffing
+        self.assertEqual(ex("Accept the PRC Foster Program, Report #2024-10, performed by the County Internal "
+                            "Auditor's Office. No adjustment to the budget is anticipated at this time.")["topic"], "other")
+        self.assertEqual(ex("Request administration and the County Attorney's Office look at the ordinance and "
+                            "make any revisions")["topic"], "other")
+        self.assertEqual(ex("Direct Development Services, the County Attorney's Office, and the Fire Marshal to "
+                            "coordinate with the Sheriff. Moved.")["topic"], "other")
+        self.assertEqual(ex("Hold a public hearing to consider a draft ordinance to revise Chapter 130")["topic"], "law")
+
+    def test_fallback_is_the_official_first_sentence(self):
+        e = ex("Board Discussion and Flagging Process. Made the motion to accept the flag list only as presented.")
+        self.assertEqual((e["topic"], e["headline"]), ("other", "Board Discussion and Flagging Process"))
+        self.assertTrue(e["motion"].startswith("Made the motion"))
+
+    def test_routine(self):
+        self.assertEqual(ex("Approval of changes to the agenda. Moved for approval.")["topic"], "routine")
+        self.assertEqual(ex("Approval of Consent Agenda. So moved.")["terms"], ["consent"])
+
+    def test_helpers(self):
+        self.assertEqual(density("4"), "up to 4 homes per acre")
+        self.assertEqual(density("1/5"), "up to 1 home per 5 acres")
+        self.assertEqual(density("4(3)"), "up to 4 homes per acre")
+        self.assertEqual(money("costs $1,500 and $2.5 million"), [1500.0, 2500000.0])
+        self.assertEqual(dollars(2_500_000), "$2.5 million")
+        self.assertEqual(dollars(3_000_000), "$3 million")
+
+    def test_every_term_has_plain_text(self):
+        for k, (name, text, src) in TERMS.items():
+            self.assertTrue(name and len(text) > 40, k)
+            self.assertTrue(src == "" or src.startswith("https://"), k)
+
+
+if __name__ == "__main__":
+    unittest.main()

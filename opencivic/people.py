@@ -152,15 +152,29 @@ def tally(row: dict, me: str) -> str:
                if row["kind"] == "none" and row["vote"]["vote"] else "") + "</p>")
 
 
+def plain(item: dict, depth: int) -> str:
+    """Plain headline, decoded facts, what the terms mean, and the official wording (folded)."""
+    from .explain import TERMS, TOPICS, explain
+    e = explain(item["title"], item.get("matter_type") or "")
+    facts = "".join(f"<li>{_e(f)}</li>" for f in e["facts"])
+    means = ""
+    for t in e["terms"]:
+        name, text, src = TERMS[t]
+        more = f' <a href="{_e(src)}">Source</a>.' if src else ""
+        means += (f'<details class="means"><summary>What does “{_e(name)}” mean?</summary>'
+                  f'<p>{_e(text)}{more} <a href="{"../" * depth}learn/{"money" if t in ("millage", "contract", "grant", "budget", "cdd") else "land"}.html">More</a></p></details>')
+    official = (f'<details class="official"><summary>Official wording</summary><p>{_e(e["official"][:1500])}'
+                + (f'<br>The motion: {_e(e["motion"])}' if e["motion"] else "") + "</p></details>")
+    return (f'<p class="headline">{_e(e["headline"])}</p>'
+            + (f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
+            + (f'<ul class="facts">{facts}</ul>' if facts else "") + means + official)
+
+
 def decision(row: dict, me: str) -> str:
     it = row["item"]
-    what, motion = split_motion(it["title"])
-    cat = CATEGORY_WORDS.get(it.get("matter_type") or "", it.get("matter_type") or "")
     link = it.get("matter_url") or it.get("portal_url") or ""
-    return (f'<li><p class="when">{_e(long_date(it["date"]))}{(". " + _e(cat)) if cat else ""}</p>'
-            f'<p class="what">{_e(what[:600])}{"…" if len(what) > 600 else ""}</p>'
-            + (f'<p class="motion">The motion: {_e(motion)}</p>' if motion else "")
-            + tally(row, me)
+    return (f'<li><p class="when">{_e(long_date(it["date"]))}</p>'
+            + plain(it, 2) + tally(row, me)
             + (f'<p class="src"><a href="{_e(link)}">Official record</a></p>' if link else "") + "</li>")
 
 
@@ -197,8 +211,8 @@ longer needs.</dd>
 XNOTE = {"hillsborough": " The Hillsborough Clerk marks this “X” (and rarely “A”) without saying which."}
 
 CSS = """
-@font-face{font-family:"Atkinson Hyperlegible";src:url(../fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
-@font-face{font-family:"Atkinson Hyperlegible";src:url(../fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible";src:url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible";src:url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
 :root{--ink:#16324F;--paper:#FFFFFF;--mark:#FFE45C;--quiet:#5F6B7A;--line:#D5DCE4}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font:1.125rem/1.6 "Atkinson Hyperlegible",system-ui,sans-serif}
@@ -214,7 +228,7 @@ h1{font-size:2.6rem;line-height:1.1;margin:0 0 .4rem;letter-spacing:-.01em}
 h2{font-size:1.5rem;line-height:1.25;margin:3rem 0 .5rem}
 h2+p{margin-top:0}
 .decisions{list-style:none;padding:0;margin:1rem 0}
-.decisions li{padding:1.1rem 0;border-top:1px solid var(--line)}
+.decisions>li{padding:1.1rem 0;border-top:1px solid var(--line)}
 .when{font-size:.95rem;color:var(--quiet);margin:0 0 .2rem}
 .what{margin:0 0 .3rem}
 .motion{font-size:1rem;color:var(--quiet);margin:0 0 .6rem}
@@ -241,6 +255,20 @@ summary{cursor:pointer;font-weight:700;padding:.5rem 0}
 .people p{margin:.2rem 0 0}
 .words dt{font-weight:700;margin-top:1rem}
 .words dd{margin:0}
+.headline{font-weight:700;margin:0 0 .3rem}
+.subject{font-size:1rem;color:var(--quiet);margin:0 0 .3rem}
+.facts{margin:.2rem 0 .5rem;padding-left:1.2rem}
+.facts li{margin:.1rem 0}
+.means{font-size:1rem;margin:.3rem 0}
+.means summary,.official summary{font-weight:400;padding:.2rem 0;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.means p,.official p{margin:.3rem 0 .6rem;padding-left:.9rem;border-left:3px solid var(--line)}
+.who-voted{font-size:1rem;margin:0 0 .3rem}
+.topic-count{color:var(--quiet);font-weight:400}
+.meetings{list-style:none;padding:0;margin:.5rem 0}
+.meetings li{padding:.7rem 0;border-top:1px solid var(--line)}
+.meetings a{font-weight:700}
+.meetings p{margin:.1rem 0 0;font-size:1rem;color:var(--quiet)}
+.learn{background:#F3F6F9;padding:.9rem 1rem;margin:1.5rem 0;font-size:1rem}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.95rem;color:var(--quiet)}
 @media (max-width:30rem){h1{font-size:2.1rem}.lede{font-size:1.2rem}}
 """
@@ -254,7 +282,7 @@ def page(title: str, body: str, depth: int) -> str:
     up = "../" * depth
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{_e(title)}</title><link rel="stylesheet" href="{up}commissioners/people.css"></head>
+<title>{_e(title)}</title><link rel="stylesheet" href="{up}plain.css"></head>
 <body><main>{body}</main></body></html>
 """
 
@@ -344,7 +372,7 @@ FOOTERS = {
 def write(data: Path, out: Path, site_url: str = "") -> dict:
     d = out / "commissioners"
     d.mkdir(parents=True, exist_ok=True)
-    (d / "people.css").write_text(CSS, "utf-8")
+    (out / "plain.css").write_text(CSS, "utf-8")
     fonts = out / "fonts"
     fonts.mkdir(exist_ok=True)
     for f in (STATIC / "fonts").iterdir():

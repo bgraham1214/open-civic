@@ -442,6 +442,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"counties": region.write(args.data_dir, args.out, site_url, built, _rss)}))
         from . import people
         print(json.dumps({"commissioner_pages": people.write(args.data_dir, args.out, site_url)}))
+        from . import meetings
+        print(json.dumps({"meeting_pages": meetings.write(args.data_dir, args.out)}))
     except Exception as e:  # noqa: BLE001
         import traceback
         traceback.print_exc()

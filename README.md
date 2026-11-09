@@ -46,6 +46,8 @@ python -m opencivic.legistar items --client hernandocountyfl --events events.jso
 
 `opencivic/people.py` writes a plain-language page for each Hillsborough and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda, and set in Atkinson Hyperlegible (SIL OFL, self-hosted, no Google Fonts).
 
+`opencivic/explain.py` translates agenda wording into plain language by fixed rules (no AI): a topic, a plain headline ("Change to the future land-use map at 16410 Balm Wimauma Road"), decoded facts ("from Agricultural/Rural, up to 1 home per 5 acres, to Residential, up to 4 homes per acre"; dollar amounts; companies), and sourced definitions of the terms. `opencivic/meetings.py` uses it to write a "what happened" page for every County Commission meeting (`site/meetings/`) and two explainers (`site/learn/`). The official wording is always one tap away.
+
 `opencivic/jurisdictions.py` says which sources belong to which government. `opencivic/region.py` builds `counties.db` and `counties.html` with per-county and per-area (Brandon, Lutz, Wesley Chapel, Spring Hill) RSS feeds.
 
 | Area | Governed by | Source | What we collect |
