@@ -21,6 +21,7 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
+from .county_entities import BOCC, board_of
 from .explain import TERMS, TOPICS, dollars, explain, money
 from .jurisdictions import JURISDICTIONS
 from .people import _e, _times, commission_votes, decision_facts, kind, long_date, outcome, page, plain, record_link
@@ -48,6 +49,27 @@ def _topic_phrase(counts: dict[str, int]) -> str:
     return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1] if parts else ""
 
 
+def _commission(body: str) -> bool:
+    """A County Commission meeting. Pasco adds the place after a comma ("Board of County Commissioners,
+    Dade City"), which board_of would otherwise read as a joint meeting."""
+    b = re.sub(r",\s*(Dade City|New Port Richey)\b.*$", "", (body or "").strip())
+    return board_of(b) == BOCC
+
+
+def meeting_info(data: Path) -> dict[tuple[str, str], dict]:
+    """(county, date) -> the County Commission meeting record: time, place, status, official page.
+    When a day has several Commission meetings, the one with a published agenda wins."""
+    out: dict[tuple[str, str], dict] = {}
+    for m in load(data)["meetings"]:
+        if not _commission(m.get("body") or ""):
+            continue
+        k = (m["county"], m["date"])
+        rank = (bool(m.get("agenda_url")), (m.get("agenda_status") or "").lower() != "cancelled")
+        if k not in out or rank > out[k]["_rank"]:
+            out[k] = {**m, "_rank": rank}
+    return out
+
+
 def decisions_by_meeting(data: Path) -> dict[str, dict[str, list[dict]]]:
     """county -> date -> [{item, votes, facts, explained}] for County Commission meetings."""
     out: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
@@ -56,13 +78,20 @@ def decisions_by_meeting(data: Path) -> dict[str, dict[str, list[dict]]]:
             vs = rec["votes"][key]
             out[county][item["date"]].append({"item": item, "votes": vs, "facts": decision_facts(item, vs),
                                               "x": explain(item["title"], item.get("matter_type") or "")})
-    # Pasco: the rest of each Commission agenda (items with no recorded vote)
+    # The rest of each Commission agenda: items with no recorded vote. For Pasco that's every meeting
+    # (its votes come item by item from the minutes). For Hillsborough and Hernando it's only meetings
+    # with no votes at all (upcoming, or not yet in the vote records), because their land-use agenda
+    # items are the same decisions the vote records already cover.
     voted = {r["item"]["key"] for c in out.values() for rs in c.values() for r in rs}
+    voted_dates = {c: set(by_date) for c, by_date in out.items()}
     for i in load(data)["items"]:
-        if i["county"] == "pasco" and "board of county commissioners" in (i.get("body") or "").lower() \
-                and i["key"] not in voted:
-            out["pasco"][i["date"]].append({"item": i, "votes": [], "facts": None,
-                                            "x": explain(i["title"], i.get("matter_type") or "")})
+        c = i["county"]
+        if not _commission(i.get("body") or "") or i["key"] in voted:
+            continue
+        if c != "pasco" and i["date"] in voted_dates.get(c, set()):
+            continue
+        out[c][i["date"]].append({"item": i, "votes": [], "facts": None,
+                                  "x": explain(i["title"], i.get("matter_type") or "")})
     return out
 
 
@@ -88,8 +117,26 @@ def _people_link(county: str, name: str) -> str:
     return f'../../commissioners/{county}/{slug(name)}.html'
 
 
-def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_next: tuple[str, str]) -> str:
+def _iso_time(t: str) -> str:
+    """'9:00 AM' -> 'T09:00' (local time; no zone, since the clerk gives none)."""
+    m = re.match(r"^\s*(\d{1,2}):(\d{2})\s*([AP])\.?M\.?", t or "", re.I)
+    if not m:
+        return ""
+    h = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "P" else 0)
+    return f"T{h:02d}:{m.group(2)}"
+
+
+def _days_between(a: str, b: str) -> int:
+    return (date.fromisoformat(b) - date.fromisoformat(a)).days
+
+
+def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_next: tuple[str, str],
+                 info: dict | None = None, today: str = "") -> str:
     j = JURISDICTIONS[county]
+    info = info or {}
+    today = today or date.today().isoformat()
+    upcoming = d > today
+    cancelled = (info.get("agenda_status") or "").lower() == "cancelled"
     voted = any(r["votes"] for r in rows)
     others = [r for r in rows if not r["votes"]] if voted else []
     if voted:
@@ -104,13 +151,34 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
         lede = (f'The {_e(j["name"])} Commission voted on <mark>{_plural(len(rows), "decision")}</mark>'
                 + (f': {_e(counts)}' if counts else "") + ". "
                 + (f'{_plural(len(nos), "decision")} had at least one no vote.' if nos else "Every recorded vote was unanimous."))
+    elif upcoming and not cancelled:
+        lede = (f'This meeting is coming up. <mark>{_plural(len(rows), "item")}</mark> '
+                f'{"is" if len(rows) == 1 else "are"} on the agenda' + (f': {_e(counts)}' if counts else "") + ".")
     else:
-        lede = (f'<mark>{_plural(len(rows), "item")}</mark> were on the {_e(j["name"])} Commission\'s agenda'
-                + (f': {_e(counts)}' if counts else "") + ".")
-    note = ("" if voted else
-            f'<p class="fair">We don\'t have the recorded votes for this meeting yet (the minutes usually come out a '
-            "few weeks later), so this page shows what was on the agenda, not what was decided. Open the official "
-            "record for the outcome.</p>")
+        lede = (f'<mark>{_plural(len(rows), "item")}</mark> {"was" if len(rows) == 1 else "were"} on the '
+                f'{_e(j["name"])} Commission\'s agenda' + (f': {_e(counts)}' if counts else "") + ".")
+    if voted:
+        note = ""
+    elif cancelled:
+        note = ('<p class="fair">The county lists this meeting as cancelled. Items on its agenda may come back at a '
+                "later meeting.</p>")
+    elif upcoming:
+        note = ('<p class="fair">Agendas can change up to the day of the meeting, so check the official meeting page '
+                "before you go. Commission meetings are open to the public.</p>")
+    elif _days_between(d, today) <= 90:
+        note = ('<p class="fair">The recorded votes for this meeting aren\'t out yet (they usually come a few weeks '
+                "later), so this page shows what was on the agenda, not what was decided. Open the official record "
+                "for the outcome.</p>")
+    else:
+        note = ('<p class="fair">No votes were recorded for this meeting in the records we collect, so this page '
+                "shows what was on the agenda, not what was decided. Open the official record for the outcome.</p>")
+    when = ""
+    if info and (upcoming or not voted):
+        place = ", ".join(x for x in (info.get("time", "").strip(), (info.get("location") or "").strip()) if x)
+        official = info.get("portal_url") or info.get("agenda_url") or ""
+        when = ('<p class="learn"><strong>When and where:</strong> ' + _e(weekday_date(d))
+                + (f", {_e(place)}" if place else "") + "."
+                + (f' <a href="{_e(official)}">Official meeting page</a>' if official else "") + "</p>")
     big = ""
     if biggest[0] >= 100_000 and biggest[1]:
         big = (f'<p class="learn">Largest dollar amount at this meeting: <strong>{dollars(biggest[0])}</strong>, '
@@ -146,7 +214,7 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
     body = f"""<h1>{_e(weekday_date(d))}</h1>
 <p class="role">{_e(j['name'])} Commission meeting</p>
 <p class="lede">{lede}</p>
-{note}{big}
+{note}{when}{big}
 <p class="fair">Headlines are our plain-language reading of the official wording, made by fixed rules, not AI.
 The official wording is under each one. Outcomes count the recorded votes.{people}</p>
 {"<ul class='key' aria-label='How to read the squares'><li><span class='m yes'></span> voted yes</li><li><span class='m no'></span> voted no</li><li><span class='m none'></span> didn't vote</li></ul>" if voted else ""}
@@ -154,21 +222,24 @@ The official wording is under each one. Outcomes count the recorded votes.{peopl
 {f'<nav class="pager" aria-label="Other meetings"><ul>{nav}</ul></nav>' if nav else ''}"""
     plain_lede = re.sub(r"<[^>]+>", "", lede)
     event = {"@type": "Event", "name": f"{j['name']} Commission meeting",
-             "startDate": d, "eventStatus": "https://schema.org/EventScheduled",
+             "startDate": d + _iso_time(info.get("time", "")),
+             "eventStatus": f"https://schema.org/{'EventCancelled' if cancelled else 'EventScheduled'}",
+             **({"location": {"@type": "Place", "name": info["location"]}} if info.get("location") else {}),
              "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
              "isAccessibleForFree": True, "description": plain_lede,
              "organizer": {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners"},
              "url": absolute(f"meetings/{county}/{d}.html") or None}
-    return page(f"{j['name']} Commission, {long_date(d)}: what happened", body, 2,
+    title = f"{j['name']} Commission, {long_date(d)}: " + ("what's on the agenda" if upcoming and not voted else "what happened")
+    return page(title, body, 2,
                 path=f"meetings/{county}/{d}.html",
                 crumbs=[("County records", "counties.html"), (f"{j['short']} meetings", f"meetings/{county}.html")],
                 description=f"{j['name']} Commission meeting of {long_date(d)}, in plain language. {plain_lede}",
                 note=f"<p>From {_e(j['name'])}'s official records.</p>", jsonld=[event], here=long_date(d))
 
 
-def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool) -> str:
+def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, today: str = "") -> str:
     j = JURISDICTIONS[county]
-    today = date.today().isoformat()
+    today = today or date.today().isoformat()
     years: dict[str, list[str]] = defaultdict(list)
     for d in sorted(by_date, reverse=True):
         years[d[:4]].append(d)
@@ -282,6 +353,9 @@ def write(data: Path, out: Path) -> dict:
         (out / "learn" / f"{name}.html").write_text(html_, "utf-8")
     d = out / "meetings"
     d.mkdir(parents=True, exist_ok=True)
+    from . import site
+    today = site.to_eastern(site.BUILT).date().isoformat() if site.BUILT else date.today().isoformat()
+    info = meeting_info(data)
     counts = {}
     for county, by_date in decisions_by_meeting(data).items():
         if not by_date:
@@ -291,7 +365,8 @@ def write(data: Path, out: Path) -> dict:
         for i, day in enumerate(dates):
             rows = sorted(by_date[day], key=lambda r: (r["item"].get("number") or "", r["item"]["key"]))
             pn = (dates[i - 1] if i else "", dates[i + 1] if i + 1 < len(dates) else "")
-            (d / county / f"{day}.html").write_text(meeting_page(county, day, rows, county in have_people, pn), "utf-8")
-        (d / f"{county}.html").write_text(county_index(county, by_date, county in have_people), "utf-8")
+            (d / county / f"{day}.html").write_text(meeting_page(county, day, rows, county in have_people, pn,
+                                                                info.get((county, day)), today), "utf-8")
+        (d / f"{county}.html").write_text(county_index(county, by_date, county in have_people, today), "utf-8")
         counts[county] = len(dates)
     return counts
