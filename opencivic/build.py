@@ -337,36 +337,9 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
 
     state = _city_state(data)
     recent = sorted((e for e in state.values() if e.get("sha256")), key=lambda e: e["date"], reverse=True)[:15]
-    rows = "".join(
-        f"<tr><td>{e['date']}</td><td>{html.escape(e['kind'])}</td><td>{html.escape(e['title'])}</td>"
-        f"<td><a href=\"{html.escape(e['url'])}\">city</a> · <a href=\"{html.escape(e.get('copy_url', ''))}\">our copy</a></td></tr>"
-        for e in recent)
     gone = sorted((e for e in state.values() if e.get("sha256") and not e.get("listed", True)),
                   key=lambda e: e.get("unlisted_at", ""), reverse=True)
-    removed = (
-        "<h2>Removed from the city's website</h2>\n"
-        "<p>The city no longer lists these documents. Our archived copies are still here, unchanged.</p>\n"
-        "<table><tr><th>Meeting date</th><th>Type</th><th>Title</th><th>Removed (first noticed)</th><th>Links</th></tr>"
-        + "".join(
-            f"<tr><td>{e['date']}</td><td>{html.escape(e['kind'])}</td><td>{html.escape(e['title'])}</td>"
-            f"<td>{html.escape(e.get('unlisted_at', '')[:10])}</td>"
-            f"<td><a href=\"{html.escape(e.get('copy_url', ''))}\">our copy</a></td></tr>"
-            for e in gone)
-        + "</table>\n") if gone else ""
-    search_pages = _lite(site_url, "/templeterrace/pages")
-    search_items = _lite(site_url, "/templeterrace/agenda_items")
-    page = INDEX.format(
-        lite=_lite(site_url), pages=search_pages, items=search_items,
-        changes=_lite(site_url, "/templeterrace/changes"),
-        votes=_lite(site_url, "/templeterrace/votes"),
-        split=_lite(site_url, "/templeterrace/votes?_where=nays%3C%3E%27%27&_sort_desc=date"),
-        contracts=_lite(site_url, "/templeterrace/contracts"), vendors=_lite(site_url, "/templeterrace/vendors"),
-        officials=_lite(site_url, "/templeterrace/officials"),
-        meetings=_lite(site_url, "/templeterrace/meetings?_sort_desc=date"), docs=_lite(site_url, "/templeterrace/documents"),
-        items_js=json.dumps(search_items), pages_js=json.dumps(search_pages),
-        rows=rows, removed=removed, feeds=" · ".join(feed_links), built=built[:16].replace("T", " "),
-        n_docs=counts["documents"], n_pages=counts["pages"], n_items=counts["agenda_items"])
-    (out / "index.html").write_text(page, "utf-8")
+    (out / "templeterrace.html").write_text(city_page(site_url, built, counts, recent, gone, feed_links, out), "utf-8")
     ftm = data / "entities" / "templeterrace.ftm.jsonl"
     if ftm.exists():
         (out / "templeterrace.ftm.jsonl").write_bytes(ftm.read_bytes())
@@ -374,57 +347,83 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
     return counts
 
 
-INDEX = """<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Temple Terrace City Council records</title>
-<link rel="alternate" type="application/rss+xml" title="New records" href="feed.xml">
-<style>
- body{{font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem;color:#1d1d1f}}
- h1{{font-size:1.6rem;margin-bottom:.2rem}} .sub{{color:#555;margin-top:0}}
- form{{display:flex;gap:.5rem;margin:1.2rem 0}} input[type=search]{{flex:1;font-size:1rem;padding:.6rem;border:1px solid #bbb;border-radius:6px}}
- button{{font-size:1rem;padding:.6rem 1rem;border:0;border-radius:6px;background:#1f5fbf;color:#fff;cursor:pointer}}
- label{{margin-right:1rem}} table{{border-collapse:collapse;width:100%;font-size:.92rem}} td,th{{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #e5e5e5;vertical-align:top}}
- .note{{background:#f6f6f2;border-left:4px solid #c9a227;padding:.6rem .9rem;font-size:.92rem}} footer{{color:#666;font-size:.85rem;margin-top:2rem}}
-</style></head><body>
-<h1>Temple Terrace City Council records</h1>
-<p class="sub">{n_docs} documents · {n_pages} searchable pages · {n_items} agenda items · updated {built} UTC</p>
-<form id="f"><input type="search" id="q" placeholder="Search agendas, packets and minutes, e.g. annexation" required>
-<button>Search</button></form>
-<p><label><input type="radio" name="w" value="pages" checked> Every page of every document</label>
-<label><input type="radio" name="w" value="items"> Agenda items</label></p>
-<p class="note">Search opens in Datasette Lite, which runs in your browser and takes a few seconds to load.
-Text from scanned pages (marked <code>ocr</code>) was machine-read and can contain errors; follow the
-page link to check the original.</p>
-<p>Nearby: <a href="counties.html">county commission records for Brandon and Lutz (Hillsborough),
-Wesley Chapel (Pasco) and Spring Hill (Hernando)</a>.</p>
-<h2>Latest documents</h2>
-<table><tr><th>Date</th><th>Type</th><th>Title</th><th>Links</th></tr>{rows}</table>
-{removed}<h2>Who decided what</h2>
-<p><a href="{votes}">Every council vote</a> · <a href="{split}">Split votes only</a> ·
-<a href="{contracts}">Contracts and purchases</a> · <a href="{vendors}">Vendors</a> · <a href="{officials}">Officials and attendance</a> · <a href="{meetings}">Meetings and videos</a></p>
-<p class="note">Votes, vendors and amounts are read from the minutes and agendas by software and can be wrong.
+def city_summary(data: Path) -> dict:
+    """For the front door: the newest Temple Terrace record and how many the city has removed."""
+    state = [e for e in _city_state(data).values() if e.get("sha256")]
+    return {"latest": max((e["date"] for e in state), default=""),
+            "removed": sum(1 for e in state if not e.get("listed", True))}
+
+
+def city_page(site_url: str, built: str, counts: dict, recent: list[dict], gone: list[dict],
+              feed_links: list[str], out: Path) -> str:
+    from . import site
+    from .site import e, long_date
+
+    def record(x: dict, removed: bool = False) -> str:
+        links = ([] if removed else [f'<a href="{e(x["url"])}">City\'s copy</a>']) + (
+            [f'<a href="{e(x["copy_url"])}">Our archived copy</a>'] if x.get("copy_url") else [])
+        when = (f' · removed from the city\'s site by {e(long_date(x["unlisted_at"]))}'
+                if removed and x.get("unlisted_at") else "")
+        return (f'<li><p class="title">{e(x["title"])}</p><p>{e(x["kind"])} · meeting of {e(long_date(x["date"]))}{when}</p>'
+                f'<p>{" · ".join(links)}</p></li>')
+    L = lambda path: _lite(site_url, path)  # noqa: E731
+    removed = ""
+    if gone:
+        removed = (f'<h2 id="removed">Removed from the city\'s website</h2>'
+                   f'<p>The city no longer lists {"this document" if len(gone) == 1 else f"these {len(gone)} documents"}. '
+                   f'Our archived copies are still here, unchanged.</p><ul class="records">'
+                   + "".join(record(x, True) for x in gone) + "</ul>")
+    size = site._size(out / "templeterrace.db")
+    body = f"""<h1>Temple Terrace City Council records</h1>
+<p class="role">Agendas, packets and minutes from October 2025 on</p>
+<p class="lede">Every City Council agenda, packet and set of minutes the city still publishes, plus copies of the
+ones it has taken down: <mark>{counts['documents']:,} documents</mark>, {counts['pages']:,} searchable pages.</p>
+<p class="fair">Plain-language meeting pages for Temple Terrace, like the ones for the counties, are next. For now
+you can search the documents and see every recorded council vote.</p>
+<form class="search" id="f" role="search"><label for="q">Search Temple Terrace council records</label>
+<div class="row"><input type="search" id="q" name="q" required autocomplete="off" placeholder="for example: annexation"><button>Search</button></div>
+<fieldset><legend>Search in</legend>
+<label><input type="radio" name="w" value="pages" checked> Every page of every document</label>
+<label><input type="radio" name="w" value="items"> Agenda items</label></fieldset></form>
+<p class="small">Search opens in Datasette Lite, which runs in your browser{f" and downloads the database (about {size}) first" if size else ""}.
+Text from scanned pages (marked <code>ocr</code>) was machine-read and can contain errors; follow the page
+link to check the original.</p>
+<h2>Who decided what</h2>
+<ul class="links">
+<li><a href="{L('/templeterrace/votes')}">Every council vote</a> (<a href="{L('/templeterrace/votes?_where=nays%3C%3E%27%27&_sort_desc=date')}">split votes only</a>)</li>
+<li><a href="{L('/templeterrace/contracts')}">Contracts and purchases</a> and <a href="{L('/templeterrace/vendors')}">the companies</a></li>
+<li><a href="{L('/templeterrace/officials')}">Council members and attendance</a></li>
+<li><a href="{L('/templeterrace/meetings?_sort_desc=date')}">Meetings</a></li></ul>
+<p class="small">Votes, vendors and amounts are read from the minutes and agendas by software and can be wrong.
 Each row links to the page it came from.</p>
-<h2>Browse</h2>
-<p><a href="{docs}">All documents</a> · <a href="{items}">All agenda items</a> · <a href="{changes}">Change log</a>
-(documents added, edited, or removed by the city) · <a href="{lite}">Full database</a></p>
-<h2>Alerts</h2>
-<p>RSS: <a href="feed.xml">everything new</a> · {feeds}</p>
-<h2>Download</h2>
-<p><a href="templeterrace.db">SQLite database</a> · <a href="templeterrace.ftm.jsonl">FollowTheMoney entities</a>
-(people, organizations, contracts) · <a href="https://github.com/bgraham1214/open-civic/tree/main/data">raw data and change log</a></p>
-<footer>Public records from the City of Temple Terrace's CivicClerk portal and Archive Center, collected
-nightly. Each document is fingerprinted (SHA-256) and archived so changes are visible.
-<a href="https://github.com/bgraham1214/open-civic">Source and data</a>.</footer>
+<h2>Latest documents</h2>
+<ul class="records">{"".join(record(x) for x in recent)}</ul>
+{removed}
+<h2>Browse everything</h2>
+<ul class="links"><li><a href="{L('/templeterrace/documents')}">All documents</a></li>
+<li><a href="{L('/templeterrace/agenda_items')}">All agenda items</a></li>
+<li><a href="{L('/templeterrace/changes')}">Change log</a>: documents the city added, edited or removed</li></ul>
+<h2>Get updates</h2>
+<p>RSS feeds: <a href="feed.xml">everything new</a> · {" · ".join(feed_links)}.</p>
 <script>
-document.getElementById('f').addEventListener('submit', function (e) {{
-  e.preventDefault();
+document.getElementById('f').addEventListener('submit', function (ev) {{
+  ev.preventDefault();
   var q = document.getElementById('q').value.trim();
   var items = document.querySelector('input[name=w]:checked').value === 'items';
-  var base = items ? {items_js} : {pages_js};
-  location.href = base + '?_search=' + encodeURIComponent(q) + '&_sort_desc=date';
+  location.href = (items ? {json.dumps(L("/templeterrace/agenda_items"))} : {json.dumps(L("/templeterrace/pages"))}) + '?_search=' + encodeURIComponent(q) + '&_sort_desc=date';
 }});
-</script></body></html>
-"""
+</script>"""
+    note = ("<p>Public records from the City of Temple Terrace's CivicClerk portal and Archive Center, collected nightly. "
+            "Each document is fingerprinted (SHA-256) and archived, so changes and removals are visible. "
+            f'<a href="{_lite(site_url)}">Full database</a> · <a href="templeterrace.db">download</a>.</p>')
+    org = {"@type": "GovernmentOrganization", "name": "Temple Terrace City Council",
+           "parentOrganization": {"@type": "GovernmentOrganization", "name": "City of Temple Terrace"},
+           "areaServed": {"@type": "City", "name": "Temple Terrace, Florida"}}
+    return site.page("Temple Terrace City Council records", body, 0, path="templeterrace.html",
+                     description=("Search every Temple Terrace City Council agenda, packet and set of minutes, see "
+                                  "every recorded council vote, and find documents the city has removed."),
+                     note=note, feeds=[("Temple Terrace: new records", "feed.xml")],
+                     jsonld=[{"@type": "CollectionPage", "about": org}])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -434,20 +433,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--site-url", default="https://bgraham1214.github.io/open-civic/")
     args = ap.parse_args(argv)
     site_url = args.site_url.rstrip("/") + "/"
+    from . import site
+    built = _now().isoformat().replace("+00:00", "Z")
+    site.configure(site_url, built)
+    site.write_assets(args.out)
     counts = write_site(args.data_dir, args.out, site_url)
     print(json.dumps(counts))
     from . import region
-    built = _now().isoformat().replace("+00:00", "Z")
     try:  # a county problem must not stop the city site from publishing
-        print(json.dumps({"counties": region.write(args.data_dir, args.out, site_url, built, _rss)}))
         from . import people
         print(json.dumps({"commissioner_pages": people.write(args.data_dir, args.out, site_url)}))
         from . import meetings
         print(json.dumps({"meeting_pages": meetings.write(args.data_dir, args.out)}))
+        print(json.dumps({"counties": region.write(args.data_dir, args.out, site_url, built, _rss)}))
     except Exception as e:  # noqa: BLE001
         import traceback
         traceback.print_exc()
         print(f"::warning::county pages not built: {e}")
+    today = site.to_eastern(built).date().isoformat()
+    lite = {"templeterrace.db": _lite(site_url), "counties.db": region.lite(site_url)}
+    print(json.dumps({"common": site.write_common(args.out, today=today, tt=city_summary(args.data_dir), lite=lite)}))
     return 0
 
 

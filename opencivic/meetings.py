@@ -14,6 +14,7 @@ votes we can read yet, so its pages list what was on the agenda and say so.
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -22,6 +23,7 @@ from .explain import TERMS, TOPICS, dollars, explain, money
 from .jurisdictions import JURISDICTIONS
 from .people import _e, _times, commission_votes, decision_facts, kind, long_date, outcome, page, plain, record_link
 from .region import load
+from .site import absolute
 
 
 def weekday_date(d: str) -> str:
@@ -73,7 +75,7 @@ def _vote_line(r: dict) -> str:
         who += f'<span class="said no">Voted no: {_e(", ".join(nos))}</span>. '
     if absent:
         who += f'Didn\'t vote: {_e(", ".join(absent))}.'
-    return (f'<div class="tally" role="img" aria-label="{_e(outcome(f))}">{marks}</div>'
+    return (f'<div class="tally" aria-hidden="true">{marks}</div>'
             f'<p class="outcome">{_e(outcome(f))}.</p>' + (f'<p class="who-voted">{who}</p>' if who else ""))
 
 
@@ -123,12 +125,11 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
                             + (f'<p class="learn">New to this? <a href="../../learn/land.html">How building and land '
                                f'decisions work</a></p>' if t == "land" else "") + block)
     prev, nxt = prev_next
-    nav = " ".join(x for x in (
-        f'<a href="{prev}.html">Earlier meeting</a>' if prev else "",
-        f'<a href="{nxt}.html">Later meeting</a>' if nxt else "") if x)
+    nav = "".join(x for x in (
+        f'<li><a href="{prev}.html" rel="prev">Earlier meeting: {_e(weekday_date(prev))}</a></li>' if prev else "",
+        f'<li><a href="{nxt}.html" rel="next">Later meeting: {_e(weekday_date(nxt))}</a></li>' if nxt else "") if x)
     people = (f' <a href="../../commissioners/{county}.html">How each commissioner voted</a>' if has_people else "")
-    body = f"""<p class="back"><a href="../{county}.html">All {_e(j['name'])} Commission meetings</a></p>
-<h1>{_e(weekday_date(d))}</h1>
+    body = f"""<h1>{_e(weekday_date(d))}</h1>
 <p class="role">{_e(j['name'])} Commission meeting</p>
 <p class="lede">{lede}</p>
 {note}{big}
@@ -136,10 +137,19 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
 The official wording is under each one. Outcomes count the recorded votes.{people}</p>
 {"<ul class='key' aria-label='How to read the squares'><li><span class='m yes'></span> voted yes</li><li><span class='m no'></span> voted no</li><li><span class='m none'></span> didn't vote</li></ul>" if voted else ""}
 {''.join(sections)}
-<p class="back">{nav}</p>
-<footer>Built by Open Civic Web, a free public project, from {_e(j['name'])}'s official records.
-<a href="https://github.com/bgraham1214/open-civic">How it works</a>.</footer>"""
-    return page(f"{j['name']} Commission, {long_date(d)}: what happened", body, 2)
+{f'<nav class="pager" aria-label="Other meetings"><ul>{nav}</ul></nav>' if nav else ''}"""
+    plain_lede = re.sub(r"<[^>]+>", "", lede)
+    event = {"@type": "Event", "name": f"{j['name']} Commission meeting",
+             "startDate": d, "eventStatus": "https://schema.org/EventScheduled",
+             "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+             "isAccessibleForFree": True, "description": plain_lede,
+             "organizer": {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners"},
+             "url": absolute(f"meetings/{county}/{d}.html") or None}
+    return page(f"{j['name']} Commission, {long_date(d)}: what happened", body, 2,
+                path=f"meetings/{county}/{d}.html",
+                crumbs=[("County records", "counties.html"), (f"{j['short']} meetings", f"meetings/{county}.html")],
+                description=f"{j['name']} Commission meeting of {long_date(d)}, in plain language. {plain_lede}",
+                note=f"<p>From {_e(j['name'])}'s official records.</p>", jsonld=[event], here=long_date(d))
 
 
 def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool) -> str:
@@ -168,17 +178,21 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool) 
                       f"<details><summary>{y} ({_plural(len(ds), 'meeting')})</summary>{inner}</details>")
     areas = " and ".join(j["areas"])
     people = (f'<p><a href="../commissioners/{county}.html">How each commissioner voted</a></p>' if has_people else "")
-    body = f"""<p class="back"><a href="../counties.html">County records</a></p>
-<h1>{_e(j['name'])} Commission meetings</h1>
+    body = f"""<h1>{_e(j['name'])} Commission meetings</h1>
 <p class="role">What happened, in plain language</p>
 <p class="lede">The County Commission makes the local decisions for {_e(areas)}. Pick a meeting to see what it
 decided, explained without the jargon.</p>
 {people}
 <p class="learn"><a href="../learn/land.html">How building and land decisions work</a> ·
 <a href="../learn/money.html">How county money works</a></p>
-{''.join(blocks)}
-<footer>Built by Open Civic Web, a free public project. <a href="https://github.com/bgraham1214/open-civic">How it works</a>.</footer>"""
-    return page(f"{j['name']} Commission meetings", body, 1)
+{''.join(blocks)}"""
+    return page(f"{j['name']} Commission meetings", body, 1, path=f"meetings/{county}.html", here=f"{j['short']} meetings",
+                crumbs=[("County records", "counties.html")],
+                description=(f"Every {j['name']} Commission meeting we have, explained in plain language: what was "
+                             f"decided, for {areas}."),
+                feeds=[(f"{j['name']}: new records", f"feeds/{county}.xml")],
+                jsonld=[{"@type": "CollectionPage", "name": f"{j['name']} Commission meetings",
+                         "about": {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners"}}])
 
 
 def _term_block(keys: list[str]) -> str:
@@ -190,8 +204,7 @@ def _term_block(keys: list[str]) -> str:
 
 
 def learn_pages() -> dict[str, str]:
-    land = f"""<p class="back"><a href="../counties.html">County records</a></p>
-<h1>How building and land decisions work</h1>
+    land = f"""<h1>How building and land decisions work</h1>
 <p class="lede">Most of what a County Commission decides is about land: what can be built, where, and how much
 of it. Two sets of rules matter.</p>
 <h2>1. The long-range land plan</h2>
@@ -211,10 +224,8 @@ Anyone can sign up to speak at these hearings; each hearing's page on
 <a href="https://hcfl.gov/events">hcfl.gov</a> explains how.</p>
 <h2>The words you'll see</h2>
 {_term_block(["cpa-map", "cpa-text", "rezoning", "rz-std", "rz-pd", "prs", "mm", "usa", "ldc", "vacate", "cdd"])}
-<footer>Plain-language explanations by Open Civic Web, with a source for each where one exists. They describe how
-the process works; they don't say whether any decision was right.</footer>"""
-    money_ = f"""<p class="back"><a href="../counties.html">County records</a></p>
-<h1>How county money works</h1>
+"""
+    money_ = f"""<h1>How county money works</h1>
 <p class="lede">The County Commission sets the property tax rate, passes the budget, and approves the bigger
 contracts and grants. Here is what those decisions mean.</p>
 <h2>Property taxes</h2>
@@ -231,10 +242,20 @@ usually makes companies compete through an invitation to bid (ITB) or a request 
 show the dollar amount and the company named in the official wording.</p>
 <h2>The words you'll see</h2>
 {_term_block(["millage", "budget", "contract", "grant", "cdd"])}
-<footer>Plain-language explanations by Open Civic Web, with a source for each where one exists. They describe how
-the process works; they don't say whether any decision was right.</footer>"""
-    return {"land": page("How building and land decisions work", land, 1),
-            "money": page("How county money works", money_, 1)}
+"""
+    note = ("<p>Plain-language explanations, with a source for each where one exists. They describe how the "
+            "process works; they don't say whether any decision was right.</p>")
+
+    def art(title: str, body: str, name: str, desc: str) -> str:
+        return page(title, body, 1, path=f"learn/{name}.html", crumbs=[("Learn", "learn/index.html")],
+                    description=desc, note=note, og_type="article",
+                    jsonld=[{"@type": "Article", "headline": title, "description": desc, "inLanguage": "en",
+                             "publisher": {"@type": "Organization", "name": "Open Civic Web"},
+                             "url": absolute(f"learn/{name}.html") or None}])
+    return {"land": art("How building and land decisions work", land, "land",
+                        "A plain-language guide to land-use plans, zoning, rezonings and public hearings in Florida counties."),
+            "money": art("How county money works", money_, "money",
+                         "A plain-language guide to property tax rates (millage), county budgets, contracts and grants.")}
 
 
 def write(data: Path, out: Path) -> dict:

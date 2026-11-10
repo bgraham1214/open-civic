@@ -59,6 +59,8 @@ class People(unittest.TestCase):
             page = (d / "site" / "commissioners" / "hillsborough" / "chris-boles.html").read_text()
             self.assertIn(f"voting on <mark>{len(rows)} decisions</mark>", page)
             self.assertIn("Boles voted no once", page)
+            self.assertIn('"@type":"ProfilePage"', page)
+            self.assertIn('href="../../commissioners/hillsborough.html">Hillsborough commissioners</a>', page)
             yes = sum(v["code"] == "Y" for v in rows[3]["votes"])
             self.assertIn(f"Passed {yes} to 1", page)
             self.assertIn("Decisions that mention Brandon or Lutz", page)

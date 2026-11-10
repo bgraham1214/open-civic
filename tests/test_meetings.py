@@ -32,6 +32,9 @@ class Meetings(unittest.TestCase):
             self.assertIn("1 decision had at least one no vote", page)
             self.assertIn("Official wording", page)
             self.assertIn("made by fixed rules, not AI", page)
+            self.assertIn('"@type":"Event","name":"Hillsborough County Commission meeting","startDate":"2025-01-07"', page)
+            self.assertIn('<div class="tally" aria-hidden="true">', page)   # the outcome is read out from the text
+            self.assertIn('<span aria-current="page">January 7, 2025</span>', page)
             idx = (d / "site" / "meetings" / "hillsborough.html").read_text()
             self.assertIn("1 with a no vote", idx)
             self.assertTrue((d / "site" / "learn" / "land.html").exists())

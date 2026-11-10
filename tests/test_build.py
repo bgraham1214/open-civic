@@ -70,12 +70,12 @@ class Build(unittest.TestCase):
             con.close()
             contracts = (d / "site" / "feeds" / "contracts.xml").read_text()
             self.assertIn("Audit Services", contracts)
-            self.assertIn("lite.datasette.io/?url=" + SITE + "templeterrace.db", (d / "site" / "index.html").read_text())
-            self.assertNotIn("Removed from the city", (d / "site" / "index.html").read_text())
+            self.assertIn("lite.datasette.io/?url=" + SITE + "templeterrace.db", (d / "site" / "templeterrace.html").read_text())
+            self.assertNotIn("Removed from the city", (d / "site" / "templeterrace.html").read_text())
             meta = json.loads((d / "site" / "metadata.json").read_text())
             self.assertIn("ocr", meta["databases"]["templeterrace"]["tables"]["pages"]["description"])
 
-    def test_removed_documents_listed_on_home_page(self):
+    def test_removed_documents_listed_on_city_page(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             data = make_data(d)
@@ -83,9 +83,9 @@ class Build(unittest.TestCase):
             state["civicclerk:t:1"].update(listed=False, unlisted_at="2026-11-04T16:24:18Z")
             (data / "state.json").write_text(json.dumps(state))
             build.write_site(data, d / "site", SITE)
-            page = (d / "site" / "index.html").read_text()
+            page = (d / "site" / "templeterrace.html").read_text()
             self.assertIn("Removed from the city's website", page)
-            self.assertIn("<td>2026-11-04</td>", page)
+            self.assertIn("removed from the city's site by November 4, 2026", page)
             self.assertIn(state["civicclerk:t:1"]["copy_url"], page)
 
 

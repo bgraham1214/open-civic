@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import html
 import re
-import shutil
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -27,8 +26,8 @@ from pathlib import Path
 from .county_entities import BOCC, board_of
 from .jurisdictions import JURISDICTIONS
 from .region import areas_in, load
-
-STATIC = Path(__file__).parent / "static"
+from .site import absolute, write_assets
+from . import site
 
 YES = {"yes", "aye", "in favor", "yea", "y"}
 NO = {"no", "nay", "opposed", "n"}
@@ -146,7 +145,7 @@ def tally(row: dict, me: str) -> str:
         marks.append(f'<span class="m {k}{mine}" title="{_e(v["person"])}: {_e(v["vote"] or label)}"></span>')
     f = row["facts"]
     said = {"yes": "voted yes", "no": "voted no", "none": "didn't vote"}[row["kind"]]
-    return (f'<div class="tally" role="img" aria-label="{_e(outcome(f))}. {_e(me)} {said}.">{"".join(marks)}</div>'
+    return (f'<div class="tally" aria-hidden="true">{"".join(marks)}</div>'
             f'<p class="outcome">{_e(outcome(f))}. <span class="said {row["kind"]}">{_e(me.split()[-1])} {said}</span>'
             + (f' <span class="raw">(recorded as “{_e(row["vote"]["vote"])}”)</span>'
                if row["kind"] == "none" and row["vote"]["vote"] else "") + "</p>")
@@ -223,81 +222,14 @@ longer needs.</dd>
 
 XNOTE = {"hillsborough": " The Hillsborough Clerk marks this “X” (and rarely “A”) without saying which."}
 
-CSS = """
-@font-face{font-family:"Atkinson Hyperlegible";src:url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
-@font-face{font-family:"Atkinson Hyperlegible";src:url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
-:root{--ink:#16324F;--paper:#FFFFFF;--mark:#FFE45C;--quiet:#5F6B7A;--line:#D5DCE4}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:1.125rem/1.6 "Atkinson Hyperlegible",system-ui,sans-serif}
-main{max-width:38rem;margin:0 auto;padding:1.5rem 1.25rem 4rem}
-a{color:var(--ink);text-decoration-thickness:2px;text-underline-offset:3px}
-a:focus-visible,summary:focus-visible{outline:3px solid var(--ink);outline-offset:3px;background:var(--mark)}
-.back{font-size:1rem;margin:0 0 2rem}
-h1{font-size:2.6rem;line-height:1.1;margin:0 0 .4rem;letter-spacing:-.01em}
-.role{color:var(--quiet);margin:0 0 1.75rem}
-.lede{font-size:1.35rem;line-height:1.5;font-weight:700;margin:0 0 1rem}
-.lede mark,.hl{background:linear-gradient(transparent 12%,var(--mark) 12%,var(--mark) 88%,transparent 88%);color:inherit;padding:0 .15em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-.fair{color:var(--quiet);font-size:1rem;margin:0 0 2.5rem}
-h2{font-size:1.5rem;line-height:1.25;margin:3rem 0 .5rem}
-h2+p{margin-top:0}
-.decisions{list-style:none;padding:0;margin:1rem 0}
-.decisions>li{padding:1.1rem 0;border-top:1px solid var(--line)}
-.when{font-size:.95rem;color:var(--quiet);margin:0 0 .2rem}
-.what{margin:0 0 .3rem}
-.motion{font-size:1rem;color:var(--quiet);margin:0 0 .6rem}
-.tally{display:flex;gap:5px;margin:.4rem 0 .3rem}
-.m{width:18px;height:18px;display:inline-block;border:2px solid var(--ink)}
-.m.yes{background:var(--ink)}
-.m.no{background:var(--mark);position:relative}
-.m.no::before,.m.no::after{content:"";position:absolute;left:50%;top:-1px;width:2px;height:16px;background:var(--ink);transform:rotate(45deg)}
-.m.no::after{transform:rotate(-45deg)}
-.m.none{border-color:var(--quiet);border-radius:50%}
-.m.me{outline:3px solid var(--ink);outline-offset:2px}
-.outcome{font-size:1rem;margin:0 0 .3rem}
-.said.no{background:var(--mark);padding:0 .2em}
-.raw{color:var(--quiet)}
-.src{font-size:1rem;margin:0}
-.empty{color:var(--quiet)}
-details{margin:.5rem 0 1rem}
-summary{cursor:pointer;font-weight:700;padding:.5rem 0}
-.key{display:flex;flex-wrap:wrap;gap:.4rem 1.25rem;font-size:1rem;margin:0 0 1rem;padding:0;list-style:none}
-.key li{display:flex;align-items:center;gap:.45rem}
-.people{list-style:none;padding:0;margin:1rem 0}
-.people li{padding:1rem 0;border-top:1px solid var(--line)}
-.people a{font-size:1.35rem;font-weight:700}
-.people p{margin:.2rem 0 0}
-.words dt{font-weight:700;margin-top:1rem}
-.words dd{margin:0}
-.headline{font-weight:700;margin:0 0 .3rem}
-.subject{font-size:1rem;color:var(--quiet);margin:0 0 .3rem}
-.facts{margin:.2rem 0 .5rem;padding-left:1.2rem}
-.facts li{margin:.1rem 0}
-.means{font-size:1rem;margin:.3rem 0}
-.means summary,.official summary{font-weight:400;padding:.2rem 0;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
-.means p,.official p{margin:.3rem 0 .6rem;padding-left:.9rem;border-left:3px solid var(--line)}
-.who-voted{font-size:1rem;margin:0 0 .3rem}
-.topic-count{color:var(--quiet);font-weight:400}
-.meetings{list-style:none;padding:0;margin:.5rem 0}
-.meetings li{padding:.7rem 0;border-top:1px solid var(--line)}
-.meetings a{font-weight:700}
-.meetings p{margin:.1rem 0 0;font-size:1rem;color:var(--quiet)}
-.learn{background:#F3F6F9;padding:.9rem 1rem;margin:1.5rem 0;font-size:1rem}
-footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.95rem;color:var(--quiet)}
-@media (max-width:30rem){h1{font-size:2.1rem}.lede{font-size:1.2rem}}
-"""
-
 KEY = """<ul class="key" aria-label="How to read the squares">
 <li><span class="m yes"></span> voted yes</li><li><span class="m no"></span> voted no</li>
 <li><span class="m none"></span> didn't vote</li><li><span class="m yes me"></span> this commissioner</li></ul>"""
 
 
-def page(title: str, body: str, depth: int) -> str:
-    up = "../" * depth
-    return f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{_e(title)}</title><link rel="stylesheet" href="{up}plain.css"></head>
-<body><main>{body}</main></body></html>
-"""
+def page(title: str, body: str, depth: int, **kw) -> str:
+    """The shared page shell (opencivic.site.page)."""
+    return site.page(title, body, depth, **kw)
 
 
 def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
@@ -313,8 +245,7 @@ def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
             f'{_e(last)} voted no {_times(p["no"])} and didn\'t vote {_times(p["none"])}.')
     no_rows = [r for r in p["rows"] if r["kind"] == "no"]
     area_rows = [r for r in p["rows"] if areas_in(r["item"]["title"] + " " + (r["item"].get("action_text") or ""))]
-    body = f"""<p class="back"><a href="../{county}.html">All {_e(j['name'])} commissioners</a></p>
-<h1>{_e(name)}</h1>
+    body = f"""<h1>{_e(name)}</h1>
 <p class="role">{_e(j['name'])} Commission</p>
 <p class="lede">{lede}</p>
 <p class="fair">These are counts from the county's official vote records. They don't say why anyone voted the
@@ -335,14 +266,26 @@ affect these areas too without naming them.</p>
 searchable table of every county vote. It's a large download (about 45 MB), so it's best on Wi-Fi.</p>
 {listing(p['rows'][:25], name, "", show=25)}
 {GLOSSARY.format(areas=_e(' and '.join(areas)), xnote=XNOTE.get(county, ""))}
-{footer}"""
-    return page(f"{name}: votes on the {j['name']} Commission", body, 2)
+"""
+    sl = slug(name)
+    current = p.get("current")
+    person = {"@type": "Person", "name": name, "url": absolute(f"commissioners/{county}/{sl}.html") or None,
+              "jobTitle": "County Commissioner" if current else "Former County Commissioner",
+              ("worksFor" if current else "alumniOf"): {"@type": "GovernmentOrganization",
+                                                        "name": f"{j['name']} Board of County Commissioners"}}
+    return page(f"{name}: votes on the {j['name']} Commission", body, 2,
+                path=f"commissioners/{county}/{sl}.html",
+                crumbs=[("County records", "counties.html"), (f"{j['short']} commissioners", f"commissioners/{county}.html")],
+                description=(f"How {name} voted on the {j['name']} Commission: {n:,} recorded votes from "
+                             f"{month_year(p['first'])} to {month_year(p['last'])}, every no vote, and decisions naming "
+                             f"{' or '.join(areas)}."),
+                note=footer, jsonld=[{"@type": "ProfilePage", "mainEntity": person}], og_type="profile", here=name)
 
 
 def county_page(county: str, ppl: dict[str, dict], footer: str) -> str:
     j = JURISDICTIONS[county]
     newest = max(p["last"] for p in ppl.values())
-    current = sorted((p for p in ppl.values() if p["last"] >= _minus_days(newest, 120)), key=lambda p: p["name"].split()[-1])
+    current = sorted((p for p in ppl.values() if p.get("current")), key=lambda p: p["name"].split()[-1])
     former = sorted((p for p in ppl.values() if p not in current), key=lambda p: p["last"], reverse=True)
 
     def entry(p: dict) -> str:
@@ -351,8 +294,7 @@ def county_page(county: str, ppl: dict[str, dict], footer: str) -> str:
                 f'<span class="hl">Voted no {_times(p["no"])}</span>; didn\'t vote {_times(p["none"])}.</p></li>')
     areas = " and ".join(j["areas"])
     plural = "doesn't" if len(j["areas"]) == 1 else "don't"
-    body = f"""<p class="back"><a href="../counties.html">County records</a></p>
-<h1>{_e(j['name'])} Commission</h1>
+    body = f"""<h1>{_e(j['name'])} Commission</h1>
 <p class="role">How each commissioner voted</p>
 <p class="lede">{_e(areas)} {plural} have a city government. Decisions about zoning, roads and county taxes
 there are made by these {len(current)} commissioners.</p>
@@ -361,8 +303,16 @@ why anyone voted the way they did.</p>
 <h2>On the Commission now</h2>
 <ul class="people">{''.join(entry(p) for p in current)}</ul>
 {('<h2>Former commissioners</h2><ul class="people">' + ''.join(entry(p) for p in former) + '</ul>') if former else ''}
-{footer}"""
-    return page(f"{j['name']} Commission: how each commissioner voted", body, 1)
+"""
+    org = {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners",
+           "areaServed": [{"@type": "Place", "name": f"{a}, Florida"} for a in j["areas"]],
+           "member": [{"@type": "Person", "name": p["name"], "jobTitle": "County Commissioner",
+                       "url": absolute(f"commissioners/{county}/{slug(p['name'])}.html") or None} for p in current]}
+    return page(f"{j['name']} Commission: how each commissioner voted", body, 1,
+                path=f"commissioners/{county}.html", crumbs=[("County records", "counties.html")], here=f"{j['short']} commissioners",
+                description=(f"How each {j['name']} commissioner voted, in plain language: who is on the board, "
+                             f"how often each voted no, and every recorded decision."),
+                note=footer, jsonld=[{"@type": "CollectionPage", "about": org}])
 
 
 def _times(n: int) -> str:
@@ -385,18 +335,16 @@ FOOTERS = {
 def write(data: Path, out: Path, site_url: str = "") -> dict:
     d = out / "commissioners"
     d.mkdir(parents=True, exist_ok=True)
-    (out / "plain.css").write_text(CSS, "utf-8")
-    fonts = out / "fonts"
-    fonts.mkdir(exist_ok=True)
-    for f in (STATIC / "fonts").iterdir():
-        shutil.copy(f, fonts / f.name)
+    write_assets(out)
     counts = {}
     for county, rec in commission_votes(data).items():
         ppl = people(rec)
         if not ppl:
             continue
-        footer = (f'<footer>{_e(FOOTERS.get(county, ""))} Built by Open Civic Web, a free public project. '
-                  f'<a href="https://github.com/bgraham1214/open-civic">How it works</a>.</footer>')
+        footer = f'<p>{_e(FOOTERS.get(county, ""))}</p>'
+        newest = max(p["last"] for p in ppl.values())
+        for p in ppl.values():
+            p["current"] = p["last"] >= _minus_days(newest, 120)
         (d / f"{county}.html").write_text(county_page(county, ppl, footer), "utf-8")
         (d / county).mkdir(exist_ok=True)
         for p in ppl.values():

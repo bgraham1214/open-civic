@@ -31,7 +31,22 @@ python -m opencivic.archivecenter items --input-dir raw/ --module minutes     # 
 
 `opencivic/extract.py` pulls text from every document, page by page, OCR'ing scanned pages with Tesseract (marked `ocr`). `civicclerk items` lists every agenda item from CivicClerk's Meetings API.
 
-`opencivic/build.py` builds the public site: a SQLite database with full-text search over every page and agenda item, opened in the browser through [Datasette Lite](https://lite.datasette.io), plus RSS feeds. It is published nightly to GitHub Pages at https://bgraham1214.github.io/open-civic/.
+`opencivic/build.py` builds the public site, published nightly to GitHub Pages at https://bgraham1214.github.io/open-civic/: SQLite databases with full-text search, opened in the browser through [Datasette Lite](https://lite.datasette.io), RSS feeds, and plain-language pages.
+
+### The public site
+
+| Page | What it is |
+| --- | --- |
+| `index.html` | The front door: pick your area (Temple Terrace, Brandon, Lutz, Wesley Chapel, Spring Hill) |
+| `templeterrace.html` | Temple Terrace City Council records, search, and documents the city removed |
+| `counties.html` | County commission records, search, recent meetings, feeds |
+| `meetings/<county>.html`, `meetings/<county>/<date>.html` | What happened at each County Commission meeting, in plain language |
+| `commissioners/<county>.html`, `commissioners/<county>/<name>.html` | How each commissioner voted |
+| `learn/index.html`, `learn/land.html`, `learn/money.html` | Every term we explain, with sources; two short explainers |
+| `data.html` | Downloads, feeds and raw files for researchers |
+| `sitemap.xml`, `llms.txt` | Maps of the site for search engines and AI tools |
+
+Every page goes through one shell, `opencivic/site.py`: skip link, header navigation, breadcrumbs, landmarks, a shared footer, a meta description, a canonical link and schema.org JSON-LD (meetings as `Event`, commissioners as `Person`, terms as `DefinedTerm`, downloads as `Dataset`). The single stylesheet (`plain.css`) uses Atkinson Hyperlegible, self-hosted. The site is checked with [axe-core](https://github.com/dequelabs/axe-core) against WCAG 2.2 AA at phone width; votes are shown by shape as well as colour and still read correctly in Windows high-contrast mode.
 
 `opencivic/minutes.py` and `opencivic/entities.py` read attendance and every roll-call vote from the minutes, find contracts and vendors in agenda items, and write them to `data/entities/`, including a FollowTheMoney file (`templeterrace.ftm.jsonl`). All of it is machine-read and links back to its source page.
 
@@ -44,7 +59,7 @@ python -m opencivic.legistar items --client hernandocountyfl --events events.jso
 
 `opencivic/hillsclerk.py` reads the Hillsborough Clerk's BOCC Master Voting Record PDFs (one per year, updated monthly) into roll calls: RCS number, item, date, category, subject and each commissioner's vote code.
 
-`opencivic/people.py` writes a plain-language page for each Hillsborough and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda, and set in Atkinson Hyperlegible (SIL OFL, self-hosted, no Google Fonts).
+`opencivic/people.py` writes a plain-language page for each Hillsborough and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda.
 
 `opencivic/explain.py` translates agenda wording into plain language by fixed rules (no AI): a topic, a plain headline ("Change to the future land-use map at 16410 Balm Wimauma Road"), decoded facts ("from Agricultural/Rural, up to 1 home per 5 acres, to Residential, up to 4 homes per acre"; dollar amounts; companies), and sourced definitions of the terms. `opencivic/meetings.py` uses it to write a "what happened" page for every County Commission meeting (`site/meetings/`) and two explainers (`site/learn/`). The official wording is always one tap away.
 

@@ -15,7 +15,6 @@ Kept apart from templeterrace.db so each stays well under GitHub's 100 MB file l
 from __future__ import annotations
 
 import gzip
-import html
 import json
 import re
 import sqlite3
@@ -369,84 +368,79 @@ def feed_entries(data: Path, county: str | None = None, area: str | None = None)
     return out
 
 
-def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[dict]]) -> str:
+def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[dict]], out: Path | None = None) -> str:
+    from . import site
+    from .site import e, long_date
     sections = []
     for slug in COUNTIES:
         j, c = JURISDICTIONS[slug], counts["by_county"][slug]
-        areas = ", ".join(j["areas"])
-        rows = "".join(
-            f"<tr><td>{m['date']}</td><td>{html.escape(m['body'])}</td><td>"
-            + " · ".join(x for x in (
-                f"<a href=\"{html.escape(m['agenda_url'])}\">agenda</a>" if m.get("agenda_url") else "",
-                f"<a href=\"{html.escape(m['minutes_url'])}\">minutes</a>" if m.get("minutes_url") else "",
-                f"<a href=\"{html.escape(m['portal_url'])}\">meeting page</a>" if m.get("portal_url") else "") if x)
-            + "</td></tr>" for m in recent[slug])
+        areas = " and ".join(j["areas"])
+
+        def meeting(m: dict) -> str:
+            ours = out is not None and (out / "meetings" / slug / f"{m['date']}.html").exists()
+            links = [x for x in (
+                f'<a href="meetings/{slug}/{m["date"]}.html">What happened, in plain words</a>' if ours else "",
+                f'<a href="{e(m["agenda_url"])}">Agenda</a>' if m.get("agenda_url") else "",
+                f'<a href="{e(m["minutes_url"])}">Minutes</a>' if m.get("minutes_url") else "",
+                f'<a href="{e(m["portal_url"])}">Official meeting page</a>' if m.get("portal_url") else "") if x]
+            return (f'<li><p class="title">{e(site.weekday_date(m["date"]))}</p><p>{e(m["body"])}</p>'
+                    f'<p>{" · ".join(links)}</p></li>')
         w = f"county%3D%27{slug}%27"
-        area_feeds = " · ".join(f'<a href="feeds/area-{a.lower().replace(" ", "-")}.xml">{html.escape(a)}</a>'
-                                for a in j["areas"])
-        area_search = " · ".join(
-            f'<a href="{lite(site_url, "/counties/agenda_items?areas__contains=" + a.replace(" ", "+") + "&_sort_desc=date")}">'
-            f'items mentioning {html.escape(a)}</a>' for a in j["areas"])
+        plain_links = [f'<li><a href="meetings/{slug}.html">What happened at each meeting</a></li>']
+        if slug in ("hillsborough", "hernando"):
+            plain_links.append(f'<li><a href="commissioners/{slug}.html">How each commissioner voted</a></li>')
+        deep = [
+            f'<a href="{lite(site_url, f"/counties/agenda_items?_where={w}&_sort_desc=date")}">agenda items</a>',
+            f'<a href="{lite(site_url, f"/counties/votes?_where={w}&_sort_desc=date")}">votes</a>',
+            f'<a href="{lite(site_url, f"/counties/agenda_items?_where={w}%20and%20nays%3C%3E%27%27&_sort_desc=date")}">items with a no vote</a>',
+            f'<a href="{lite(site_url, f"/counties/meetings?_where={w}&_sort_desc=date")}">meetings</a>',
+        ] + ([f'<a href="{lite(site_url, f"/counties/pages?_where={w}&_sort_desc=date")}">document pages</a>'] if c["documents"] else [])
+        deep += [f'<a href="{lite(site_url, "/counties/agenda_items?areas__contains=" + a.replace(" ", "+") + "&_sort_desc=date")}">'
+                 f'items naming {e(a)}</a>' for a in j["areas"]]
+        feeds = [f'<a href="feeds/{slug}.xml">everything new in {e(j["short"])}</a>'] + [
+            f'<a href="feeds/area-{a.lower().replace(" ", "-")}.xml">items naming {e(a)}</a>' for a in j["areas"]]
         sections.append(f"""
-<section id="{slug}"><h2>{html.escape(j['name'])} <span class="areas">({html.escape(areas)})</span></h2>
-<p class="sub">{c['meetings']} meetings · {c['agenda_items']} agenda items · {c['votes']} recorded votes ·
-{c['documents']} archived documents · {c['first']} to {c['last']}</p>
-<p class="note">{html.escape(j['coverage'])}</p>
-<p class="who"><a href="meetings/{slug}.html">What happened at each meeting, in plain language</a></p>
-{('<p class="who"><a href="commissioners/' + slug + '.html">How each ' + html.escape(j['short']) + ' commissioner voted</a></p>') if slug in ('hillsborough', 'hernando') else ''}
-<p><a href="{lite(site_url, f'/counties/agenda_items?_where={w}&_sort_desc=date')}">Agenda items</a> ·
-<a href="{lite(site_url, f'/counties/votes?_where={w}&_sort_desc=date')}">Votes</a> ·
-<a href="{lite(site_url, f'/counties/agenda_items?_where={w}%20and%20nays%3C%3E%27%27&_sort_desc=date')}">Items with a no vote</a> ·
-<a href="{lite(site_url, f'/counties/meetings?_where={w}&_sort_desc=date')}">Meetings</a>
-{(' · <a href="' + lite(site_url, f'/counties/pages?_where={w}&_sort_desc=date') + '">Document pages</a>') if c['documents'] else ''}</p>
-<p>{area_search}</p>
-<p>RSS: <a href="feeds/{slug}.xml">everything new in {html.escape(j['short'])}</a> · {area_feeds}</p>
-<table><tr><th>Date</th><th>Meeting</th><th>Links</th></tr>{rows}</table></section>""")
-    return COUNTIES_PAGE.format(sections="".join(sections), lite=lite(site_url), built=built[:16].replace("T", " "),
-                                items_js=json.dumps(lite(site_url, "/counties/agenda_items")),
-                                pages_js=json.dumps(lite(site_url, "/counties/pages")))
-
-
-COUNTIES_PAGE = """<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hillsborough, Pasco and Hernando county records</title>
-<style>
- body{{font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem;color:#1d1d1f}}
- h1{{font-size:1.6rem;margin-bottom:.2rem}} h2{{margin-top:2.2rem}} .sub{{color:#555;margin-top:0}} .areas{{font-weight:normal;color:#555}}
- form{{display:flex;gap:.5rem;margin:1.2rem 0}} input[type=search]{{flex:1;font-size:1rem;padding:.6rem;border:1px solid #bbb;border-radius:6px}}
- button{{font-size:1rem;padding:.6rem 1rem;border:0;border-radius:6px;background:#1f5fbf;color:#fff;cursor:pointer}}
- label{{margin-right:1rem}} table{{border-collapse:collapse;width:100%;font-size:.92rem}} td,th{{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #e5e5e5;vertical-align:top}}
- .who{{font-size:1.15rem;font-weight:600}}
- .note{{background:#f6f6f2;border-left:4px solid #c9a227;padding:.6rem .9rem;font-size:.92rem}} footer{{color:#666;font-size:.85rem;margin-top:2rem}}
-</style></head><body>
-<p><a href="index.html">← Temple Terrace City Council</a></p>
-<h1>County commission records</h1>
-<p class="sub">Brandon and Lutz (Hillsborough) · Wesley Chapel (Pasco) · Spring Hill (Hernando) · updated {built} UTC</p>
-<p>Brandon, Lutz, Wesley Chapel and Spring Hill have no city government of their own. Their local decisions
-are made by their county commission, so this page follows those commissions.</p>
-<p class="who">New to this? <a href="learn/land.html">How building and land decisions work</a> ·
-<a href="learn/money.html">How county money works</a></p>
-<form id="f"><input type="search" id="q" placeholder="Search all three counties, e.g. rezoning" required>
-<button>Search</button></form>
-<p><label><input type="radio" name="w" value="items" checked> Agenda items</label>
-<label><input type="radio" name="w" value="pages"> Pages of archived documents</label></p>
-<p class="note">Search opens in Datasette Lite, which runs in your browser and takes a few seconds to load.
-Actions, results and votes are as each county recorded them; follow the links to check the county's own record.</p>
-{sections}
-<footer>Public records from Hillsborough County (Legistar), Pasco County (CivicClerk) and Hernando County
-(Legistar), plus the Hillsborough Clerk's Master Voting Record, collected nightly.
-<a href="{lite}">Full database</a> · <a href="counties.db">download</a> ·
-<a href="counties.ftm.jsonl">FollowTheMoney entities</a> ·
-<a href="https://github.com/bgraham1214/open-civic">Source and data</a>.</footer>
+<section id="{slug}" aria-labelledby="h-{slug}"><h2 id="h-{slug}">{e(j['name'])} <span class="topic-count">({e(areas)})</span></h2>
+<p class="small">{c['meetings']:,} meetings · {c['agenda_items']:,} agenda items · {c['votes']:,} recorded votes ·
+{c['documents']:,} archived documents{f" · {e(long_date(c['first']))} to {e(long_date(c['last']))}" if c.get('first') and c.get('last') else ''}</p>
+<ul class="links">{''.join(plain_links)}</ul>
+<details><summary>What we collect from {e(j['name'])}</summary><p>{e(j['coverage'])}</p></details>
+<h3>Recent meetings</h3>
+<ul class="records">{''.join(meeting(m) for m in recent[slug])}</ul>
+<h3>Dig deeper</h3>
+<p class="small">Searchable tables (they open in Datasette Lite): {" · ".join(deep)}.</p>
+<p class="small">RSS feeds: {" · ".join(feeds)}.</p></section>""")
+    size = site._size(out / "counties.db") if out is not None else ""
+    body = f"""<h1>County commission records</h1>
+<p class="role">Brandon and Lutz (Hillsborough) · Wesley Chapel (Pasco) · Spring Hill (Hernando)</p>
+<p class="lede">Brandon, Lutz, Wesley Chapel and Spring Hill have no city government of their own. Their local
+decisions are made by their county commission, so we follow those commissions.</p>
+<p class="learn">New to this? <a href="learn/land.html">How building and land decisions work</a> ·
+<a href="learn/money.html">How county money works</a> · <a href="learn/index.html">Words you'll see</a></p>
+<form class="search" id="f" role="search"><label for="q">Search all three counties</label>
+<div class="row"><input type="search" id="q" name="q" required autocomplete="off" placeholder="for example: rezoning"><button>Search</button></div>
+<fieldset><legend>Search in</legend>
+<label><input type="radio" name="w" value="items" checked> Agenda items</label>
+<label><input type="radio" name="w" value="pages"> Pages of archived documents</label></fieldset></form>
+<p class="small">Search opens in Datasette Lite, which runs in your browser. The first search downloads the whole
+database{f" (about {size})" if size else ""}, so it's best on Wi-Fi. Actions, results and votes are as each county
+recorded them; follow the links to check the county's own record.</p>
+{"".join(sections)}
 <script>
-document.getElementById('f').addEventListener('submit', function (e) {{
-  e.preventDefault();
+document.getElementById('f').addEventListener('submit', function (ev) {{
+  ev.preventDefault();
   var q = document.getElementById('q').value.trim();
   var items = document.querySelector('input[name=w]:checked').value === 'items';
-  location.href = (items ? {items_js} : {pages_js}) + '?_search=' + encodeURIComponent(q) + '&_sort_desc=date';
+  location.href = (items ? {json.dumps(lite(site_url, "/counties/agenda_items"))} : {json.dumps(lite(site_url, "/counties/pages"))}) + '?_search=' + encodeURIComponent(q) + '&_sort_desc=date';
 }});
-</script></body></html>
-"""
+</script>"""
+    note = ("<p>Public records from Hillsborough County (Legistar), Pasco County (CivicClerk) and Hernando County "
+            "(Legistar), plus the Hillsborough Clerk's Master Voting Record, collected nightly. "
+            f'<a href="{lite(site_url)}">Full database</a> · <a href="counties.db">download</a>.</p>')
+    return site.page("County commission records", body, 0, path="counties.html",
+                     description=("Meetings, agenda items and commissioners' votes for the Hillsborough, Pasco and "
+                                  "Hernando county commissions, which govern Brandon, Lutz, Wesley Chapel and Spring Hill."),
+                     note=note, feeds=[(f"{JURISDICTIONS[x]['name']}: new records", f"feeds/{x}.xml") for x in COUNTIES])
 
 
 def write(data: Path, out: Path, site_url: str, built: str, rss) -> dict:
@@ -474,5 +468,5 @@ def write(data: Path, out: Path, site_url: str, built: str, rss) -> dict:
     d = load(data)
     recent = {slug: sorted((m for m in d["meetings"] if m["county"] == slug and m["date"] <= built[:10]),
                            key=lambda m: (m["date"], m["key"]), reverse=True)[:10] for slug in COUNTIES}
-    (out / "counties.html").write_text(page_html(counts, site_url, built, recent), "utf-8")
+    (out / "counties.html").write_text(page_html(counts, site_url, built, recent, out), "utf-8")
     return counts
