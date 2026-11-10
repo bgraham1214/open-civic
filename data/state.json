@@ -2754,6 +2754,25 @@
   "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/f95785f047ffc10150017d63c9cf3304b9aaefa1d145c3afdc1808895a33e80b.pdf",
   "first_seen": "2026-11-09T03:23:38Z"
  },
+ "civicclerk:pascocofl:12082": {
+  "key": "civicclerk:pascocofl:12082",
+  "source": "civicclerk",
+  "url": "https://pascocofl.api.civicclerk.com/v1/Meetings/GetMeetingFileStream(fileId=12082,plainText=false)",
+  "title": "11-17-26 FINAL Agenda",
+  "kind": "Agenda",
+  "date": "2026-11-17",
+  "body": "Board of County Commissioners (Board of County Commissioners)",
+  "page": "https://pascocofl.portal.civicclerk.com/event/2961/files",
+  "listed": true,
+  "last_checked": "2026-11-10T16:40:41Z",
+  "sha256": "f59e98a7410a6ed5f8a364dfd348de294c2f6da3c35db916f4043052d415cbd6",
+  "bytes": 1223634,
+  "content_type": "application/pdf",
+  "ext": "pdf",
+  "last_changed": "2026-11-10T16:40:41Z",
+  "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/f59e98a7410a6ed5f8a364dfd348de294c2f6da3c35db916f4043052d415cbd6.pdf",
+  "first_seen": "2026-11-10T16:40:41Z"
+ },
  "civicclerk:pascocofl:8243": {
   "key": "civicclerk:pascocofl:8243",
   "source": "civicclerk",
