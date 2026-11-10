@@ -123,5 +123,23 @@ class Explain(unittest.TestCase):
         x = explain("Approval of April 21, 2026 City Council Meeting Minutes")
         self.assertEqual((x["topic"], x["headline"]), ("routine", "Approved the minutes of an earlier meeting"))
 
+    def test_kratom(self):
+        # Hillsborough Clerk's voting record, Jun 17, 2026, item F-5 (RCS 5536)
+        x = explain("Moved with a slight amendment to the proposed language that says prohibits the sale of kratom "
+                    "and wanted to be intentional and specific that the motion prohibits the sale of kratom 7OH, that "
+                    "was provided as backup, moved for approval of Item F-5 as...")
+        self.assertEqual((x["topic"], x["headline"], x["terms"]), ("law", "Kratom products (7-OH)", ["7-oh"]))
+        self.assertIn("kratom 7OH", x["subject"])
+        y = explain("Conduct a public hearing to enact an ordinance amending Section 36-507 relating to synthetic "
+                    "drugs, adding 7-hydroxymitragynine. Moved approval.")
+        self.assertEqual((y["headline"], y["terms"]), ("County law on kratom products (7-OH)", ["7-oh", "ordinance"]))
+        # Ordinance 14-19 (Jun 18, 2014) names no kratom compound
+        z = explain("Conduct a public hearing to enact an ordinance amending Section 36-507 of Hillsborough County "
+                    "Code of Ordinances and Laws, Chapter 36, Article VII, relating to the possession, sale, or "
+                    "manufacture of synthetic drugs in the County. Moved approval. (Ordinance 14-19)")
+        self.assertEqual((z["headline"], z["terms"]), ("County law on synthetic drugs", ["ordinance"]))
+        self.assertIn("fda.gov", TERMS["7-oh"][2])
+
+
 if __name__ == "__main__":
     unittest.main()

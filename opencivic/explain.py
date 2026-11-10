@@ -90,6 +90,12 @@ TERMS = {
               "Money given for a specific purpose, either to the county (often from the state or federal "
               "government) or from the county to a local group.",
               ""),
+    "7-oh": ("7-OH (a concentrated kratom compound)",
+             "7-hydroxymitragynine, or 7-OH, occurs in trace amounts in kratom, a Southeast Asian plant. "
+             "Products with 7-OH added or concentrated, such as tablets, gummies and drink shots, are strong "
+             "opioids. The FDA has approved none of them and warns they can cause serious harm. Natural kratom "
+             "leaf is a separate product.",
+             "https://www.fda.gov/consumers/consumer-updates/products-containing-7-oh-can-cause-serious-harm"),
     "budget": ("Budget change",
                "Moves money within the county budget or adds money that came in after the budget was set.",
                ""),
@@ -121,7 +127,9 @@ FLU_CHANGE_RX = re.compile(r"from\s+(.{3,80}?)\s*\(([A-Z/]{1,4})\s?-\s?([\d./]+(
 COMPANY_RX = re.compile(r"((?:(?:[A-Z][\w&.'-]*|&|of|and|for|the)\s){0,9}?[A-Z][\w&.'-]*,?\s(?:Inc|LLC|L\.L\.C|Corp|Corporation|Company|Co|LP|LLP|LLLP|P\.?A|PLLC|Ltd)\.?)(?=\W|$)")
 # The Clerk ends each subject with the motion ("... Boyette Rd. Moved approval."). Split only where a
 # sentence starts with it; "Chair Hagan sought a motion for ..." is one sentence and stays whole.
-MOTION_RX = re.compile(r"(?<=[.;:!?)])\s+((?:Moved|So [Mm]oved|Made (?:a|the) motion|Motion(?:ed)?)\b.*)$")
+ORDINANCE_RX = (r"(adopt|enact|amend|repeal|consider|hearing)\w*\b[^.]{0,80}\bordinance|draft ordinance|"
+                r"ordinance (amending|creating|repealing|establishing)")
+MOTION_RX =re.compile(r"(?<=[.;:!?)])\s+((?:Moved|So [Mm]oved|Made (?:a|the) motion|Motion(?:ed)?)\b.*)$")
 SITE_RX = re.compile(r"(\b(?:N|S|E|W|NE|NW|SE|SW|North|South|East|West)\.?\s+(?:side|corner)\b.*|\b\d[\d,]*\s*(?:ft|feet)\b.*|\b\d+\s+[A-Z][\w.]*\s.*)")
 
 
@@ -281,8 +289,20 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
     elif re.search(r"\b(award|contract|agreement|task order|purchase|bid|itb|rfp|rsq|sole source|change order|lease)\b", low) and money(what):
         topic, headline, terms = "money", "Contract or purchase", ["contract"]
     # --- laws
-    elif re.search(r"(adopt|enact|amend|repeal|consider|hearing)\w*\b[^.]{0,80}\bordinance|draft ordinance|ordinance (amending|creating|repealing|establishing)", low):
-        topic, headline, terms = "law", "New or changed county law (ordinance)", ["ordinance"]
+    # Kratom and 7-OH (Hillsborough, Jun 17, 2026: "prohibits the sale of kratom 7OH"). The topic is named,
+    # not the action: the same words cover a request to draft a ban and the vote that adopts it.
+    # Many Clerk entries are only a motion ("Moved ... kratom 7OH"), so read the motion when there's no item text.
+    elif re.search(r"kratom|\b7-?oh\b|hydroxymitragynine", low or motion.lower()):
+        topic, terms = "law", ["7-oh"]
+        if re.search(ORDINANCE_RX, low or motion.lower()):
+            headline = "County law on kratom products (7-OH)"
+            terms.append("ordinance")
+        else:
+            headline = "Kratom products (7-OH)"
+    elif re.search(ORDINANCE_RX, low):
+        topic, terms = "law", ["ordinance"]
+        headline = ("County law on synthetic drugs" if "synthetic drug" in low
+                    else "New or changed county law (ordinance)")
     # --- people
     elif re.search(r"\b(appoint|reappoint|appointments?|nominat)", low):
         topic, headline = "people", "Appointments to boards and committees"
