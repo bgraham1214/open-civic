@@ -1,0 +1,7 @@
+{
+  "name": "open-civic-a11y",
+  "private": true,
+  "description": "Accessibility check for the built site: axe-core in headless Chrome at phone width.",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {"axe-core": "^4.10.0", "puppeteer-core": "^24.0.0"}
+}
