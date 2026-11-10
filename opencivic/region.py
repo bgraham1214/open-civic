@@ -208,6 +208,7 @@ def load(data: Path) -> dict:
                 "action_text": i.get("description", ""), "consent": "consent" in (i.get("section", "").lower()),
                 "attachments": [a["name"] for a in i.get("attachments", [])], "matter_url": "",
                 "portal_url": i["portal_url"]})
+    _load_pasco_minutes(lst, out)
     _load_hillsclerk(lst, out)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
@@ -220,6 +221,21 @@ def load(data: Path) -> dict:
                        **({"title": x.get("reason", ""), "url": "", "copy_url": ""} if x["event"] == "excluded" else {})}
                       for x in events if x["key"] not in excluded or x["event"] == "excluded"]
     return out
+
+
+def _load_pasco_minutes(lst: Path, out: dict) -> None:
+    """Pasco's votes, read from the Clerk's minutes by opencivic.pascominutes, joined to their agenda items."""
+    actions = {a["item_key"]: a for a in _jsonl(lst / "pasco-minutes-actions.jsonl")}
+    if not actions:
+        return
+    for i in out["items"]:
+        a = actions.get(i["key"])
+        if a:
+            i.update(action=a["action"], result=a["result"], mover=a.get("mover", ""), seconder=a.get("seconder", ""),
+                     minutes_url=a.get("minutes_url", ""), minutes_copy_url=a.get("minutes_copy_url", ""),
+                     minutes_code=a.get("code", ""), minutes_page=a.get("page"))
+    keys = {i["key"] for i in out["items"]}
+    out["votes"] += [{**v, "county": "pasco"} for v in _jsonl(lst / "pasco-minutes-votes.jsonl") if v["item_key"] in keys]
 
 
 def build_db(data: Path, db_path: Path) -> dict:
@@ -387,7 +403,7 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
                     f'<p>{" · ".join(links)}</p></li>')
         w = f"county%3D%27{slug}%27"
         plain_links = [f'<li><a href="meetings/{slug}.html">What happened at each meeting</a></li>']
-        if slug in ("hillsborough", "hernando"):
+        if out is not None and (out / "commissioners" / f"{slug}.html").exists():
             plain_links.append(f'<li><a href="commissioners/{slug}.html">How each commissioner voted</a></li>')
         deep = [
             f'<a href="{lite(site_url, f"/counties/agenda_items?_where={w}&_sort_desc=date")}">agenda items</a>',

@@ -337,7 +337,7 @@ def home(out: Path, today: str, tt: dict) -> str:
             if j == "hillsborough":
                 bits.append("The Clerk publishes votes a few weeks after each meeting.")
             if j == "pasco":
-                bits.append("Pasco doesn't publish each commissioner's vote in a form we can read yet, so these pages show what was on the agenda.")
+                bits.append("Votes are read from the Clerk's minutes, which come out a few weeks after each meeting.")
             when = " ".join(bits)
         feed = ("feed.xml" if j == "templeterrace" else f"feeds/area-{area.lower().replace(' ', '-')}.xml")
         go.append(f'<a href="{feed}">Get updates (RSS feed)</a>')
@@ -444,7 +444,7 @@ def data_page(out: Path, lite: dict[str, str]) -> str:
                            "Officials, organisations, contracts and meetings in the open FollowTheMoney format.")
     c_db, c_db_ld = dl("counties.db", "County commissions database", "SQLite",
                        "Meetings, agenda items and each commissioner's vote for Hillsborough (votes since 2014), "
-                       "Pasco and Hernando (since 2025), with archived document pages.",
+                       "Pasco (votes read from the Clerk's minutes) and Hernando (since 2025), with archived document pages.",
                        lite.get("counties.db", ""))
     c_ftm, c_ftm_ld = dl("counties.ftm.jsonl", "County entities", "FollowTheMoney JSON lines",
                          "Each county and board, each commissioner and their membership, each meeting and archived document.")
@@ -522,7 +522,7 @@ def llms_txt(out: Path) -> str:
         for j in ("hillsborough", "pasco", "hernando") if (out / "meetings" / f"{j}.html").exists())
     people = "\n".join(
         f"- [{JURISDICTIONS[j]['name']} commissioners]({u(f'commissioners/{j}.html')}): each member's recorded votes"
-        for j in ("hillsborough", "hernando") if (out / "commissioners" / f"{j}.html").exists())
+        for j in ("hillsborough", "pasco", "hernando") if (out / "commissioners" / f"{j}.html").exists())
     return f"""# {NAME}
 
 > Free, nonpartisan, plain-language public records of local government in the Tampa Bay area, Florida:
@@ -531,7 +531,7 @@ def llms_txt(out: Path) -> str:
 > to its source. Headlines are produced by fixed rules, not AI, and the official wording is always shown.
 
 Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
-come from the Clerk's Master Voting Record (2014 on). Pasco publishes no per-member votes we can read yet.
+come from the Clerk's Master Voting Record (2014 on); Pasco votes are read from the Clerk's minutes (2025 on).
 
 ## Start here
 

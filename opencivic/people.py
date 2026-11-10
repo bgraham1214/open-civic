@@ -9,7 +9,7 @@ the record shows, then lists the decisions, with clerk shorthand explained.
   site/commissioners/<county>/<person>.html one commissioner's votes
 
 Sources: the Hillsborough Clerk's Master Voting Record (complete for the Commission) and
-Hernando's Legistar. Pasco publishes no votes in a form we can read yet.
+Hernando's Legistar, and Pasco's Clerk's minutes (opencivic/pascominutes.py).
 
 These pages count recorded votes. They say nothing about why anyone voted as they did,
 and they never call a vote good or bad.
@@ -101,13 +101,20 @@ def decision_facts(item: dict, votes: list[dict]) -> dict:
         passed = False
     else:
         passed = None if yes == no else yes > no
-    return {"yes": yes, "no": no, "passed": passed}
+    return {"yes": yes, "no": no, "passed": passed, "action": (item.get("action") or "").strip()}
 
 
 def outcome(f: dict) -> str:
+    """'Passed 5 to 0'; for a motion to deny or to put off, say what the vote did."""
     if f["passed"] is None:
         return f"Tied, {f['yes']} to {f['no']}"
-    return f"{'Passed' if f['passed'] else 'Failed'} {max(f['yes'], f['no'])} to {min(f['yes'], f['no'])}"
+    count = f"{max(f['yes'], f['no'])} to {min(f['yes'], f['no'])}"
+    act = (f.get("action") or "").lower()
+    if f["passed"] and act.startswith("denied"):
+        return f"Denied, {count}"
+    if f["passed"] and act.startswith(("continued", "postponed", "tabled", "deferred")):
+        return f"Moved to a later meeting, {count}"
+    return f"{'Passed' if f['passed'] else 'Failed'} {count}"
 
 
 def people(rec: dict) -> dict[str, dict]:
@@ -179,6 +186,11 @@ def record_link(it: dict) -> str:
         ref = it.get("file_number") or it.get("number") or ""
         hint = f" (look for item {_e(ref)})" if ref else ""
         return f'<p class="src"><a href="{_e(link)}">Official meeting record</a>{hint}</p>'
+    if it.get("minutes_url"):
+        where = f", page {it['minutes_page']}" if it.get("minutes_page") else ""
+        copy = f' (<a href="{_e(it["minutes_copy_url"])}">our copy</a>)' if it.get("minutes_copy_url") else ""
+        return (f'<p class="src"><a href="{_e(it["minutes_url"])}">Official minutes{where}</a>{copy}; '
+                f'votes read from the Clerk\'s minutes (item {_e(it.get("minutes_code", ""))})</p>')
     if "hillsclerk" in link:
         return f'<p class="src"><a href="{_e(link)}">Official record</a> (the Clerk\'s vote report, {_e(it.get("file_number", ""))})</p>'
     return f'<p class="src"><a href="{_e(link)}">Official record</a></p>'
@@ -240,9 +252,12 @@ def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
     name, last = p["name"], p["name"].split()[-1]
     n = len(p["rows"])
     areas = j["areas"]
-    lede = (f'{_e(name)} has been recorded voting on <mark>{n:,} decisions</mark> of the {_e(j["name"])} '
-            f'Commission, from {month_year(p["first"])} to {month_year(p["last"])}. '
-            f'{_e(last)} voted no {_times(p["no"])} and didn\'t vote {_times(p["none"])}.')
+    span = (f'in {month_year(p["first"])}' if month_year(p["first"]) == month_year(p["last"])
+            else f'from {month_year(p["first"])} to {month_year(p["last"])}')
+    lede = (f'{_e(name)} has been recorded voting on <mark>{n:,} {"decision" if n == 1 else "decisions"}</mark> of the '
+            f'{_e(j["name"])} Commission, {span}. '
+            + (f'{_e(last)} voted no {_times(p["no"])}' if p["no"] else f'{_e(last)} never voted no')
+            + (f' and didn\'t vote {_times(p["none"])}.' if p["none"] else " and was recorded on every vote."))
     no_rows = [r for r in p["rows"] if r["kind"] == "no"]
     area_rows = [r for r in p["rows"] if areas_in(r["item"]["title"] + " " + (r["item"].get("action_text") or ""))]
     body = f"""<h1>{_e(name)}</h1>
@@ -276,8 +291,8 @@ searchable table of every county vote. It's a large download (about 45 MB), so i
     return page(f"{name}: votes on the {j['name']} Commission", body, 2,
                 path=f"commissioners/{county}/{sl}.html",
                 crumbs=[("County records", "counties.html"), (f"{j['short']} commissioners", f"commissioners/{county}.html")],
-                description=(f"How {name} voted on the {j['name']} Commission: {n:,} recorded votes from "
-                             f"{month_year(p['first'])} to {month_year(p['last'])}, every no vote, and decisions naming "
+                description=(f"How {name} voted on the {j['name']} Commission: {n:,} recorded "
+                             f"{'vote' if n == 1 else 'votes'} {span}, every no vote, and decisions naming "
                              f"{' or '.join(areas)}."),
                 note=footer, jsonld=[{"@type": "ProfilePage", "mainEntity": person}], og_type="profile", here=name)
 
@@ -291,7 +306,8 @@ def county_page(county: str, ppl: dict[str, dict], footer: str) -> str:
     def entry(p: dict) -> str:
         return (f'<li><a href="{county}/{slug(p["name"])}.html">{_e(p["name"])}</a>'
                 f'<p>Voted on {len(p["rows"]):,} decisions from {month_year(p["first"])} to {month_year(p["last"])}. '
-                f'<span class="hl">Voted no {_times(p["no"])}</span>; didn\'t vote {_times(p["none"])}.</p></li>')
+                + (f'<span class="hl">Voted no {_times(p["no"])}</span>' if p["no"] else "Never voted no")
+                + (f'; didn\'t vote {_times(p["none"])}.' if p["none"] else "; recorded on every vote.") + '</p></li>')
     areas = " and ".join(j["areas"])
     plural = "doesn't" if len(j["areas"]) == 1 else "don't"
     body = f"""<h1>{_e(j['name'])} Commission</h1>
@@ -329,6 +345,10 @@ FOOTERS = {
                      "Clerk updates about monthly, so the newest meetings can be a few weeks behind. Names are "
                      "printed by surname in the record; we match them to full names by date."),
     "hernando": "Votes from Hernando County's Legistar meeting records, County Commission meetings from 2025 on.",
+    "pasco": ("Votes read from the Pasco Clerk's minutes (County Commission meetings from 2025 on). The Clerk names "
+              "only members who voted no, abstained or were absent; everyone else present is counted as yes. "
+              "Items whose minutes we couldn't read with confidence (several motions on one item, for example) "
+              "are left out."),
 }
 
 

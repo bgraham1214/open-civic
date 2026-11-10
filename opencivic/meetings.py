@@ -8,8 +8,10 @@
                                        and the official wording one tap away
   site/learn/land.html, money.html     short explainers for zoning and county money
 
-Hillsborough and Hernando come with each member's vote. Pasco publishes agendas but no
-votes we can read yet, so its pages list what was on the agenda and say so.
+Every county comes with each member's vote: Hillsborough from the Clerk's Master Voting
+Record, Hernando from Legistar, Pasco from the Clerk's minutes (opencivic/pascominutes.py).
+A Pasco meeting whose minutes aren't out yet (or couldn't be read) lists what was on the
+agenda and says so; items with no recorded vote are folded under the decisions.
 """
 
 from __future__ import annotations
@@ -54,9 +56,11 @@ def decisions_by_meeting(data: Path) -> dict[str, dict[str, list[dict]]]:
             vs = rec["votes"][key]
             out[county][item["date"]].append({"item": item, "votes": vs, "facts": decision_facts(item, vs),
                                               "x": explain(item["title"], item.get("matter_type") or "")})
-    # Pasco: Commission agenda items, no votes
+    # Pasco: the rest of each Commission agenda (items with no recorded vote)
+    voted = {r["item"]["key"] for c in out.values() for rs in c.values() for r in rs}
     for i in load(data)["items"]:
-        if i["county"] == "pasco" and "board of county commissioners" in (i.get("body") or "").lower():
+        if i["county"] == "pasco" and "board of county commissioners" in (i.get("body") or "").lower() \
+                and i["key"] not in voted:
             out["pasco"][i["date"]].append({"item": i, "votes": [], "facts": None,
                                             "x": explain(i["title"], i.get("matter_type") or "")})
     return out
@@ -86,10 +90,13 @@ def _people_link(county: str, name: str) -> str:
 
 def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_next: tuple[str, str]) -> str:
     j = JURISDICTIONS[county]
+    voted = any(r["votes"] for r in rows)
+    others = [r for r in rows if not r["votes"]] if voted else []
+    if voted:
+        rows = [r for r in rows if r["votes"]]
     by_topic: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         by_topic[r["x"]["topic"]].append(r)
-    voted = bool(rows and rows[0]["votes"])
     counts = _topic_phrase({t: len(by_topic[t]) for t in TOPICS if by_topic.get(t) and t != "routine"})
     biggest = max(((max(money(r["x"]["official"]) or [0]), r) for r in rows), key=lambda t: t[0], default=(0, None))
     nos = [r for r in rows if r["votes"] and any(kind(v["vote"]) == "no" for v in r["votes"])]
@@ -101,9 +108,9 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
         lede = (f'<mark>{_plural(len(rows), "item")}</mark> were on the {_e(j["name"])} Commission\'s agenda'
                 + (f': {_e(counts)}' if counts else "") + ".")
     note = ("" if voted else
-            f'<p class="fair">{_e(j["name"])} publishes its agendas but not each commissioner\'s vote in a form we can '
-            "read yet, so this page shows what was on the agenda, not what was decided. Open the official record "
-            "for the outcome.</p>")
+            f'<p class="fair">We don\'t have the recorded votes for this meeting yet (the minutes usually come out a '
+            "few weeks later), so this page shows what was on the agenda, not what was decided. Open the official "
+            "record for the outcome.</p>")
     big = ""
     if biggest[0] >= 100_000 and biggest[1]:
         big = (f'<p class="learn">Largest dollar amount at this meeting: <strong>{dollars(biggest[0])}</strong>, '
@@ -124,6 +131,13 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
             sections.append(f'<h2>{TOPICS[t]} <span class="topic-count">({len(items)})</span></h2>'
                             + (f'<p class="learn">New to this? <a href="../../learn/land.html">How building and land '
                                f'decisions work</a></p>' if t == "land" else "") + block)
+    if others:
+        lis = "".join("<li>" + plain(r["item"], 2) + record_link(r["item"]) + "</li>" for r in others)
+        sections.append(f'<h2>Also on the agenda <span class="topic-count">({len(others)})</span></h2>'
+                        f'<p>Items with no recorded vote: reports the board only noted, items withdrawn or put off, '
+                        f'presentations, and anything the minutes didn\'t record clearly enough for us to read.</p>'
+                        f'<details><summary>Show {_plural(len(others), "item")}</summary>'
+                        f'<ol class="decisions">{lis}</ol></details>')
     prev, nxt = prev_next
     nav = "".join(x for x in (
         f'<li><a href="{prev}.html" rel="prev">Earlier meeting: {_e(weekday_date(prev))}</a></li>' if prev else "",
@@ -161,13 +175,15 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool) 
 
     def entry(d: str) -> str:
         rows = by_date[d]
+        if any(r["votes"] for r in rows):
+            rows = [r for r in rows if r["votes"]]
         topics = defaultdict(int)
         for r in rows:
             topics[r["x"]["topic"]] += 1
         what = _topic_phrase({t: n for t, n in topics.items() if t != "routine"})
         nos = sum(1 for r in rows if r["votes"] and any(kind(v["vote"]) == "no" for v in r["votes"]))
         coming = " (coming up)" if d > today else ""
-        noun = "decision" if rows and rows[0]["votes"] else "agenda item"
+        noun = "decision" if any(r["votes"] for r in rows) else "agenda item"
         return (f'<li><a href="{county}/{d}.html">{_e(weekday_date(d))}</a>{coming}'
                 f'<p>{_plural(len(rows), noun)}' + (f": {_e(what)}" if what else "")
                 + (f". {nos} with a no vote." if nos else ".") + "</p></li>")

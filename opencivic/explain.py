@@ -194,6 +194,20 @@ def _companies(text: str) -> list[str]:
     return seen
 
 
+ABBREVIATIONS = {"no", "nos", "inc", "co", "corp", "ltd", "llc", "st", "rd", "ave", "blvd", "dr", "mr", "ms", "mrs",
+                 "jr", "sr", "dept", "div", "sec", "approx", "vs", "u.s", "fla", "p.e", "esq", "ph", "a.m", "p.m"}
+
+
+def first_sentence(text: str) -> str:
+    """Text up to the first full stop that ends a sentence ('Task Order No. 5' and 'Acme Inc. –' don't)."""
+    for m in re.finditer(r"(?<=[a-z0-9)])\.\s+(?=[A-Z])", text):
+        word = re.search(r"([\w.]+)$", text[:m.start()])
+        if word and word.group(1).lower() in ABBREVIATIONS:
+            continue
+        return text[:m.start()].rstrip(".")
+    return text.rstrip(".")
+
+
 def explain(title: str, category: str = "", county: str = "") -> dict:
     """Plain-language reading of one agenda item. Keys: topic, headline, facts, terms, motion."""
     what, motion = strip_motion(re.sub(r"\s+", " ", title or ""))
@@ -205,6 +219,15 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
     at = f" at {place}" if place else ""
 
     # --- routine
+    # Pasco lists the minutes it approves by the earlier meeting's name ("Board of County Commissioners
+    # Regular Meeting/Rezoning August 6, 2024 – 10 A.M"); the agenda section says "Minutes Approval".
+    past = re.match(r"^(?:board of county commissioners|bcc)\b.*?(?:meeting|workshop|hearing)[^,]*?\b"
+                    r"((?:january|february|march|april|may|june|july|august|september|october|november|december)"
+                    r"\s+\d{1,2},\s+\d{4})", low)
+    if "minutes approval" in (category or "").lower() or past:
+        when = f" of {past.group(1).title()}" if past else " listed"
+        return {"topic": "routine", "headline": f"Approved the minutes of the meeting{when}", "subject": "",
+                "facts": [], "terms": [], "motion": motion, "official": what}
     if re.match(r"^(oral vote\s*-\s*\w+\s*-\s*)?(approval of )?(the )?(changes( to the agenda)?|consent( agenda)?|agenda|minutes)\b", low) \
             or re.match(r"^(approve|approval of) (the )?(changes|consent)", low):
         topic = "routine"
@@ -297,7 +320,7 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
         if cos:
             facts.append("Company or group named: " + "; ".join(cos[:3]))
 
-    first = re.split(r"(?<=[a-z0-9)])\.\s+(?=[A-Z])", what or motion, maxsplit=1)[0].rstrip(".")
+    first = first_sentence(what or motion)
     short = first if len(first) <= 320 else first[:320].rsplit(" ", 1)[0] + "…"
     if not headline:
         headline = short

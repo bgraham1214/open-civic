@@ -59,7 +59,9 @@ python -m opencivic.legistar items --client hernandocountyfl --events events.jso
 
 `opencivic/hillsclerk.py` reads the Hillsborough Clerk's BOCC Master Voting Record PDFs (one per year, updated monthly) into roll calls: RCS number, item, date, category, subject and each commissioner's vote code.
 
-`opencivic/people.py` writes a plain-language page for each Hillsborough and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda.
+`opencivic/pascominutes.py` reads each Pasco commissioner's vote from the Clerk's annotated-agenda minutes, because Pasco's CivicClerk portal publishes no vote data. The Clerk names only members who voted no, abstained or were absent, so everyone else present is counted as yes; consent items inherit the consent-agenda vote. Each item is joined to its CivicClerk agenda item by date and file number. Public comment is never read, and any item it can't read with confidence (several motions, an unknown name) is reported, not guessed.
+
+`opencivic/people.py` writes a plain-language page for each Hillsborough, Pasco and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda.
 
 `opencivic/explain.py` translates agenda wording into plain language by fixed rules (no AI): a topic, a plain headline ("Change to the future land-use map at 16410 Balm Wimauma Road"), decoded facts ("from Agricultural/Rural, up to 1 home per 5 acres, to Residential, up to 4 homes per acre"; dollar amounts; companies), and sourced definitions of the terms. `opencivic/meetings.py` uses it to write a "what happened" page for every County Commission meeting (`site/meetings/`) and two explainers (`site/learn/`). The official wording is always one tap away.
 
@@ -69,7 +71,7 @@ python -m opencivic.legistar items --client hernandocountyfl --events events.jso
 | --- | --- | --- | --- |
 | Temple Terrace | City Council | CivicClerk + Archive Center | Agendas, packets, minutes (archived), items, votes, contracts |
 | Brandon, Lutz | Hillsborough County | Clerk's BOCC Master Voting Record + Legistar (`hillsboroughcounty`) | Every Commission roll call (subject, category, each commissioner's vote) from the Clerk's yearly reports, archived; land-use and zoning hearings from Legistar. Full regular agendas are on eagenda.hillsboroughcounty.org, whose robots.txt disallows all robots, so they are not collected. |
-| Wesley Chapel | Pasco County | CivicClerk (`pascocofl`) | Agendas and minutes (archived), agenda items, from 2025 |
+| Wesley Chapel | Pasco County | CivicClerk (`pascocofl`) + the Clerk's minutes | Agendas and minutes (archived), agenda items, and each commissioner's vote read from the minutes, from 2025 |
 | Spring Hill | Hernando County | Legistar (`hernandocountyfl`) | Meetings, items, actions, votes, from 2025 |
 
 ## Tests

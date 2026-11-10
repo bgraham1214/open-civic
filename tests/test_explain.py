@@ -95,5 +95,21 @@ class Explain(unittest.TestCase):
             self.assertTrue(src == "" or src.startswith("https://"), k)
 
 
+    def test_pasco_minutes_approval_is_not_a_rezoning(self):
+        x = explain("Board of County Commissioners Regular Meeting/Rezoning August 6, 2024 – 10 A.M",
+                    "Constitutional Officers - Clerk - Minutes Approval")
+        self.assertEqual(x["topic"], "routine")
+        self.assertEqual(x["headline"], "Approved the minutes of the meeting of August 6, 2024")
+        self.assertEqual(x["terms"], [])
+        y = explain("Board of County Commissioners Emergency Special Meeting September 24, 2024 – 3 P.M.")
+        self.assertEqual(y["headline"], "Approved the minutes of the meeting of September 24, 2024")
+        z = explain("Zoning Amendment (Consent) - SFG Industrial Lutz, LLC - Change in Zoning from A-R to MPUD")
+        self.assertNotEqual(z["topic"], "routine")
+
+    def test_abbreviations_dont_end_the_headline(self):
+        x = explain("Task Order No. FM25-008 – Williamson Design Associates. Second sentence here.")
+        self.assertIn("FM25-008", x["headline"] + x["subject"])
+        self.assertNotIn("Second sentence", x["headline"] + x["subject"])
+
 if __name__ == "__main__":
     unittest.main()

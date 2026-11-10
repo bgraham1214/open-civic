@@ -140,6 +140,12 @@ jobs:
       - name: Extract text
         continue-on-error: true
         run: python -m opencivic.extract --data-dir data --files-dir out/files --max-ocr-pages 600 2>&1 | tee out/extract-log.txt
+      - name: Pasco votes (read from the Clerk's minutes)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.pascominutes --data-dir data --problems out/pasco-minutes-problems.jsonl 2>&1 \
+            | tee out/pasco-minutes-log.txt
 
       # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
       - name: Build entities

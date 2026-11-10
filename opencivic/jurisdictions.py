@@ -35,7 +35,8 @@ JURISDICTIONS: dict[str, dict] = {
         "areas": ["Wesley Chapel"], "groups": ["civicclerk:pascocofl"], "since": "2025-01-01",
         "skip_kinds": ["Agenda Packet"],
         "coverage": ("Agendas and minutes for the County Commission, Planning Commission and other boards, "
-                     "from Pasco's CivicClerk portal. Agenda packets are linked but not yet archived."),
+                     "from Pasco's CivicClerk portal, and each commissioner's vote on Commission decisions, read "
+                     "from the Clerk's minutes (from 2025). Agenda packets are linked but not yet archived."),
     },
     "hernando": {
         "name": "Hernando County", "short": "Hernando", "body": "Board of County Commissioners",
