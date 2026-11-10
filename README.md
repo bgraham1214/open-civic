@@ -40,8 +40,8 @@ python -m opencivic.archivecenter items --input-dir raw/ --module minutes     # 
 | `index.html` | The front door: pick your area (Temple Terrace, Brandon, Lutz, Wesley Chapel, Spring Hill) |
 | `templeterrace.html` | Temple Terrace City Council records, search, and documents the city removed |
 | `counties.html` | County commission records, search, recent meetings, feeds |
-| `meetings/<county>.html`, `meetings/<county>/<date>.html` | What happened at each County Commission meeting, in plain language |
-| `commissioners/<county>.html`, `commissioners/<county>/<name>.html` | How each commissioner voted |
+| `meetings/<place>.html`, `meetings/<place>/<date>.html` | What happened at each Commission or City Council meeting, in plain language |
+| `commissioners/<county>.html`, `commissioners/<county>/<name>.html`, `council/templeterrace.html`, `council/templeterrace/<name>.html` | How each commissioner or council member voted |
 | `learn/index.html`, `learn/land.html`, `learn/money.html` | Every term we explain, with sources; two short explainers |
 | `data.html` | Downloads, feeds and raw files for researchers |
 | `sitemap.xml`, `llms.txt` | Maps of the site for search engines and AI tools |
@@ -60,6 +60,8 @@ python -m opencivic.legistar items --client hernandocountyfl --events events.jso
 `opencivic/hillsclerk.py` reads the Hillsborough Clerk's BOCC Master Voting Record PDFs (one per year, updated monthly) into roll calls: RCS number, item, date, category, subject and each commissioner's vote code.
 
 `opencivic/pascominutes.py` reads each Pasco commissioner's vote from the Clerk's annotated-agenda minutes, because Pasco's CivicClerk portal publishes no vote data. The Clerk names only members who voted no, abstained or were absent, so everyone else present is counted as yes; consent items inherit the consent-agenda vote. Each item is joined to its CivicClerk agenda item by date and file number. Public comment is never read, and any item it can't read with confidence (several motions, an unknown name) is reported, not guessed.
+
+`opencivic/council.py` turns the Temple Terrace City Council's roll calls (read from the minutes by `minutes.py`) into the same shape, so the city gets the same meeting and member pages (`site/meetings/templeterrace/`, `site/council/templeterrace/`). Consent motions give their vote to the items they name ("11.A.-11.D. were ADOPTED by consent"); a motion the minutes filed under the wrong item moves to the item it names (an ordinance or case number, an address), and only when exactly one item matches.
 
 `opencivic/people.py` writes a plain-language page for each Hillsborough, Pasco and Hernando county commissioner (`site/commissioners/`): one sentence on what the record shows, their no votes, when the board went the other way, decisions naming Brandon, Lutz or Spring Hill, and a glossary. It is written for residents who have never read an agenda.
 

@@ -49,6 +49,19 @@ JURISDICTIONS: dict[str, dict] = {
 
 COUNTIES = [k for k in JURISDICTIONS if k != "templeterrace"]
 
+# How each government's board and members are named on the plain-language pages.
+for _slug, _j in JURISDICTIONS.items():
+    if _slug == "templeterrace":
+        _j.update(board="Temple Terrace City Council", board_formal="Temple Terrace City Council",
+                  body_short="Council", member="council member", members="council members",
+                  member_title="Council Member", people_dir="council", hub=("Temple Terrace", "templeterrace.html"),
+                  govt="city")
+    else:
+        _j.update(board=f"{_j['name']} Commission", board_formal=f"{_j['name']} Board of County Commissioners",
+                  body_short="Commission", member="commissioner", members="commissioners",
+                  member_title="County Commissioner", people_dir="commissioners", hub=("County records", "counties.html"),
+                  govt="county")
+
 _BY_GROUP = {g: slug for slug, j in JURISDICTIONS.items() for g in j["groups"]}
 
 

@@ -24,7 +24,7 @@ from pathlib import Path
 from .county_entities import BOCC, board_of
 from .explain import TERMS, TOPICS, dollars, explain, money
 from .jurisdictions import JURISDICTIONS
-from .people import _e, _times, commission_votes, decision_facts, kind, long_date, outcome, page, plain, record_link
+from .people import _e, cityify, decision_facts, kind, long_date, outcome, page, plain, record_link
 from .region import load
 from .site import absolute
 
@@ -67,28 +67,33 @@ def meeting_info(data: Path) -> dict[tuple[str, str], dict]:
         rank = (bool(m.get("agenda_url")), (m.get("agenda_status") or "").lower() != "cancelled")
         if k not in out or rank > out[k]["_rank"]:
             out[k] = {**m, "_rank": rank}
+    from .council import meeting_info as city_info
+    out.update(city_info(data))
     return out
 
 
 def decisions_by_meeting(data: Path) -> dict[str, dict[str, list[dict]]]:
     """county -> date -> [{item, votes, facts, explained}] for County Commission meetings."""
     out: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
-    for county, rec in commission_votes(data).items():
+    from .people import all_votes
+    for county, rec in all_votes(data).items():
         for key, item in rec["items"].items():
             vs = rec["votes"][key]
             out[county][item["date"]].append({"item": item, "votes": vs, "facts": decision_facts(item, vs),
-                                              "x": explain(item["title"], item.get("matter_type") or "")})
+                                              "x": explain(item.get("motion") or item["title"], item.get("matter_type") or "")})
     # The rest of each Commission agenda: items with no recorded vote. For Pasco that's every meeting
     # (its votes come item by item from the minutes). For Hillsborough and Hernando it's only meetings
     # with no votes at all (upcoming, or not yet in the vote records), because their land-use agenda
     # items are the same decisions the vote records already cover.
-    voted = {r["item"]["key"] for c in out.values() for rs in c.values() for r in rs}
+    voted = {r["item"].get("agenda_key", r["item"]["key"]) for c in out.values() for rs in c.values() for r in rs}
     voted_dates = {c: set(by_date) for c, by_date in out.items()}
-    for i in load(data)["items"]:
+    from .council import agenda_items as city_items
+    city = city_items(data)
+    for i in load(data)["items"] + city:
         c = i["county"]
-        if not _commission(i.get("body") or "") or i["key"] in voted:
+        if (c != "templeterrace" and not _commission(i.get("body") or "")) or i["key"] in voted:
             continue
-        if c != "pasco" and i["date"] in voted_dates.get(c, set()):
+        if c not in ("pasco", "templeterrace") and i["date"] in voted_dates.get(c, set()):
             continue
         out[c][i["date"]].append({"item": i, "votes": [], "facts": None,
                                   "x": explain(i["title"], i.get("matter_type") or "")})
@@ -148,7 +153,7 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
     biggest = max(((max(money(r["x"]["official"]) or [0]), r) for r in rows), key=lambda t: t[0], default=(0, None))
     nos = [r for r in rows if r["votes"] and any(kind(v["vote"]) == "no" for v in r["votes"])]
     if voted:
-        lede = (f'The {_e(j["name"])} Commission voted on <mark>{_plural(len(rows), "decision")}</mark>'
+        lede = (f'The {_e(j["board"])} voted on <mark>{_plural(len(rows), "decision")}</mark>'
                 + (f': {_e(counts)}' if counts else "") + ". "
                 + (f'{_plural(len(nos), "decision")} had at least one no vote.' if nos else "Every recorded vote was unanimous."))
     elif upcoming and not cancelled:
@@ -156,15 +161,15 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
                 f'{"is" if len(rows) == 1 else "are"} on the agenda' + (f': {_e(counts)}' if counts else "") + ".")
     else:
         lede = (f'<mark>{_plural(len(rows), "item")}</mark> {"was" if len(rows) == 1 else "were"} on the '
-                f'{_e(j["name"])} Commission\'s agenda' + (f': {_e(counts)}' if counts else "") + ".")
+                f'{_e(j["board"])}\'s agenda' + (f': {_e(counts)}' if counts else "") + ".")
     if voted:
         note = ""
     elif cancelled:
-        note = ('<p class="fair">The county lists this meeting as cancelled. Items on its agenda may come back at a '
+        note = (f'<p class="fair">The {j["govt"]} lists this meeting as cancelled. Items on its agenda may come back at a '
                 "later meeting.</p>")
     elif upcoming:
         note = ('<p class="fair">Agendas can change up to the day of the meeting, so check the official meeting page '
-                "before you go. Commission meetings are open to the public.</p>")
+                f"before you go. {j['body_short']} meetings are open to the public.</p>")
     elif _days_between(d, today) <= 90:
         note = ('<p class="fair">The recorded votes for this meeting aren\'t out yet (they usually come a few weeks '
                 "later), so this page shows what was on the agenda, not what was decided. Open the official record "
@@ -182,7 +187,8 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
     big = ""
     if biggest[0] >= 100_000 and biggest[1]:
         big = (f'<p class="learn">Largest dollar amount at this meeting: <strong>{dollars(biggest[0])}</strong>, '
-               f'in “{_e(biggest[1]["x"]["headline"])}”. <a href="../../learn/money.html">How county money works</a></p>')
+               f'in “{_e(cityify(biggest[1]["x"]["headline"]) if j["govt"] == "city" else biggest[1]["x"]["headline"])}”. '
+               f'<a href="../../learn/money.html">How {"public" if j["govt"] == "city" else "county"} money works</a></p>')
     sections = []
     for t in TOPICS:
         items = by_topic.get(t)
@@ -210,9 +216,9 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
     nav = "".join(x for x in (
         f'<li><a href="{prev}.html" rel="prev">Earlier meeting: {_e(weekday_date(prev))}</a></li>' if prev else "",
         f'<li><a href="{nxt}.html" rel="next">Later meeting: {_e(weekday_date(nxt))}</a></li>' if nxt else "") if x)
-    people = (f' <a href="../../commissioners/{county}.html">How each commissioner voted</a>' if has_people else "")
+    people = (f' <a href="../../{j["people_dir"]}/{county}.html">How each {j["member"]} voted</a>' if has_people else "")
     body = f"""<h1>{_e(weekday_date(d))}</h1>
-<p class="role">{_e(j['name'])} Commission meeting</p>
+<p class="role">{_e(j['board'])} meeting</p>
 <p class="lede">{lede}</p>
 {note}{when}{big}
 <p class="fair">Headlines are our plain-language reading of the official wording, made by fixed rules, not AI.
@@ -221,19 +227,19 @@ The official wording is under each one. Outcomes count the recorded votes.{peopl
 {''.join(sections)}
 {f'<nav class="pager" aria-label="Other meetings"><ul>{nav}</ul></nav>' if nav else ''}"""
     plain_lede = re.sub(r"<[^>]+>", "", lede)
-    event = {"@type": "Event", "name": f"{j['name']} Commission meeting",
+    event = {"@type": "Event", "name": f"{j['board']} meeting",
              "startDate": d + _iso_time(info.get("time", "")),
              "eventStatus": f"https://schema.org/{'EventCancelled' if cancelled else 'EventScheduled'}",
              **({"location": {"@type": "Place", "name": info["location"]}} if info.get("location") else {}),
              "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
              "isAccessibleForFree": True, "description": plain_lede,
-             "organizer": {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners"},
+             "organizer": {"@type": "GovernmentOrganization", "name": j["board_formal"]},
              "url": absolute(f"meetings/{county}/{d}.html") or None}
-    title = f"{j['name']} Commission, {long_date(d)}: " + ("what's on the agenda" if upcoming and not voted else "what happened")
+    title = f"{j['board']}, {long_date(d)}: " + ("what's on the agenda" if upcoming and not voted else "what happened")
     return page(title, body, 2,
                 path=f"meetings/{county}/{d}.html",
-                crumbs=[("County records", "counties.html"), (f"{j['short']} meetings", f"meetings/{county}.html")],
-                description=f"{j['name']} Commission meeting of {long_date(d)}, in plain language. {plain_lede}",
+                crumbs=[j["hub"], (f"{j['short']} meetings", f"meetings/{county}.html")],
+                description=f"{j['board']} meeting of {long_date(d)}, in plain language. {plain_lede}",
                 note=f"<p>From {_e(j['name'])}'s official records.</p>", jsonld=[event], here=long_date(d))
 
 
@@ -264,22 +270,24 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, 
         blocks.append(f"<h2>{y}</h2>{inner}" if i < 2 else
                       f"<details><summary>{y} ({_plural(len(ds), 'meeting')})</summary>{inner}</details>")
     areas = " and ".join(j["areas"])
-    people = (f'<p><a href="../commissioners/{county}.html">How each commissioner voted</a></p>' if has_people else "")
-    body = f"""<h1>{_e(j['name'])} Commission meetings</h1>
+    people = (f'<p><a href="../{j["people_dir"]}/{county}.html">How each {j["member"]} voted</a></p>' if has_people else "")
+    who = (f"The City Council makes {_e(j['short'])}'s local decisions." if j["govt"] == "city"
+           else f"The County Commission makes the local decisions for {_e(areas)}.")
+    body = f"""<h1>{_e(j['board'])} meetings</h1>
 <p class="role">What happened, in plain language</p>
-<p class="lede">The County Commission makes the local decisions for {_e(areas)}. Pick a meeting to see what it
+<p class="lede">{who} Pick a meeting to see what it
 decided, explained without the jargon.</p>
 {people}
 <p class="learn"><a href="../learn/land.html">How building and land decisions work</a> ·
 <a href="../learn/money.html">How county money works</a></p>
 {''.join(blocks)}"""
-    return page(f"{j['name']} Commission meetings", body, 1, path=f"meetings/{county}.html", here=f"{j['short']} meetings",
-                crumbs=[("County records", "counties.html")],
-                description=(f"Every {j['name']} Commission meeting we have, explained in plain language: what was "
-                             f"decided, for {areas}."),
-                feeds=[(f"{j['name']}: new records", f"feeds/{county}.xml")],
-                jsonld=[{"@type": "CollectionPage", "name": f"{j['name']} Commission meetings",
-                         "about": {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners"}}])
+    return page(f"{j['board']} meetings", body, 1, path=f"meetings/{county}.html", here=f"{j['short']} meetings",
+                crumbs=[j["hub"]],
+                description=(f"Every {j['board']} meeting we have, explained in plain language: what was "
+                             f"decided" + (f", for {areas}." if areas else ".")),
+                feeds=[(f"{j['name']}: new records", "feed.xml" if j["govt"] == "city" else f"feeds/{county}.xml")],
+                jsonld=[{"@type": "CollectionPage", "name": f"{j['board']} meetings",
+                         "about": {"@type": "GovernmentOrganization", "name": j["board_formal"]}}])
 
 
 def _term_block(keys: list[str]) -> str:
@@ -346,8 +354,8 @@ show the dollar amount and the company named in the official wording.</p>
 
 
 def write(data: Path, out: Path) -> dict:
-    from .people import commission_votes as _cv
-    have_people = set(_cv(data))
+    from .people import all_votes
+    have_people = set(all_votes(data))
     (out / "learn").mkdir(parents=True, exist_ok=True)
     for name, html_ in learn_pages().items():
         (out / "learn" / f"{name}.html").write_text(html_, "utf-8")

@@ -316,28 +316,30 @@ def home(out: Path, today: str, tt: dict) -> str:
         when = ""
         if j == "templeterrace":
             gov = "Has its own city government: the Temple Terrace City Council."
-            go.append('<a href="templeterrace.html">City Council agendas, minutes and votes</a>')
-            if tt.get("latest"):
-                when = f'Newest record: {e(long_date(tt["latest"]))}.'
         else:
             gov = (f"Has no city government. Local decisions are made by the "
                    f"{e(jur['name'])} Commission.")
-            dates = _meeting_dates(out, j)
-            if dates:
-                go.append(f'<a href="meetings/{j}.html">What happened at each meeting</a>')
-            if (out / "commissioners" / f"{j}.html").exists():
-                go.append(f'<a href="commissioners/{j}.html">How each commissioner voted</a>')
-            past = [d for d in dates if d <= today]
-            coming = [d for d in dates if d > today]
-            bits = []
-            if past:
-                bits.append(f'Latest meeting: <a href="meetings/{j}/{past[-1]}.html">{e(weekday_date(past[-1]))}</a>.')
-            if coming:
-                bits.append(f'Next on the calendar: <a href="meetings/{j}/{coming[0]}.html">{e(weekday_date(coming[0]))}</a>.')
-            if j == "hillsborough":
-                bits.append("The Clerk publishes votes a few weeks after each meeting.")
-            if j == "pasco":
-                bits.append("Votes are read from the Clerk's minutes, which come out a few weeks after each meeting.")
+        dates = _meeting_dates(out, j)
+        if dates:
+            go.append(f'<a href="meetings/{j}.html">What happened at each meeting</a>')
+        if (out / jur["people_dir"] / f"{j}.html").exists():
+            go.append(f'<a href="{jur["people_dir"]}/{j}.html">How each {jur["member"]} voted</a>')
+        if j == "templeterrace":
+            go.append('<a href="templeterrace.html">Search agendas and minutes, and see removed records</a>')
+            if tt.get("latest") and not dates:
+                when = f'Newest record: {e(long_date(tt["latest"]))}.'
+        past = [d for d in dates if d <= today]
+        coming = [d for d in dates if d > today]
+        bits = []
+        if past:
+            bits.append(f'Latest meeting: <a href="meetings/{j}/{past[-1]}.html">{e(weekday_date(past[-1]))}</a>.')
+        if coming:
+            bits.append(f'Next on the calendar: <a href="meetings/{j}/{coming[0]}.html">{e(weekday_date(coming[0]))}</a>.')
+        if j == "hillsborough":
+            bits.append("The Clerk publishes votes a few weeks after each meeting.")
+        if j in ("pasco", "templeterrace"):
+            bits.append("Votes are read from the Clerk's minutes, which come out a few weeks after each meeting.")
+        if past or coming:
             when = " ".join(bits)
         feed = ("feed.xml" if j == "templeterrace" else f"feeds/area-{area.lower().replace(' ', '-')}.xml")
         go.append(f'<a href="{feed}">Get updates (RSS feed)</a>')
@@ -516,13 +518,16 @@ def sitemap(out: Path) -> str:
 def llms_txt(out: Path) -> str:
     def u(p: str) -> str:
         return absolute(p) or p
-    counties = "\n".join(
-        f"- [{JURISDICTIONS[j]['name']} Commission meetings]({u(f'meetings/{j}.html')}): one page per meeting, "
-        f"decisions grouped by topic with plain headlines, outcomes and who voted no"
-        for j in ("hillsborough", "pasco", "hernando") if (out / "meetings" / f"{j}.html").exists())
-    people = "\n".join(
-        f"- [{JURISDICTIONS[j]['name']} commissioners]({u(f'commissioners/{j}.html')}): each member's recorded votes"
-        for j in ("hillsborough", "pasco", "hernando") if (out / "commissioners" / f"{j}.html").exists())
+    lines = []
+    for j in ("templeterrace", "hillsborough", "pasco", "hernando"):
+        jur = JURISDICTIONS[j]
+        if (out / "meetings" / f"{j}.html").exists():
+            lines.append(f"- [{jur['board']} meetings]({u(f'meetings/{j}.html')}): one page per meeting, decisions "
+                         "grouped by topic with plain headlines, outcomes and who voted no")
+        if (out / jur["people_dir"] / f"{j}.html").exists():
+            lines.append(f"- [{jur['board']} members]({u(jur['people_dir'] + '/' + j + '.html')}): each member's recorded votes")
+    counties = "\n".join(lines)
+    people = ""
     return f"""# {NAME}
 
 > Free, nonpartisan, plain-language public records of local government in the Tampa Bay area, Florida:
@@ -531,7 +536,7 @@ def llms_txt(out: Path) -> str:
 > to its source. Headlines are produced by fixed rules, not AI, and the official wording is always shown.
 
 Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
-come from the Clerk's Master Voting Record (2014 on); Pasco votes are read from the Clerk's minutes (2025 on).
+come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace votes are read from the Clerk's minutes.
 
 ## Start here
 

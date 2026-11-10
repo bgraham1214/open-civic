@@ -306,7 +306,7 @@ class OnTheSite(unittest.TestCase):
             self.assertIn("Votes read from the Pasco Clerk&#x27;s minutes",
                           (d / "site" / "commissioners" / "pasco" / "jack-mariano.html").read_text())
             oakley = (d / "site" / "commissioners" / "pasco" / "ronald-e-oakley.html").read_text()
-            self.assertIn("voting on <mark>1 decision</mark>", oakley)
+            self.assertIn("The record covers <mark>1 decision</mark>", oakley)
             self.assertIn("Oakley never voted no and didn't vote once.", oakley)
 
 if __name__ == "__main__":

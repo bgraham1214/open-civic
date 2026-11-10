@@ -57,7 +57,7 @@ class People(unittest.TestCase):
             self.assertIn("Voted no once", idx)
             self.assertNotIn("1 times", idx)
             page = (d / "site" / "commissioners" / "hillsborough" / "chris-boles.html").read_text()
-            self.assertIn(f"voting on <mark>{len(rows)} decisions</mark>", page)
+            self.assertIn(f"The record covers <mark>{len(rows)} decisions</mark>", page)
             self.assertIn("Boles voted no once", page)
             self.assertIn('"@type":"ProfilePage"', page)
             self.assertIn('href="../../commissioners/hillsborough.html">Hillsborough commissioners</a>', page)

@@ -101,7 +101,7 @@ class Common(unittest.TestCase):
             self.assertEqual(counts["pages"], len(urls))
             llms = (out / "llms.txt").read_text()
             self.assertTrue(llms.startswith("# Open Civic Web\n\n> "))
-            self.assertIn(f"[Hernando County commissioners]({SITE}commissioners/hernando.html)", llms)
+            self.assertIn(f"[Hernando County Commission members]({SITE}commissioners/hernando.html)", llms)
             self.assertNotIn("Pasco County Commission meetings", llms)   # only pages that exist
             self.assertTrue((out / "plain.css").exists())
 

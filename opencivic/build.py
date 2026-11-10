@@ -378,8 +378,8 @@ def city_page(site_url: str, built: str, counts: dict, recent: list[dict], gone:
 <p class="role">Agendas, packets and minutes from October 2025 on</p>
 <p class="lede">Every City Council agenda, packet and set of minutes the city still publishes, plus copies of the
 ones it has taken down: <mark>{counts['documents']:,} documents</mark>, {counts['pages']:,} searchable pages.</p>
-<p class="fair">Plain-language meeting pages for Temple Terrace, like the ones for the counties, are next. For now
-you can search the documents and see every recorded council vote.</p>
+<ul class="links"><li><a href="meetings/templeterrace.html">What happened at each council meeting, in plain words</a></li>
+<li><a href="council/templeterrace.html">How each council member voted</a></li></ul>
 <form class="search" id="f" role="search"><label for="q">Search Temple Terrace council records</label>
 <div class="row"><input type="search" id="q" name="q" required autocomplete="off" placeholder="for example: annexation"><button>Search</button></div>
 <fieldset><legend>Search in</legend>

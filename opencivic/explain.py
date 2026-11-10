@@ -229,7 +229,8 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
         return {"topic": "routine", "headline": f"Approved the minutes of the meeting{when}", "subject": "",
                 "facts": [], "terms": [], "motion": motion, "official": what}
     if re.match(r"^(oral vote\s*-\s*\w+\s*-\s*)?(approval of )?(the )?(changes( to the agenda)?|consent( agenda)?|agenda|minutes)\b", low) \
-            or re.match(r"^(approve|approval of) (the )?(changes|consent)", low):
+            or re.match(r"^(approve|approval of) (the )?(changes|consent)", low) \
+            or re.match(r"^(approve|approval of) (the )?[\w ,]{0,60}\bminutes\b", low):
         topic = "routine"
         if "consent" in low:
             headline, terms = "Approved the routine items together (consent agenda)", ["consent"]
@@ -250,8 +251,10 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
         topic, headline, terms = "land", f"Rezoning to a standard zone{at}", ["rz-std"]
     elif re.search(r"hc/cpa|comprehensive plan|future land use|land use plan amendment", low):
         topic = "land"
-        if re.search(r"text amendment", low):
-            headline, terms = "Change to the wording of the county's long-range land plan", ["cpa-text"]
+        if re.search(r"text amendment", low) or (
+                not re.search(r"future land use|land use map|\bflu\b", low)
+                and re.search(r"\b(section|element|polic(y|ies)|objectives?|goals?)\b", low)):
+            headline, terms = "Change to the wording of the long-range land plan", ["cpa-text"]
         else:
             headline, terms = f"Change to the future land-use map{at}", ["cpa-map"]
         if "urban service area" in low:

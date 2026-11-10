@@ -111,5 +111,17 @@ class Explain(unittest.TestCase):
         self.assertIn("FM25-008", x["headline"] + x["subject"])
         self.assertNotIn("Second sentence", x["headline"] + x["subject"])
 
+    def test_plan_wording_change_is_not_a_map_change(self):
+        x = explain("Second Public Hearing and Second Reading of Ordinance 1585 Amending the Capital Improvements "
+                    "Section of the City's Comprehensive Plan")
+        self.assertEqual(x["terms"], ["cpa-text"])
+        y = explain("Ordinance amending the Future Land Use of a parcel from Residential-9 to Residential-18 (CPA-20-02), "
+                    "an amendment to the Comprehensive Plan")
+        self.assertEqual(y["terms"], ["cpa-map"])
+
+    def test_city_minutes_approval_is_routine(self):
+        x = explain("Approval of April 21, 2026 City Council Meeting Minutes")
+        self.assertEqual((x["topic"], x["headline"]), ("routine", "Approved the minutes of an earlier meeting"))
+
 if __name__ == "__main__":
     unittest.main()

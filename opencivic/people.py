@@ -158,39 +158,65 @@ def tally(row: dict, me: str) -> str:
                if row["kind"] == "none" and row["vote"]["vote"] else "") + "</p>")
 
 
+COUNTY_SOURCE = re.compile(r"hcfl\.gov|planhillsborough|hillsborough_county", re.I)
+
+
+def cityify(text: str) -> str:
+    """A definition written for the counties, worded for the City Council."""
+    for a, b in (("county law", "city law"), ("County gives up", "City gives up"), ("County leadership", "City leadership"),
+                 ("the county area", "the city"), ("the county's", "the city's"), ("the county", "the city"), ("The county", "The city"),
+                 ("county area", "city"), ("any commissioner", "any council member"), ("Any commissioner", "Any council member"),
+                 ("the Commission", "the Council"), ("county budget", "city budget"), ("to the county", "to the city"),
+                 ("from the county", "from the city")):
+        text = text.replace(a, b)
+    return text
+
+
 def plain(item: dict, depth: int) -> str:
     """Plain headline, decoded facts, what the terms mean, and the official wording (folded)."""
-    from .explain import TERMS, TOPICS, explain
-    e = explain(item["title"], item.get("matter_type") or "")
+    from .explain import TERMS, explain
+    # When an agenda item carried several motions, each decision is the motion itself; the item is context.
+    e = explain(item.get("motion") or item["title"], item.get("matter_type") or "")
     facts = "".join(f"<li>{_e(f)}</li>" for f in e["facts"])
     means = ""
+    city = item.get("county") == "templeterrace"
     for t in e["terms"]:
         name, text, src = TERMS[t]
+        if city:
+            text, src = cityify(text), ("" if COUNTY_SOURCE.search(src or "") else src)
         more = f' <a href="{_e(src)}">Source</a>.' if src else ""
         means += (f'<details class="means"><summary>What does “{_e(name)}” mean?</summary>'
                   f'<p>{_e(text)}{more} <a href="{"../" * depth}learn/{"money" if t in ("millage", "contract", "grant", "budget", "cdd") else "land"}.html">More</a></p></details>')
     full = re.sub(r"\s+", " ", item["title"] or "").strip()
-    official = (f'<details class="official"><summary>Official wording</summary><p>{_e(full[:4000])}'
-                f'{"…" if len(full) > 4000 else ""}</p></details>')
-    return (f'<p class="headline">{_e(e["headline"])}</p>'
+    official = (f'<details class="official"><summary>Official wording</summary><p>'
+                + (f'Motion: {_e(item["motion"])}</p><p>Agenda item: ' if item.get("motion") else "")
+                + f'{_e(full[:4000])}{"…" if len(full) > 4000 else ""}</p></details>')
+    headline = cityify(e["headline"]) if city else e["headline"]
+    return (f'<p class="headline">{_e(headline)}</p>'
             + (f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
+            + (f'<p class="subject"><strong>Agenda item {_e(item.get("number", ""))}</strong> {_e(full[:320])}</p>'
+               if item.get("motion") else "")
             + (f'<ul class="facts">{facts}</ul>' if facts else "") + means + official)
 
 
 def record_link(it: dict) -> str:
     """Link to the official record. For Legistar that's the meeting page, so name the item to look for."""
     link = it.get("matter_url") or it.get("portal_url") or ""
-    if not link:
+    if not link and not it.get("minutes_url") and not it.get("minutes_copy_url"):
         return ""
     if "MeetingDetail.aspx" in link:
         ref = it.get("file_number") or it.get("number") or ""
         hint = f" (look for item {_e(ref)})" if ref else ""
         return f'<p class="src"><a href="{_e(link)}">Official meeting record</a>{hint}</p>'
+    if it.get("minutes_removed") and it.get("minutes_copy_url"):
+        where = f", page {it['minutes_page']}" if it.get("minutes_page") else ""
+        return (f'<p class="src"><a href="{_e(it["minutes_copy_url"])}">Minutes{where}</a> (our archived copy; the '
+                f'{"city" if it.get("county") == "templeterrace" else "county"} has taken its own copy down)</p>')
     if it.get("minutes_url"):
         where = f", page {it['minutes_page']}" if it.get("minutes_page") else ""
         copy = f' (<a href="{_e(it["minutes_copy_url"])}">our copy</a>)' if it.get("minutes_copy_url") else ""
         return (f'<p class="src"><a href="{_e(it["minutes_url"])}">Official minutes{where}</a>{copy}; '
-                f'votes read from the Clerk\'s minutes (item {_e(it.get("minutes_code", ""))})</p>')
+                f'votes read from the Clerk\'s minutes' + (f' (item {_e(it["minutes_code"])})' if it.get("minutes_code") else "") + '</p>')
     if "hillsclerk" in link:
         return f'<p class="src"><a href="{_e(link)}">Official record</a> (the Clerk\'s vote report, {_e(it.get("file_number", ""))})</p>'
     return f'<p class="src"><a href="{_e(link)}">Official record</a></p>'
@@ -232,11 +258,28 @@ longer needs.</dd>
 </dl>
 </section>"""
 
+CITY_GLOSSARY = """
+<section class="words" aria-labelledby="words">
+<h2 id="words">What these words mean</h2>
+<dl>
+<dt>City Council</dt><dd>The elected board that runs city government: the mayor and the council members. It
+decides the city's laws, budget, taxes, zoning and contracts. In Temple Terrace the mayor votes too.</dd>
+<dt>Motion</dt><dd>A formal proposal by one member for what the council should do. Another member seconds it,
+then the council votes.</dd>
+<dt>Consent agenda</dt><dd>A group of routine items approved together in one vote, to save time. Any member can
+ask to pull an item off it for a separate discussion and vote.</dd>
+<dt>Resolution</dt><dd>A formal decision of the council, such as approving a contract or a purchase.</dd>
+<dt>Ordinance</dt><dd>A city law. It is usually read and voted on at two meetings (first and second reading)
+before it takes effect.</dd>
+<dt>Didn't vote</dt><dd>The member was absent from the meeting, or the minutes don't record their vote.</dd>
+</dl>
+</section>"""
+
 XNOTE = {"hillsborough": " The Hillsborough Clerk marks this “X” (and rarely “A”) without saying which."}
 
 KEY = """<ul class="key" aria-label="How to read the squares">
 <li><span class="m yes"></span> voted yes</li><li><span class="m no"></span> voted no</li>
-<li><span class="m none"></span> didn't vote</li><li><span class="m yes me"></span> this commissioner</li></ul>"""
+<li><span class="m none"></span> didn't vote</li><li><span class="m yes me"></span> this member</li></ul>"""
 
 
 def page(title: str, body: str, depth: int, **kw) -> str:
@@ -247,23 +290,36 @@ def page(title: str, body: str, depth: int, **kw) -> str:
 def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
     from urllib.parse import quote
     from .region import lite
-    search_url = lite(site_url, f"/counties/votes?person={quote(p['name'])}&county={county}&_sort_desc=date")
     j = JURISDICTIONS[county]
+    d_ = j["people_dir"]
+    if county == "templeterrace":
+        from .build import _lite
+        search_url = _lite(site_url, f"/templeterrace/votes?_search={quote(p['name'].split()[-1])}&_sort_desc=date")
+    else:
+        search_url = lite(site_url, f"/counties/votes?person={quote(p['name'])}&county={county}&_sort_desc=date")
     name, last = p["name"], p["name"].split()[-1]
     n = len(p["rows"])
     areas = j["areas"]
     span = (f'in {month_year(p["first"])}' if month_year(p["first"]) == month_year(p["last"])
             else f'from {month_year(p["first"])} to {month_year(p["last"])}')
-    lede = (f'{_e(name)} has been recorded voting on <mark>{n:,} {"decision" if n == 1 else "decisions"}</mark> of the '
-            f'{_e(j["name"])} Commission, {span}. '
+    lede = (f'The record covers <mark>{n:,} {"decision" if n == 1 else "decisions"}</mark> of the '
+            f'{_e(j["board"])} while {_e(name)} was a member, {span}. '
             + (f'{_e(last)} voted no {_times(p["no"])}' if p["no"] else f'{_e(last)} never voted no')
             + (f' and didn\'t vote {_times(p["none"])}.' if p["none"] else " and was recorded on every vote."))
     no_rows = [r for r in p["rows"] if r["kind"] == "no"]
     area_rows = [r for r in p["rows"] if areas_in(r["item"]["title"] + " " + (r["item"].get("action_text") or ""))]
+    role_line = ", ".join(p.get("roles") or []) + (", " if p.get("roles") else "") + j["board"]
+    area_block = (f"""<h2>Decisions that mention {_e(' or '.join(areas))}</h2>
+<p>Items whose official wording names {_e(' or '.join(areas))}: {len(area_rows):,}. Other decisions can
+affect these areas too without naming them.</p>
+{listing(area_rows, name, f"No recorded decision names {' or '.join(areas)} yet.")}
+""" if areas else "")
+    glossary = (CITY_GLOSSARY if j["govt"] == "city" else
+                GLOSSARY.format(areas=_e(' and '.join(areas)), xnote=XNOTE.get(county, "")))
     body = f"""<h1>{_e(name)}</h1>
-<p class="role">{_e(j['name'])} Commission</p>
+<p class="role">{_e(role_line)}</p>
 <p class="lede">{lede}</p>
-<p class="fair">These are counts from the county's official vote records. They don't say why anyone voted the
+<p class="fair">These are counts from the {j['govt']}'s official vote records. They don't say why anyone voted the
 way they did. A no vote can mean many things, so open the official record to read more.</p>
 {KEY}
 <h2>When {_e(last)} voted no</h2>
@@ -272,28 +328,24 @@ way they did. A no vote can mean many things, so open the official record to rea
 <h2>When the board went the other way</h2>
 <p>Decisions where {_e(last)} voted on the losing side: {len(p['lost']):,}.</p>
 {listing(p['lost'], name, f"{name} was never on the losing side of a recorded vote.")}
-<h2>Decisions that mention {_e(' or '.join(areas))}</h2>
-<p>Items whose official wording names {_e(' or '.join(areas))}: {len(area_rows):,}. Other decisions can
-affect these areas too without naming them.</p>
-{listing(area_rows, name, f"No recorded decision names {' or '.join(areas)} yet.")}
-<h2>Most recent votes</h2>
-<p>The latest 25. <a href="{_e(search_url)}">Search all {n:,} of {_e(last)}'s votes</a>. This opens a
-searchable table of every county vote. It's a large download (about 45 MB), so it's best on Wi-Fi.</p>
+{area_block}<h2>Most recent votes</h2>
+<p>The latest 25. <a href="{_e(search_url)}">Search all of {_e(last)}'s votes</a>. This opens a
+searchable table of every {j['govt']} vote. It's a large download, so it's best on Wi-Fi.</p>
 {listing(p['rows'][:25], name, "", show=25)}
-{GLOSSARY.format(areas=_e(' and '.join(areas)), xnote=XNOTE.get(county, ""))}
+{glossary}
 """
     sl = slug(name)
     current = p.get("current")
-    person = {"@type": "Person", "name": name, "url": absolute(f"commissioners/{county}/{sl}.html") or None,
-              "jobTitle": "County Commissioner" if current else "Former County Commissioner",
-              ("worksFor" if current else "alumniOf"): {"@type": "GovernmentOrganization",
-                                                        "name": f"{j['name']} Board of County Commissioners"}}
-    return page(f"{name}: votes on the {j['name']} Commission", body, 2,
-                path=f"commissioners/{county}/{sl}.html",
-                crumbs=[("County records", "counties.html"), (f"{j['short']} commissioners", f"commissioners/{county}.html")],
-                description=(f"How {name} voted on the {j['name']} Commission: {n:,} recorded "
-                             f"{'vote' if n == 1 else 'votes'} {span}, every no vote, and decisions naming "
-                             f"{' or '.join(areas)}."),
+    title = ", ".join(p.get("roles") or []) or j["member_title"]
+    person = {"@type": "Person", "name": name, "url": absolute(f"{d_}/{county}/{sl}.html") or None,
+              "jobTitle": title if current else f"Former {title}",
+              ("worksFor" if current else "alumniOf"): {"@type": "GovernmentOrganization", "name": j["board_formal"]}}
+    return page(f"{name}: votes on the {j['board']}", body, 2,
+                path=f"{d_}/{county}/{sl}.html",
+                crumbs=[j["hub"], (f"{j['short']} {j['members']}", f"{d_}/{county}.html")],
+                description=(f"How {name} voted on the {j['board']}: {n:,} recorded "
+                             f"{'vote' if n == 1 else 'votes'} {span}, and every no vote"
+                             + (f", and decisions naming {' or '.join(areas)}." if areas else ".")),
                 note=footer, jsonld=[{"@type": "ProfilePage", "mainEntity": person}], og_type="profile", here=name)
 
 
@@ -304,29 +356,37 @@ def county_page(county: str, ppl: dict[str, dict], footer: str) -> str:
     former = sorted((p for p in ppl.values() if p not in current), key=lambda p: p["last"], reverse=True)
 
     def entry(p: dict) -> str:
+        roles = ", ".join(p.get("roles") or [])
         return (f'<li><a href="{county}/{slug(p["name"])}.html">{_e(p["name"])}</a>'
-                f'<p>Voted on {len(p["rows"]):,} decisions from {month_year(p["first"])} to {month_year(p["last"])}. '
+                + (f'<p>{_e(roles)}</p>' if roles else "")
+                + f'<p>{len(p["rows"]):,} recorded decisions while a member, {month_year(p["first"])} to {month_year(p["last"])}. '
                 + (f'<span class="hl">Voted no {_times(p["no"])}</span>' if p["no"] else "Never voted no")
                 + (f'; didn\'t vote {_times(p["none"])}.' if p["none"] else "; recorded on every vote.") + '</p></li>')
     areas = " and ".join(j["areas"])
     plural = "doesn't" if len(j["areas"]) == 1 else "don't"
-    body = f"""<h1>{_e(j['name'])} Commission</h1>
-<p class="role">How each commissioner voted</p>
-<p class="lede">{_e(areas)} {plural} have a city government. Decisions about zoning, roads and county taxes
-there are made by these {len(current)} commissioners.</p>
+    if j["govt"] == "city":
+        lede = (f"{_e(j['short'])}'s local decisions are made by its City Council: these {len(current)} members. "
+                "The mayor runs the meetings and votes too.")
+    else:
+        lede = (f"{_e(areas)} {plural} have a city government. Decisions about zoning, roads and county taxes "
+                f"there are made by these {len(current)} commissioners.")
+    body = f"""<h1>{_e(j['board'])}</h1>
+<p class="role">How each {j['member']} voted</p>
+<p class="lede">{lede}</p>
 <p class="fair">Records through {long_date(newest)}. Counts come from official vote records and say nothing about
 why anyone voted the way they did.</p>
-<h2>On the Commission now</h2>
+<h2>On the {j['body_short']} now</h2>
 <ul class="people">{''.join(entry(p) for p in current)}</ul>
-{('<h2>Former commissioners</h2><ul class="people">' + ''.join(entry(p) for p in former) + '</ul>') if former else ''}
+{(f'<h2>Former {j["members"]}</h2><ul class="people">' + ''.join(entry(p) for p in former) + '</ul>') if former else ''}
 """
-    org = {"@type": "GovernmentOrganization", "name": f"{j['name']} Board of County Commissioners",
-           "areaServed": [{"@type": "Place", "name": f"{a}, Florida"} for a in j["areas"]],
-           "member": [{"@type": "Person", "name": p["name"], "jobTitle": "County Commissioner",
-                       "url": absolute(f"commissioners/{county}/{slug(p['name'])}.html") or None} for p in current]}
-    return page(f"{j['name']} Commission: how each commissioner voted", body, 1,
-                path=f"commissioners/{county}.html", crumbs=[("County records", "counties.html")], here=f"{j['short']} commissioners",
-                description=(f"How each {j['name']} commissioner voted, in plain language: who is on the board, "
+    d_ = j["people_dir"]
+    org = {"@type": "GovernmentOrganization", "name": j["board_formal"],
+           "areaServed": [{"@type": "Place", "name": f"{a}, Florida"} for a in (j["areas"] or [j["short"]])],
+           "member": [{"@type": "Person", "name": p["name"], "jobTitle": ", ".join(p.get("roles") or []) or j["member_title"],
+                       "url": absolute(f"{d_}/{county}/{slug(p['name'])}.html") or None} for p in current]}
+    return page(f"{j['board']}: how each {j['member']} voted", body, 1,
+                path=f"{d_}/{county}.html", crumbs=[j["hub"]], here=f"{j['short']} {j['members']}",
+                description=(f"How each {j['board']} member voted, in plain language: who is on the board, "
                              f"how often each voted no, and every recorded decision."),
                 note=footer, jsonld=[{"@type": "CollectionPage", "about": org}])
 
@@ -345,6 +405,9 @@ FOOTERS = {
                      "Clerk updates about monthly, so the newest meetings can be a few weeks behind. Names are "
                      "printed by surname in the record; we match them to full names by date."),
     "hernando": "Votes from Hernando County's Legistar meeting records, County Commission meetings from 2025 on.",
+    "templeterrace": ("Votes read from the City Clerk's minutes of each City Council meeting (from November 2025; the "
+                      "city keeps its minutes online for about a year, and we keep copies). When a member didn't vote, "
+                      "each decision says whether the minutes recorded them absent."),
     "pasco": ("Votes read from the Pasco Clerk's minutes (County Commission meetings from 2025 on). The Clerk names "
               "only members who voted no, abstained or were absent; everyone else present is counted as yes. "
               "Items whose minutes we couldn't read with confidence (several motions on one item, for example) "
@@ -352,15 +415,35 @@ FOOTERS = {
 }
 
 
+def all_votes(data: Path) -> dict[str, dict]:
+    """Every jurisdiction's decisions and votes: the county commissions, and the Temple Terrace City Council."""
+    from .council import SLUG, council_votes
+    out = commission_votes(data)
+    tt = council_votes(data)
+    if tt["items"]:
+        out[SLUG] = tt
+    return out
+
+
+def city_roles(data: Path) -> dict[str, list[str]]:
+    """Temple Terrace member -> ['Mayor'] or ['Council Member']. The vice-mayor seat rotates, so it isn't shown."""
+    from .council import members
+    return {o["name"]: ["Mayor"] if "Mayor" in o.get("roles", []) else ["Council Member"] for o in members(data)}
+
+
 def write(data: Path, out: Path, site_url: str = "") -> dict:
-    d = out / "commissioners"
-    d.mkdir(parents=True, exist_ok=True)
     write_assets(out)
     counts = {}
-    for county, rec in commission_votes(data).items():
+    for county, rec in all_votes(data).items():
         ppl = people(rec)
         if not ppl:
             continue
+        d = out / JURISDICTIONS[county]["people_dir"]
+        d.mkdir(parents=True, exist_ok=True)
+        if JURISDICTIONS[county]["govt"] == "city":
+            roles = city_roles(data)
+            for p in ppl.values():
+                p["roles"] = roles.get(p["name"], [])
         footer = f'<p>{_e(FOOTERS.get(county, ""))}</p>'
         newest = max(p["last"] for p in ppl.values())
         for p in ppl.values():
