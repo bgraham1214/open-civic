@@ -131,6 +131,74 @@ def _iso_time(t: str) -> str:
     return f"T{h:02d}:{m.group(2)}"
 
 
+TOPIC_RANK = {"law": 0, "money": 1, "land": 2, "people": 3, "other": 4, "routine": 9}
+
+
+def _clip(s: str, n: int) -> str:
+    s = re.sub(r"\s+", " ", s or "").strip().rstrip(".")
+    return s if len(s) <= n else s[:n].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
+
+PROCEDURE_RX = re.compile(r"^(?:\d+:\d+ ?[ap]\.?m\.? \(time certain\) )?(?:oral vote[.,] )?(?:(?:hold|conduct)\w* )?(?:a |the )?"
+                          r"(?:(?:first|second|final|1st|2nd) )?(?:public )?hearings? (?:to |and )?(?:consider\w* )?"
+                          r"(?:the )?(?:adoption of |enactment of )?(?:an? |the )?|^proposed |^(?:an? )?", re.I)
+BY_BOARD_RX = re.compile(r"^(?:ordinance|resolution) by the [\w ]{0,60}?commissioners?(?: of [\w ]{0,40}?county,? florida,?)? ", re.I)
+CODE_TO_RX = re.compile(r"^(?:ordinance|resolution)\b[^;]{0,90}?\b(?:code|ordinances?)(?: of ordinances(?: and laws)?)? to ", re.I)
+
+
+def _essence(subject: str) -> str:
+    """'Second Public Hearing to Consider Ordinance Amending Hernando County Code to Impose Moratorium on …'
+    -> 'Impose Moratorium on …'."""
+    s = PROCEDURE_RX.sub("", subject.strip(), count=1)
+    s = CODE_TO_RX.sub("", BY_BOARD_RX.sub("", s, count=1), count=1)
+    s = re.sub(r"^amending the [\w ]{0,40}?code of ordinances(?: and laws)?[;,] (?:amending )?", "", s, flags=re.I)
+    return s[:1].upper() + s[1:]
+
+
+def top_headlines(rows: list[dict], city: bool = False, n: int = 3) -> list[str]:
+    """The decisions a searcher is most likely looking for: spotlighted first, then laws, money (largest first),
+    land, the rest. Routine items never. For page titles and descriptions."""
+    from .spotlight import REASONS, for_item
+
+    def rank(r):
+        return (0 if for_item(r["item"]) else 1, TOPIC_RANK.get(r["x"]["topic"], 5),
+                -max(money(r["x"]["official"]) or [0]))
+    out: list[str] = []
+    for r in sorted(rows, key=rank):
+        if r["x"]["topic"] == "routine":
+            continue
+        h, x = r["x"]["headline"], r["x"]
+        co = next((f.split(": ", 1)[1].split(";")[0] for f in x["facts"] if f.startswith("Company or group named")), "")
+        biz = next((t for t in for_item(r["item"]) if t["kind"] == "business"), None)
+        amount = max(money(x["official"]) or [0])
+        if biz:                             # "Incentive payment to a company: $21 million, H. Lee Moffitt Cancer Center"
+            h = REASONS["business"][biz["reason"]] + (f": {dollars(amount)}" if amount else "") + (f", {co}" if co else "")
+        elif any(t["kind"] == "restriction" for t in for_item(r["item"])) and (
+                x["topic"] in ("land", "other") or h == "New or changed county law (ordinance)"):
+            h = _essence(x.get("subject") or x["official"])   # "Establishing a Temporary Moratorium on …"
+        elif co and x["topic"] == "money":
+            h = f"{h} with {co}"            # "Contract or purchase: $1.1 million with AKCA Inc."
+        elif x.get("subject") and h in ("New or changed county law (ordinance)", "Grant", "Budget or funding decision"):
+            h = f"{h}: {_essence(x['subject'])}"
+        h = _clip(cityify(h) if city else h, 70)
+        if h not in out:
+            out.append(h)
+        if len(out) == n:
+            break
+    return out
+
+
+def _spot_line(rows: list[dict]) -> str:
+    from collections import Counter
+    from .spotlight import for_item, label
+    c = Counter(label(t, r["facts"] if r["votes"] else None) for r in rows for t in for_item(r["item"]))
+    if not c:
+        return ""
+    parts = [f"{n} × {l[0].lower()}{l[1:]}" if n > 1 else f"{l[0].lower()}{l[1:]}" for l, n in c.most_common()]
+    return ('<p class="learn"><strong>In the spotlight:</strong> ' + _e("; ".join(parts)) + ". Tagged below. "
+            '<a href="../../spotlight.html">All spotlight decisions</a></p>')
+
+
 def _days_between(a: str, b: str) -> int:
     return (date.fromisoformat(b) - date.fromisoformat(a)).days
 
@@ -196,7 +264,7 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
             continue
         lis = []
         for r in items:
-            lis.append("<li>" + plain(r["item"], 2) + _vote_line(r) + record_link(r["item"]) + "</li>")
+            lis.append("<li>" + plain(r["item"], 2, r["facts"]) + _vote_line(r) + record_link(r["item"]) + "</li>")
         block = f'<ol class="decisions">{"".join(lis)}</ol>'
         if t == "routine":
             sections.append(f'<h2>{TOPICS[t]}</h2><details><summary>Show {len(items)} routine '
@@ -217,10 +285,11 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
         f'<li><a href="{prev}.html" rel="prev">Earlier meeting: {_e(weekday_date(prev))}</a></li>' if prev else "",
         f'<li><a href="{nxt}.html" rel="next">Later meeting: {_e(weekday_date(nxt))}</a></li>' if nxt else "") if x)
     people = (f' <a href="../../{j["people_dir"]}/{county}.html">How each {j["member"]} voted</a>' if has_people else "")
+    spot = _spot_line(rows + others)
     body = f"""<h1>{_e(weekday_date(d))}</h1>
 <p class="role">{_e(j['board'])} meeting</p>
 <p class="lede">{lede}</p>
-{note}{when}{big}
+{note}{when}{spot}{big}
 <p class="fair">Headlines are our plain-language reading of the official wording, made by fixed rules, not AI.
 The official wording is under each one. Outcomes count the recorded votes.{people}</p>
 {"<ul class='key' aria-label='How to read the squares'><li><span class='m yes'></span> voted yes</li><li><span class='m no'></span> voted no</li><li><span class='m none'></span> didn't vote</li></ul>" if voted else ""}
@@ -235,11 +304,17 @@ The official wording is under each one. Outcomes count the recorded votes.{peopl
              "isAccessibleForFree": True, "description": plain_lede,
              "organizer": {"@type": "GovernmentOrganization", "name": j["board_formal"]},
              "url": absolute(f"meetings/{county}/{d}.html") or None}
-    title = f"{j['board']}, {long_date(d)}: " + ("what's on the agenda" if upcoming and not voted else "what happened")
+    tops = top_headlines(rows + others, j["govt"] == "city")
+    agenda = upcoming and not voted
+    title = (f"{j['board']}, {long_date(d)}" + (" agenda" if agenda else "") + ": "
+             + ("; ".join(tops[:2]) if tops else ("what's on the agenda" if agenda else "what happened")))
+    desc = f"{j['board']} meeting of {long_date(d)}, in plain language. {plain_lede}"
+    if tops:
+        desc += (" On the agenda: " if agenda or not voted else " Decisions include: ") + "; ".join(tops) + "."
     return page(title, body, 2,
                 path=f"meetings/{county}/{d}.html",
                 crumbs=[j["hub"], (f"{j['short']} meetings", f"meetings/{county}.html")],
-                description=f"{j['board']} meeting of {long_date(d)}, in plain language. {plain_lede}",
+                description=desc,
                 note=f"<p>From {_e(j['name'])}'s official records.</p>", jsonld=[event], here=long_date(d))
 
 
@@ -365,7 +440,8 @@ def write(data: Path, out: Path) -> dict:
     today = site.to_eastern(site.BUILT).date().isoformat() if site.BUILT else date.today().isoformat()
     info = meeting_info(data)
     counts = {}
-    for county, by_date in decisions_by_meeting(data).items():
+    by_meeting = decisions_by_meeting(data)
+    for county, by_date in by_meeting.items():
         if not by_date:
             continue
         (d / county).mkdir(exist_ok=True)
@@ -377,4 +453,7 @@ def write(data: Path, out: Path) -> dict:
                                                                 info.get((county, day)), today), "utf-8")
         (d / f"{county}.html").write_text(county_index(county, by_date, county in have_people, today), "utf-8")
         counts[county] = len(dates)
+    from . import spotlight
+    from .build import _rss
+    counts["spotlight"] = spotlight.write(by_meeting, out, today, _rss)
     return counts

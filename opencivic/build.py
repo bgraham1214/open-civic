@@ -453,6 +453,8 @@ def main(argv: list[str] | None = None) -> int:
     today = site.to_eastern(built).date().isoformat()
     lite = {"templeterrace.db": _lite(site_url), "counties.db": region.lite(site_url)}
     print(json.dumps({"common": site.write_common(args.out, today=today, tt=city_summary(args.data_dir), lite=lite)}))
+    from . import indexnow
+    print(json.dumps({"indexnow_pages": indexnow.prepare(args.out)}))
     return 0
 
 

@@ -60,7 +60,10 @@ class Meetings(unittest.TestCase):
         self.assertIn("This meeting is coming up. <mark>1 item</mark> is on the agenda", page)
         self.assertIn("Tuesday, November 17, 2026, 9:00 AM, John Law Ayers Commission Chambers, Room 160.", page)
         self.assertIn('"startDate":"2026-11-17T09:00"', page)
-        self.assertIn("what&#x27;s on the agenda</title>", page)
+        # the title names what's on the agenda, so a search for the company or the topic can find the page
+        self.assertIn("<title>Hernando County Commission, November 17, 2026 agenda: Contract or purchase: "
+                      "$2 million with Acme Inc</title>", page)
+        self.assertIn("On the agenda: Contract or purchase: $2 million with Acme Inc.", page)
         gone = meetings.meeting_page("hernando", "2026-11-17", [row], True, ("", ""),
                                      {**info, "agenda_status": "Cancelled"}, "2026-11-09")
         self.assertIn("The county lists this meeting as cancelled", gone)

@@ -140,6 +140,12 @@ class Explain(unittest.TestCase):
         self.assertEqual((z["headline"], z["terms"]), ("County law on synthetic drugs", ["ordinance"]))
         self.assertIn("fda.gov", TERMS["7-oh"][2])
 
+    def test_incentives_are_not_contracts(self):
+        x = explain("Economic Incentive Agreement – H. Lee Moffitt Cancer Center and Research Institute, Inc. – $21,000,000.00")
+        self.assertEqual((x["headline"], x["terms"]), ("Incentive or tax break for a business: $21 million", ["incentive"]))
+        self.assertEqual(explain("Grant Agreement With the State Department of Environmental Protection for Septic "
+                                 "Upgrade Incentive Program")["terms"], ["grant"])
+
 
 if __name__ == "__main__":
     unittest.main()

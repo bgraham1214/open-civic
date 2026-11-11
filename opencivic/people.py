@@ -172,8 +172,9 @@ def cityify(text: str) -> str:
     return text
 
 
-def plain(item: dict, depth: int) -> str:
-    """Plain headline, decoded facts, what the terms mean, and the official wording (folded)."""
+def plain(item: dict, depth: int, vote: dict | None = None) -> str:
+    """Spotlight tags, plain headline, decoded facts, what the terms mean, and the official wording (folded).
+    vote: the vote (decision_facts), so a tag can say whether it passed; None for an item with no vote."""
     from .explain import TERMS, explain
     # When an agenda item carried several motions, each decision is the motion itself; the item is context.
     e = explain(item.get("motion") or item["title"], item.get("matter_type") or "")
@@ -186,13 +187,14 @@ def plain(item: dict, depth: int) -> str:
             text, src = cityify(text), ("" if COUNTY_SOURCE.search(src or "") else src)
         more = f' <a href="{_e(src)}">Source</a>.' if src else ""
         means += (f'<details class="means"><summary>What does “{_e(name)}” mean?</summary>'
-                  f'<p>{_e(text)}{more} <a href="{"../" * depth}learn/{"money" if t in ("millage", "contract", "grant", "budget", "cdd") else "land"}.html">More</a></p></details>')
+                  f'<p>{_e(text)}{more} <a href="{"../" * depth}learn/{"money" if t in ("millage", "contract", "grant", "budget", "cdd", "incentive") else "land"}.html">More</a></p></details>')
     full = re.sub(r"\s+", " ", item["title"] or "").strip()
     official = (f'<details class="official"><summary>Official wording</summary><p>'
                 + (f'Motion: {_e(item["motion"])}</p><p>Agenda item: ' if item.get("motion") else "")
                 + f'{_e(full[:4000])}{"…" if len(full) > 4000 else ""}</p></details>')
     headline = cityify(e["headline"]) if city else e["headline"]
-    return (f'<p class="headline">{_e(headline)}</p>'
+    from .spotlight import badges
+    return (badges(item, vote, depth) + f'<p class="headline">{_e(headline)}</p>'
             + (f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
             + (f'<p class="subject"><strong>Agenda item {_e(item.get("number", ""))}</strong> {_e(full[:320])}</p>'
                if item.get("motion") else "")
@@ -225,7 +227,7 @@ def record_link(it: dict) -> str:
 def decision(row: dict, me: str) -> str:
     it = row["item"]
     return (f'<li><p class="when">{_e(long_date(it["date"]))}</p>'
-            + plain(it, 2) + tally(row, me) + record_link(it) + "</li>")
+            + plain(it, 2, row["facts"]) + tally(row, me) + record_link(it) + "</li>")
 
 
 def listing(rows: list[dict], me: str, empty: str, show: int = 15) -> str:
@@ -307,6 +309,8 @@ def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
             + (f'{_e(last)} voted no {_times(p["no"])}' if p["no"] else f'{_e(last)} never voted no')
             + (f' and didn\'t vote {_times(p["none"])}.' if p["none"] else " and was recorded on every vote."))
     no_rows = [r for r in p["rows"] if r["kind"] == "no"]
+    from .spotlight import for_item
+    spot_rows = [r for r in p["rows"] if for_item(r["item"])]
     area_rows = [r for r in p["rows"] if areas_in(r["item"]["title"] + " " + (r["item"].get("action_text") or ""))]
     role_line = ", ".join(p.get("roles") or []) + (", " if p.get("roles") else "") + j["board"]
     area_block = (f"""<h2>Decisions that mention {_e(' or '.join(areas))}</h2>
@@ -328,6 +332,10 @@ way they did. A no vote can mean many things, so open the official record to rea
 <h2>When the board went the other way</h2>
 <p>Decisions where {_e(last)} voted on the losing side: {len(p['lost']):,}.</p>
 {listing(p['lost'], name, f"{name} was never on the losing side of a recorded vote.")}
+<h2>Votes in the spotlight</h2>
+<p>Decisions tagged as new restrictions, or as money, land or breaks for companies: {len(spot_rows):,}.
+<a href="../../spotlight.html#how">How the tags work</a>. Tags say what a decision does, not whether it was right.</p>
+{listing(spot_rows, name, f"No decision {name} voted on has a spotlight tag.")}
 {area_block}<h2>Most recent votes</h2>
 <p>The latest 25. <a href="{_e(search_url)}">Search all of {_e(last)}'s votes</a>. This opens a
 searchable table of every {j['govt']} vote. It's a large download, so it's best on Wi-Fi.</p>

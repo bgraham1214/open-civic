@@ -129,6 +129,11 @@ def page(title: str, body: str, depth: int, *, path: str = "", description: str 
              f'<meta property="og:site_name" content="{NAME}">']
     if desc:
         head.append(f'<meta property="og:description" content="{e(desc)}">')
+    if SITE_URL:  # the share card for links posted on social media and in group chats
+        head += [f'<meta property="og:image" content="{e(absolute("share.png"))}">',
+                 '<meta property="og:image:width" content="1200">', '<meta property="og:image:height" content="630">',
+                 f'<meta property="og:image:alt" content="{NAME}: what your local government decided, in plain words">',
+                 '<meta name="twitter:card" content="summary_large_image">']
     head += [f'<link rel="alternate" type="application/rss+xml" title="{e(t)}" href="{up}{e(p)}">' for t, p in feeds]
     trail = [("Home", "index.html")] + list(crumbs)
     crumb_html = ""
@@ -150,7 +155,7 @@ def page(title: str, body: str, depth: int, *, path: str = "", description: str 
 <link rel="stylesheet" href="{up}plain.css"></head>
 <body><a class="skip" href="#main">Skip to main content</a>
 <header class="site"><div class="wrap"><a class="brand" href="{up}index.html">{NAME}</a>
-<nav aria-label="Site"><ul><li><a href="{up}index.html#areas">Your area</a></li><li><a href="{up}learn/index.html">Learn</a></li><li><a href="{up}data.html">Data</a></li></ul></nav></div></header>
+<nav aria-label="Site"><ul><li><a href="{up}index.html#areas">Your area</a></li><li><a href="{up}spotlight.html">Spotlight</a></li><li><a href="{up}learn/index.html">Learn</a></li><li><a href="{up}data.html">Data</a></li></ul></nav></div></header>
 <div class="wrap">{crumb_html}
 <main id="main" tabindex="-1">
 {body}
@@ -233,6 +238,11 @@ summary{cursor:pointer;font-weight:700;padding:.5rem 0}
 .words dt{font-weight:700;margin-top:1.25rem;scroll-margin-top:1rem}
 .words dd{margin:0}
 .headline{font-weight:700;margin:0 0 .3rem}
+.spot{margin:0 0 .35rem;line-height:1.9}
+.tag{display:inline-block;font-size:.9rem;font-weight:700;line-height:1.3;padding:.1rem .5rem;border:2px solid var(--ink);text-decoration:none;margin-right:.35rem}
+.tag.restriction{background:var(--ink);color:#fff}
+.tag.business{border-style:dashed}
+.tag.restriction:focus-visible{color:var(--ink)}
 .subject{font-size:1rem;color:var(--quiet);margin:0 0 .3rem}
 .facts{margin:.2rem 0 .5rem;padding-left:1.2rem}
 .facts li{margin:.1rem 0}
@@ -289,6 +299,8 @@ def write_assets(out: Path) -> None:
     fonts.mkdir(exist_ok=True)
     for f in (STATIC / "fonts").iterdir():
         shutil.copy(f, fonts / f.name)
+    if (STATIC / "share.png").exists():
+        shutil.copy(STATIC / "share.png", out / "share.png")
 
 
 # --- The front door -----------------------------------------------------------------------
@@ -362,6 +374,10 @@ what a decision was. We never say whether it was right.</p>
 and county taxes for your neighborhood.</p>
 <ul class="areas">{''.join(cards)}</ul>
 <p class="small">More places are planned. <a href="counties.html">Search all three counties' records</a>.</p>
+<h2>Spotlight</h2>
+<p>New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases for
+companies, across all four governments. Each is tagged by fixed rules from the official wording.
+<a href="spotlight.html">See the spotlight</a>.</p>
 <h2>New to this?</h2>
 <ul class="links"><li><a href="learn/land.html">How building and land decisions work</a></li>
 <li><a href="learn/money.html">How county money works</a></li>
@@ -386,7 +402,7 @@ NetNewsWire) checks for you. Email and text alerts are planned.</p>
 
 # --- The glossary ----------------------------------------------------------------------------
 
-MONEY_TERMS = ("millage", "contract", "grant", "budget", "cdd")
+MONEY_TERMS = ("millage", "contract", "grant", "budget", "cdd", "incentive")
 
 
 def glossary() -> str:
@@ -543,6 +559,7 @@ come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace v
 - [Home: pick an area]({u('index.html')})
 - [Temple Terrace City Council records]({u('templeterrace.html')})
 - [County commission records and search]({u('counties.html')})
+- [Spotlight]({u('spotlight.html')}): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
 {counties}
 {people}
 

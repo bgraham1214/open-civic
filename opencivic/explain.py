@@ -96,6 +96,12 @@ TERMS = {
              "opioids. The FDA has approved none of them and warns they can cause serious harm. Natural kratom "
              "leaf is a separate product.",
              "https://www.fda.gov/consumers/consumer-updates/products-containing-7-oh-can-cause-serious-harm"),
+    "incentive": ("Incentive or tax break for a business",
+                  "Public money or a tax break offered to a company, usually in exchange for promised jobs or "
+                  "investment. Under Florida law a county can exempt a new or expanding business from part of its "
+                  "property taxes for up to 10 years, once voters have approved that power in a referendum. Cash "
+                  "incentives are paid under an agreement with the company.",
+                  "https://www.flsenate.gov/Laws/Statutes/2023/196.1995"),
     "budget": ("Budget change",
                "Moves money within the county budget or adds money that came in after the budget was set.",
                ""),
@@ -284,6 +290,10 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
     elif re.search(r"budget (amendment|resolution|transfer)|amend\w* the [\w ]{0,30}budget|\ballocat\w+|transfer\w* [\w ]{0,40}(funds|moneys)|recogniz\w+ (additional )?revenue", low) \
             and not re.search(r"no adjustment to the budget", low):
         topic, headline, terms = "money", "Budget or funding decision", ["budget"]
+    elif re.search(r"economic (?:development )?incentive|incentives? agreement|ad valorem tax exemption|"
+                   r"qualified target industry|job creation (?:and|grant|incentive)|(?:mobility|impact) fee buy-?down", low) \
+            and not re.search(r"septic|weatherization|housing incentive|\baudit\b|\breport\b", low):
+        topic, headline, terms = "money", "Incentive or tax break for a business", ["incentive"]
     elif re.search(r"\bgrant\b", low):
         topic, headline, terms = "money", "Grant", ["grant"]
     elif re.search(r"\b(award|contract|agreement|task order|purchase|bid|itb|rfp|rsq|sole source|change order|lease)\b", low) and money(what):
