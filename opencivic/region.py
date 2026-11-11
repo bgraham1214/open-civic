@@ -184,7 +184,11 @@ def load(data: Path) -> dict:
     lst = data / "listings"
     out = {"meetings": [], "items": [], "votes": [], "docs": [], "changes": []}
     for client, slug in legistar_clients().items():
+        hidden = set()  # agenda status "Hidden": the county took the meeting's web page down (HTTP 410)
         for e in _jsonl(lst / f"legistar-{client}-events.jsonl"):
+            if (e.get("agenda_status") or "").lower() == "hidden":
+                hidden.add(e["event_id"])
+                e = {**e, "portal_url": ""}
             if not is_private_body(e["body"]):
                 out["meetings"].append({**e, "county": slug})
         # each item's own page, read from the meeting's web page by `legistar links`; matched by File #
@@ -193,6 +197,9 @@ def load(data: Path) -> dict:
             # listings saved before Nov 9, 2026 carry LegislationDetail links built from API ids, which
             # Legistar rejects; only links read from the meeting page are used
             own = links.get(i.get("event_id"), {}).get((i.get("file_number") or "").strip(), "")
+            if i.get("event_id") in hidden:
+                out["items"].append({**i, "county": slug, "matter_url": "", "portal_url": "", "source_hidden": True})
+                continue
             out["items"].append({**i, "county": slug, "matter_url": own})
         for v in _jsonl(lst / f"legistar-{client}-votes.jsonl"):
             out["votes"].append({**v, "county": slug})

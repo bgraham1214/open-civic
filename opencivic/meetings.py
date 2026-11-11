@@ -210,6 +210,7 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
     today = today or date.today().isoformat()
     upcoming = d > today
     cancelled = (info.get("agenda_status") or "").lower() == "cancelled"
+    hidden = (info.get("agenda_status") or "").lower() == "hidden"
     voted = any(r["votes"] for r in rows)
     others = [r for r in rows if not r["votes"]] if voted else []
     if voted:
@@ -232,6 +233,9 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
                 f'{_e(j["board"])}\'s agenda' + (f': {_e(counts)}' if counts else "") + ".")
     if voted:
         note = ""
+    elif hidden:
+        note = (f'<p class="fair">The {j["govt"]} has since hidden this meeting from its website, so it may not have '
+                "taken place as listed. This page shows what its agenda listed when we collected it.</p>")
     elif cancelled:
         note = (f'<p class="fair">The {j["govt"]} lists this meeting as cancelled. Items on its agenda may come back at a '
                 "later meeting.</p>")

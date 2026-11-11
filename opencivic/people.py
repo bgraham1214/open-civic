@@ -206,17 +206,19 @@ def record_link(it: dict) -> str:
     and what to look for once there. Every link here was checked to open in a browser (Nov 11, 2026);
     our backup copies are GitHub release files, which download, so the text says so."""
     link = it.get("matter_url") or it.get("portal_url") or ""
-    if not link and not it.get("minutes_url") and not it.get("minutes_copy_url"):
-        return ""
     j = JURISDICTIONS.get(it.get("county", ""), {})
     govt = j.get("govt", "county")
     page = it.get("minutes_page")
 
     def src(body: str) -> str:
         return f'<p class="src">Official record: {body}</p>'
+    if it.get("source_hidden"):
+        return src(f"the {govt} has since hidden this meeting's page on its website, so there is no link to give.")
+    if not link and not it.get("minutes_url") and not it.get("minutes_copy_url"):
+        return ""
     if "LegislationDetail.aspx" in link:
         ref = it.get("file_number") or it.get("number") or ""
-        return src(f'<a href="{_e(link)}">{f"File # {_e(ref)}" if ref else "This item"} on the {govt}\'s meeting site</a>')
+        return src(f'<a href="{_e(link)}">{f"File # {_e(ref)}" if ref else "This item"} on the {govt}\'s meeting site</a>.')
     if "MeetingDetail.aspx" in link:
         ref, num = it.get("file_number") or "", it.get("number") or ""
         hint = (f". Find File # {_e(ref)}" + (f" (agenda item {_e(num)})" if num else "") if ref

@@ -50,6 +50,13 @@ class People(unittest.TestCase):
         gone = pp.record_link({"county": "templeterrace", "minutes_removed": True, "minutes_page": 3,
                                "minutes_copy_url": "https://c/x.pdf#page=3"})
         self.assertIn("the city has taken its copy of these minutes down. <a", gone)
+        # a meeting the county hid (its page answers HTTP 410): say so, link nothing
+        hidden = pp.record_link({"county": "hernando", "portal_url": "", "source_hidden": True})
+        self.assertIn("has since hidden this meeting", hidden)
+        self.assertNotIn("href", hidden)
+        item = pp.record_link({"county": "hernando", "file_number": "16399",
+                               "matter_url": "https://hernandocountyfl.legistar.com/LegislationDetail.aspx?ID=1&GUID=A"})
+        self.assertIn(">File # 16399 on the county's meeting site</a>.", item)
 
     def test_official_wording_is_verbatim(self):
         text = "Chair Hagan sought a motion for each person to be given two minutes. Moved to approve."
