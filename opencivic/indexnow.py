@@ -6,11 +6,16 @@ Bing, Yandex, Naver, Seznam and Yep take IndexNow pings; DuckDuckGo and several 
 index. Google doesn't use IndexNow; it reads sitemap.xml, best submitted once in Search Console.
 
 Every page's footer carries the build time, so every page "changes" every night. To send only real changes,
-each page is fingerprinted with that line removed and the fingerprints are published as page-hashes.json.
-The next build compares against the published copy.
+each page is fingerprinted with that line removed (page-hashes.json). After a successful submission the
+fingerprints are recorded (--record, kept on the live-samples branch as indexnow-submitted.json); the next run
+sends what differs from that record, so a failed night is sent again the next night.
 
   python -m opencivic.indexnow prepare --site site      # key file + page-hashes.json (after the build)
-  python -m opencivic.indexnow submit --site site --previous prev.json --site-url https://.../open-civic/
+  python -m opencivic.indexnow submit --site site --previous last.json --record out/indexnow-submitted.json \
+      --site-url https://.../open-civic/
+
+Before submitting, it waits until the site serves the key file: IndexNow checks it, and GitHub Pages takes a
+minute or more to deploy (the first try, Nov 11, 2026, got HTTP 403 thirty seconds after the deploy).
 
 The key is public by design: IndexNow checks that the key file is served from the site it names, and a key
 file under /open-civic/ only covers URLs under /open-civic/.
@@ -23,6 +28,7 @@ import hashlib
 import json
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
@@ -73,11 +79,30 @@ def submit(paths: list[str], site_url: str, opener=urllib.request.urlopen) -> li
     return statuses
 
 
+def key_served(site_url: str, opener=urllib.request.urlopen, tries: int = 24, wait: float = 20.0,
+               sleep=time.sleep) -> bool:
+    """True once the site serves the key file (polls for up to tries × wait seconds)."""
+    url = payload([], site_url)["keyLocation"]
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(f"{url}?t={int(time.time())}",
+                                         headers={"User-Agent": "open-civic (+https://github.com/bgraham1214/open-civic)"})
+            with opener(req, timeout=30) as r:
+                if r.status == 200 and r.read().decode("utf-8", "replace").strip() == KEY:
+                    return True
+        except Exception:  # noqa: BLE001 - 404 until Pages has deployed
+            pass
+        if i + 1 < tries:
+            sleep(wait)
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.indexnow")
     ap.add_argument("action", choices=["prepare", "submit"])
     ap.add_argument("--site", type=Path, default=Path("site"))
-    ap.add_argument("--previous", type=Path, help="the published page-hashes.json from the last build")
+    ap.add_argument("--previous", type=Path, help="fingerprints last submitted successfully (indexnow-submitted.json)")
+    ap.add_argument("--record", type=Path, help="where to write the fingerprints submitted (or carried forward)")
     ap.add_argument("--site-url", default="https://bgraham1214.github.io/open-civic/")
     args = ap.parse_args(argv)
     if args.action == "prepare":
@@ -88,14 +113,25 @@ def main(argv: list[str] | None = None) -> int:
     if args.previous and args.previous.exists() and args.previous.stat().st_size:
         previous = json.loads(args.previous.read_text("utf-8"))
     paths = changed(previous, current)
+
+    def record(h: dict) -> None:
+        if args.record:
+            args.record.parent.mkdir(parents=True, exist_ok=True)
+            args.record.write_text(json.dumps(h, indent=0, sort_keys=True), "utf-8")
     if not paths:
+        record(current)
         print(json.dumps({"indexnow": "no changed pages"}))
+        return 0
+    record(previous)  # until it succeeds, keep the old record so these pages are sent next time
+    if not key_served(args.site_url):
+        print("::warning::IndexNow: the key file isn't being served yet; will retry next run", file=sys.stderr)
         return 0
     try:
         statuses = submit(paths, args.site_url)
     except Exception as e:  # noqa: BLE001 - a ping failure must never fail the run
         print(f"::warning::IndexNow submit failed: {e}", file=sys.stderr)
         return 0
+    record(current)
     print(json.dumps({"indexnow_submitted": len(paths), "status": statuses, "sample": paths[:5]}))
     return 0
 

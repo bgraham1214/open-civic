@@ -197,12 +197,12 @@ jobs:
           csize=$(stat -c %s site/counties.db 2>/dev/null || echo 0); echo "counties database: $csize bytes"
           if [ "$csize" -gt 95000000 ]; then echo "::error::counties.db over GitHub's 100 MB file limit"; exit 1; fi
           if [ "$csize" -gt 50000000 ]; then echo "::warning::counties.db is $csize bytes; Datasette Lite loads it whole, which is slow on phones"; fi
-      - name: Keep the published page fingerprints (to tell search engines only what changed)
+      - name: Fingerprints of the pages last sent to search engines
         continue-on-error: true
         run: |
-          git fetch -q --depth 1 origin +gh-pages:refs/remotes/origin/gh-pages \
-            && git show origin/gh-pages:page-hashes.json > out/prev-page-hashes.json \
-            || : > out/prev-page-hashes.json
+          git fetch -q --depth 1 origin +live-samples:refs/remotes/origin/live-samples \
+            && git show origin/live-samples:indexnow-submitted.json > out/prev-indexnow.json \
+            || : > out/prev-indexnow.json
       - name: Publish to gh-pages branch
         run: |
           cd site
@@ -216,8 +216,8 @@ jobs:
       - name: Tell search engines which pages changed (IndexNow)
         continue-on-error: true
         run: |
-          sleep 60   # let GitHub Pages deploy first
-          python -m opencivic.indexnow submit --site site --previous out/prev-page-hashes.json \
+          python -m opencivic.indexnow submit --site site --previous out/prev-indexnow.json \
+            --record out/indexnow-submitted.json \
             --site-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" \
             2>&1 | tee out/indexnow-log.txt
 

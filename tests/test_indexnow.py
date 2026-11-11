@@ -53,6 +53,39 @@ class IndexNow(unittest.TestCase):
         self.assertEqual(out, [202, 202])
         self.assertEqual([len(s["urlList"]) for s in sent], [10_000, 1])
 
+    def test_waits_for_the_key_file(self):
+        calls = []
+
+        class R:
+            def __init__(self, body): self.status, self.body = 200, body
+            def read(self): return self.body
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def opener(req, timeout):
+            calls.append(req.full_url)
+            if len(calls) < 3:
+                raise OSError("404")
+            return R(indexnow.KEY.encode())
+        self.assertTrue(indexnow.key_served("https://x.github.io/open-civic/", opener, tries=5, sleep=lambda s: None))
+        self.assertEqual(len(calls), 3)
+        self.assertFalse(indexnow.key_served("https://x.github.io/open-civic/", lambda r, timeout: (_ for _ in ()).throw(OSError()),
+                                             tries=2, sleep=lambda s: None))
+
+    def test_failed_night_is_sent_again(self):
+        with tempfile.TemporaryDirectory() as d:
+            site, rec = Path(d) / "site", Path(d) / "rec.json"
+            site.mkdir()
+            (site / "a.html").write_text(PAGE.format("a"))
+            indexnow.prepare(site)
+            orig = indexnow.key_served
+            indexnow.key_served = lambda *a, **k: False   # the site isn't serving the key: nothing is sent
+            try:
+                indexnow.main(["submit", "--site", str(site), "--record", str(rec)])
+            finally:
+                indexnow.key_served = orig
+            self.assertEqual(json.loads(rec.read_text()), {})   # so the next run sends a.html again
+
 
 if __name__ == "__main__":
     unittest.main()
