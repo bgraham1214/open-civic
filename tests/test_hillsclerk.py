@@ -47,6 +47,17 @@ class Report(unittest.TestCase):
                 self.assertNotIn(junk, r["subject"])
         self.assertTrue(all(len(r["votes"]) == 7 for r in rows))
 
+    def test_pdf_page_of_each_roll_call(self):
+        """pdftotext separates pages with a form feed; each row keeps the page it's printed on."""
+        text = (FIX / "bocc-vote-comparison-2025-p1-2-69.txt").read_text()
+        rows, _ = hc.parse_report(text)
+        self.assertEqual(rows[0]["page"], 1)
+        pages = [r["page"] for r in rows]
+        self.assertEqual(pages, sorted(pages))
+        self.assertEqual(len(set(pages)), 3)  # the fixture is three pages of the 2025 report
+        last = next(r for r in rows if r["rcs"] == 5261)
+        self.assertEqual(last["page"], 3)
+
     def test_current_page(self):
         rows, problems = hc.parse_report((FIX / "bocc-vote-comparison-current-p1.txt").read_text())
         self.assertEqual(problems, [])

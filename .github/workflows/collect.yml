@@ -95,6 +95,12 @@ jobs:
               --items-out "out/legistar-$c-items.jsonl" --votes-out "out/legistar-$c-votes.jsonl" \
               2>&1 | tee -a out/legistar-log.txt || continue
             cp "out/legistar-$c-events.jsonl" "out/legistar-$c-items.jsonl" "out/legistar-$c-votes.jsonl" data/listings/
+            # each item's own page, read from the meeting web pages (recent meetings re-read; robots.txt allows)
+            python -m opencivic.legistar links --client "$c" --events "out/legistar-$c-events.jsonl" \
+              --previous-links "data/listings/legistar-$c-links.jsonl" --max-requests 300 \
+              -o "out/legistar-$c-links.jsonl" 2>&1 | tee -a out/legistar-log.txt \
+              && test -s "out/legistar-$c-links.jsonl" && cp "out/legistar-$c-links.jsonl" data/listings/ \
+              || echo "$c: item links not updated"
           done
 
       - name: Hillsborough Clerk BOCC voting record (list the yearly reports, 2014 on)

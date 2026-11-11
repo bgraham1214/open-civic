@@ -111,3 +111,38 @@ class Items(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ItemLinks(unittest.TestCase):
+    PAGE = (FIX / "meetingdetail-hernando-1399-rows.html").read_text()
+    MEETING = "https://hernandocountyfl.legistar.com/MeetingDetail.aspx?LEGID=1399&GID=881&G=6D9E70B1"
+
+    def test_rows_give_each_file_its_page(self):
+        links = lg.parse_item_links("hernandocountyfl", self.PAGE)
+        # File 15403 appears on two rows with the same link: one entry
+        self.assertEqual(links["15403"], "https://hernandocountyfl.legistar.com/LegislationDetail.aspx"
+                                         "?ID=7086147&GUID=090C0A00-1EFF-4D05-A97A-487554A63E88")
+        self.assertIn("15187", links)
+        self.assertTrue(all("&amp;" not in u and "Options" not in u for u in links.values()))
+
+    def test_ambiguous_file_number_is_left_out(self):
+        self.assertIn(">15187<", self.PAGE)
+        page = self.PAGE.replace(">15187<", ">15403<")  # now 15403 points at two different item pages
+        links = lg.parse_item_links("hernandocountyfl", page)
+        self.assertNotIn("15403", links)
+        self.assertIn("15252", links)
+
+    def test_recent_meetings_reread_older_reused(self):
+        events = [{"event_id": 1, "date": "2025-02-04", "portal_url": self.MEETING},
+                  {"event_id": 2, "date": "2026-11-03", "portal_url": self.MEETING + "2"},
+                  {"event_id": 3, "date": "2026-11-04", "portal_url": ""}]
+        prev = [{"event_id": 1, "date": "2025-02-04", "links": {"1": "u"}, "checked": "2025-02-05"}]
+        fx = FixtureFetcher({self.MEETING + "2": FIX / "meetingdetail-hernando-1399-rows.html"})
+        rows, stats = lg.crawl_links("hernandocountyfl", events, fx, previous=prev, today=date(2026, 11, 11))
+        self.assertEqual((stats["reused"], stats["fetched"], stats["events"]), (1, 1, 2))
+        self.assertEqual(rows[0]["links"], {"1": "u"})
+        self.assertIn("15403", rows[1]["links"])
+        # a page that can't be read keeps the last reading
+        rows, stats = lg.crawl_links("hernandocountyfl", events[1:2], FixtureFetcher({}),
+                                     previous=[{**rows[1]}], today=date(2026, 11, 11))
+        self.assertEqual((stats["errors"], len(rows)), (1, 1))

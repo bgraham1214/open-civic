@@ -32,11 +32,24 @@ class People(unittest.TestCase):
     def test_record_links(self):
         meeting = "https://hernandocountyfl.legistar.com/MeetingDetail.aspx?LEGID=1494&GID=881&G=X"
         html_ = pp.record_link({"matter_url": "", "portal_url": meeting, "file_number": "17960"})
-        self.assertIn("Official meeting record", html_)
-        self.assertIn("look for item 17960", html_)
+        # Legistar's page labels the column "File #", so say that, not "item"
+        self.assertIn("the county's page for this meeting</a>. Find File # 17960 in its list.", html_)
         self.assertNotIn("LegislationDetail", html_)
-        clerk = pp.record_link({"matter_url": "https://www.hillsclerk.com/r.pdf", "file_number": "RCS 4692"})
-        self.assertIn("the Clerk's vote report, RCS 4692", clerk)
+        both = pp.record_link({"portal_url": meeting, "file_number": "PRS 24-0969", "number": "A.1."})
+        self.assertIn("Find File # PRS 24-0969 (agenda item A.1.) in its list.", both)
+        clerk = pp.record_link({"matter_url": "https://www.hillsclerk.com/r#page=37", "file_number": "RCS 4692",
+                                "record_page": 37, "record_year": "2025"})
+        self.assertIn('<a href="https://www.hillsclerk.com/r#page=37">the Clerk\'s 2025 voting record, page 37</a>. '
+                      "Look for roll call (RCS) 4692.", clerk)
+        unpaged = pp.record_link({"matter_url": "https://www.hillsclerk.com/r", "file_number": "RCS 4692"})
+        self.assertIn("(a long PDF). Search it for RCS 4692.", unpaged)
+        city = pp.record_link({"county": "templeterrace", "minutes_url": "https://tt/Archive.aspx?ADID=1#page=3",
+                               "minutes_page": 3, "minutes_code": "12.C.", "minutes_copy_url": "https://c/x.pdf#page=3"})
+        self.assertIn(">Council minutes, page 3</a>, item 12.C. · ", city)
+        self.assertIn("our backup copy</a> (downloads a PDF)", city)
+        gone = pp.record_link({"county": "templeterrace", "minutes_removed": True, "minutes_page": 3,
+                               "minutes_copy_url": "https://c/x.pdf#page=3"})
+        self.assertIn("the city has taken its copy of these minutes down. <a", gone)
 
     def test_official_wording_is_verbatim(self):
         text = "Chair Hagan sought a motion for each person to be given two minutes. Moved to approve."

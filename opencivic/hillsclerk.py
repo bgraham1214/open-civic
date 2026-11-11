@@ -165,6 +165,12 @@ def parse_report(text: str, doc_key: str = "", doc_url: str = "") -> tuple[list[
     """Roll calls, and problems (rows that couldn't be read with confidence; never guessed)."""
     rows: list[dict] = []
     problems: list[str] = []
+    # pdftotext ends each page with a form feed, which splitlines() treats as a line break: note the
+    # PDF page each line is printed on, so links can open the report at the roll call (#page=N)
+    pages, n = [], 1
+    for ln in text.splitlines(keepends=True):
+        pages.append(n)
+        n += ln.endswith("\f")
     lines = [ln.replace("\f", "") for ln in text.splitlines()]
     cols: list[tuple[float, str]] = []
     page: list[dict] = []
@@ -198,7 +204,7 @@ def parse_report(text: str, doc_key: str = "", doc_url: str = "") -> tuple[list[
                 "key": f"hillsclerk:bocc-votes:rcs:{yyyy}-{m.group(1)}", "rcs": int(m.group(1)),
                 "item": (m.group(2) or "").strip(), "date": f"{yyyy}-{int(mo):02d}-{int(dd):02d}", "time": t,
                 "category": m.group(5) or "", "category_name": CATEGORIES.get(m.group(5) or "", ""),
-                "subject": "", "votes": [], "_codes": codes, "doc_key": doc_key, "doc_url": doc_url,
+                "subject": "", "votes": [], "_codes": codes, "doc_key": doc_key, "doc_url": doc_url, "page": pages[i],
                 "layout": layout,  # "legacy" (2014-2017) prints full names; "modern" prints surnames
             }
             rows.append(cur)

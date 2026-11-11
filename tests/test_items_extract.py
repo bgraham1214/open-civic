@@ -40,7 +40,7 @@ class AgendaItems(unittest.TestCase):
         self.assertTrue(item["title"].startswith("Resolution Approving the Purchase of Playground Equipment"))
         self.assertEqual(len(item["attachments"]), 4)
         self.assertEqual(item["date"], "2025-11-04")
-        self.assertEqual(item["portal_url"], "https://templeterracefl.portal.civicclerk.com/event/8/agenda")
+        self.assertEqual(item["portal_url"], "https://templeterracefl.portal.civicclerk.com/event/8/files")
 
     def test_text_is_clean(self):
         for i in self.items:

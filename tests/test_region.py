@@ -129,6 +129,31 @@ class Region(unittest.TestCase):
                              {"Yes", "X"})
             con.close()
 
+    def test_record_links_open_in_the_browser(self):
+        from opencivic import hillsclerk as hc
+        fx = Path(__file__).parent / "fixtures" / "hillsclerk" / "bocc-vote-comparison-2025-p1-2-69.txt"
+        url = "https://www.hillsclerk.com/documents/d/guest/bocc-vote-comparison-2025-pdf?download=true"
+        rows, _ = hc.parse_report(fx.read_text(), "hillsclerk:bocc-votes:2025", url)
+        with tempfile.TemporaryDirectory() as d:
+            data = make_data(Path(d))
+            lst = data / "listings"
+            (lst / "hillsclerk-bocc-votes.jsonl").write_text(jl(rows))
+            a1 = next(json.loads(x) for x in (lst / "legistar-hillsboroughcounty-items.jsonl").read_text().splitlines()
+                      if json.loads(x)["number"] == "A.1.")
+            item_page = "https://hillsboroughcounty.legistar.com/LegislationDetail.aspx?ID=1&GUID=AB"
+            (lst / "legistar-hillsboroughcounty-links.jsonl").write_text(jl([
+                {"event_id": a1["event_id"], "date": a1["date"], "links": {a1["file_number"]: item_page}}]))
+            items = {i["key"]: i for i in region.load(data)["items"]}
+            # Legistar: the item's own page, matched by File #
+            self.assertEqual(items[a1["key"]]["matter_url"], item_page)
+            # the Clerk's report opens in the browser (no ?download=true), at the roll call's page
+            last = items["hillsclerk:bocc-votes:rcs:2025-5261"]
+            self.assertEqual(last["matter_url"], url.replace("?download=true", "") + "#page=3")
+            self.assertEqual((last["record_page"], last["record_year"]), (3, "2025"))
+            # CivicClerk agenda items open the Agenda in the portal's viewer
+            pasco = [i for i in items.values() if i["county"] == "pasco"]
+            self.assertTrue(all("/agenda" not in i["portal_url"].replace("/files/agenda/", "") for i in pasco))
+
     def test_private_boards_never_shown(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)

@@ -26,6 +26,8 @@ import json
 import re
 from pathlib import Path
 
+from .civicclerk import viewer_links
+
 SLUG = "templeterrace"
 TENANT = "templeterracefl"
 COUNCIL = re.compile(r"^(City Council( Meeting| Special( Meeting)?)?|Special Meeting|Budget Work Session|Budget Workshop)$", re.I)
@@ -164,13 +166,16 @@ def _state(data: Path) -> dict:
 def agenda_items(data: Path) -> list[dict]:
     """City Council agenda items (not section headings), shaped like the county items."""
     out = []
+    # link the agenda in the portal's viewer; its /event/N/agenda route doesn't exist (see civicclerk.file_viewer_url)
+    _, agenda_at = viewer_links(_jsonl(data / "listings" / "civicclerk-meetings.jsonl"))
     for i in _jsonl(data / "listings" / "civicclerk-items.jsonl"):
         if i.get("is_section") or not COUNCIL.match((i.get("meeting") or "").strip()):
             continue
         out.append({"county": SLUG, "key": i["key"], "date": i["date"], "body": "City Council",
                     "number": i.get("outline", ""), "title": _case(i.get("title") or ""), "file_number": i.get("item_number", ""),
                     "matter_type": i.get("section", ""), "action": "", "result": "", "mover": "", "seconder": "",
-                    "action_text": i.get("description", ""), "portal_url": i.get("portal_url", ""), "matter_url": ""})
+                    "action_text": i.get("description", ""), "matter_url": "",
+                    "portal_url": agenda_at.get(i.get("event_id")) or i.get("portal_url", "").replace("/agenda", "/files")})
     return out
 
 

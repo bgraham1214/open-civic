@@ -29,6 +29,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -114,6 +115,74 @@ def matter_url(client: str, raw: dict) -> str:
     answers "Invalid parameters!" on both hernandocountyfl and hillsboroughcounty (the website's
     ids differ from the API's). The meeting page (EventInSiteURL) works; pages link to that."""
     return ""
+
+
+LINK_ROW_RX = re.compile(r'<tr[^>]*class="rg(?:Alt)?Row"[^>]*>(.*?)</tr>', re.S)
+LINK_CELL_RX = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
+LINK_HREF_RX = re.compile(r'href="(LegislationDetail\.aspx\?[^"]+)"')
+
+
+def parse_item_links(client: str, page: str) -> dict[str, str]:
+    """File # -> the item's own page, read from a meeting's web page (MeetingDetail.aspx).
+
+    The API's MatterId/MatterGuid don't work in LegislationDetail links (see matter_url), but the
+    meeting page links each row with the website's own ids (checked Nov 11, 2026: robots.txt is a 404,
+    so allowed; a 68-item meeting lists every File # on one page; the item page opens). A File #
+    linked to two different pages in one meeting is left out rather than guessed.
+    """
+    out: dict[str, str] = {}
+    bad: set[str] = set()
+    for row in LINK_ROW_RX.findall(page):
+        cells = LINK_CELL_RX.findall(row)
+        href = LINK_HREF_RX.search(cells[0]) if cells else None
+        if not href:
+            continue
+        number = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", cells[0]))).strip()
+        q = html.unescape(href.group(1))
+        ids = re.search(r"[?&]ID=(\d+)&GUID=([0-9A-Fa-f-]+)", q)
+        if not number or not ids:
+            continue
+        url = f"https://{client}.legistar.com/LegislationDetail.aspx?ID={ids.group(1)}&GUID={ids.group(2)}"
+        if out.get(number, url) != url:
+            bad.add(number)
+        out[number] = url
+    return {k: v for k, v in out.items() if k not in bad}
+
+
+def crawl_links(client: str, events: list[dict], fetcher: Fetcher, *, previous: list[dict] = (),
+                max_requests: int | None = None, today: date | None = None) -> tuple[list[dict], dict]:
+    """One row per meeting: {event_id, links: {File #: item page}, checked}. A meeting's page is read
+    again while it's recent (items still change); older ones reuse the last reading."""
+    today = today or date.today()
+    prev = {r["event_id"]: r for r in previous}
+    out, stats = [], {"events": 0, "fetched": 0, "reused": 0, "deferred": 0, "errors": 0, "links": 0}
+    for ev in events:
+        url = ev.get("portal_url") or ""
+        if "MeetingDetail.aspx" not in url:
+            continue
+        stats["events"] += 1
+        old = prev.get(ev["event_id"])
+        if old and not _recent(ev["date"], today):
+            out.append(old)
+            stats["reused"] += 1
+            continue
+        if max_requests is not None and stats["fetched"] + stats["errors"] >= max_requests:
+            stats["deferred"] += 1
+            if old:
+                out.append(old)
+            continue
+        try:
+            links = parse_item_links(client, fetcher.get_text(url))
+        except FetchError as e:
+            print(f"error: {e}", file=sys.stderr)
+            stats["errors"] += 1
+            if old:
+                out.append(old)
+            continue
+        out.append({"event_id": ev["event_id"], "date": ev["date"], "links": links, "checked": today.isoformat()})
+        stats["fetched"] += 1
+    stats["links"] = sum(len(r["links"]) for r in out)
+    return sorted(out, key=lambda r: (r["date"], r["event_id"])), stats
 
 
 def wants_votes(raw: dict) -> bool:
@@ -242,7 +311,7 @@ def _write_jsonl(rows: list[dict], path: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.legistar")
-    ap.add_argument("what", choices=["events", "items"])
+    ap.add_argument("what", choices=["events", "items", "links"])
     ap.add_argument("--client", required=True, help="Legistar client name, e.g. hernandocountyfl")
     ap.add_argument("--since", default="2025-01-01")
     ap.add_argument("--include-private-bodies", action="store_true",
@@ -250,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--events", help="for items: events jsonl from `events`")
     ap.add_argument("--previous-items", help="items jsonl from the last run (reused when unchanged)")
     ap.add_argument("--previous-votes", help="votes jsonl from the last run")
+    ap.add_argument("--previous-links", help="links: item links jsonl from the last run")
     ap.add_argument("--max-requests", type=int, help="cap API requests this run; the rest wait")
     ap.add_argument("-o", "--output", help="events: write here")
     ap.add_argument("--items-out")
@@ -266,6 +336,12 @@ def main(argv: list[str] | None = None) -> int:
         if not events:
             print("error: no events", file=sys.stderr)
             return 1
+        if args.what == "links":
+            rows, stats = crawl_links(args.client, events, fetcher, previous=_read_jsonl(args.previous_links),
+                                      max_requests=args.max_requests)
+            _write_jsonl(rows, args.output or "/dev/stdout")
+            print(f"{args.client}: item links {json.dumps(stats)}", file=sys.stderr)
+            return 1 if stats["errors"] and not stats["fetched"] and not stats["reused"] else 0
         items, votes, stats = crawl_items(args.client, events, fetcher,
                                           previous_items=_read_jsonl(args.previous_items),
                                           previous_votes=_read_jsonl(args.previous_votes),

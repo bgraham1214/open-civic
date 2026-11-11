@@ -287,7 +287,12 @@ class OnTheSite(unittest.TestCase):
             (lst / "pasco-minutes-actions.jsonl").write_text(jl([{
                 "item_key": item["key"], "date": "2025-03-04", "code": "R5", "file_number": "CA25-0005",
                 "action": "Continued", "result": "Pass", "mover": "", "seconder": "", "action_text": "x", "page": 7,
-                "minutes_url": "https://pascocofl.api.civicclerk.com/f/1#page=7", "minutes_copy_url": "https://c/m.pdf#page=7"}]))
+                "minutes_url": "https://pascocofl.api.civicclerk.com/v1/Meetings/GetMeetingFileStream(fileId=2,plainText=false)#page=7",
+                "minutes_copy_url": "https://c/m.pdf#page=7"}]))
+            # the minutes are one of event 9's files, so the link opens the portal's viewer, not a download
+            m9 = json.loads((lst / "civicclerk-pascocofl-meetings.jsonl").read_text().splitlines()[0])
+            m9["files"].append({"kind": "Minutes", "file_id": 2})
+            (lst / "civicclerk-pascocofl-meetings.jsonl").write_text(json.dumps(m9) + "\n")
             (lst / "pasco-minutes-votes.jsonl").write_text(jl([
                 {"key": f"{item['key']}:vote:{n}", "item_key": item["key"], "date": "2025-03-04",
                  "body": "Board of County Commissioners", "person": n, "vote": v, "source": "pasco-minutes"}
@@ -298,7 +303,13 @@ class OnTheSite(unittest.TestCase):
             self.assertIn("voted on <mark>1 decision</mark>", page)
             self.assertIn("Moved to a later meeting, 3 to 1", page)
             self.assertIn("Voted no: Jack Mariano", page)
-            self.assertIn('href="https://pascocofl.api.civicclerk.com/f/1#page=7">Official minutes, page 7</a>', page)
+            self.assertIn('Official record: <a href="https://pascocofl.portal.civicclerk.com/event/9/files/agenda/2">'
+                          'Commission minutes, page 7</a>, item R5 · <a href="https://c/m.pdf#page=7">our backup copy</a> '
+                          '(downloads a PDF). Votes are read from these minutes.', page)
+            self.assertNotIn("GetMeetingFileStream", page)
+            # a noted item links to the agenda in the viewer, never to the portal's missing /agenda route
+            self.assertIn('<a href="https://pascocofl.portal.civicclerk.com/event/9/files/agenda/1">the meeting agenda</a>', page)
+            self.assertNotIn("/event/9/agenda", page)
             self.assertIn("Also on the agenda", page)
             self.assertIn("Library Advisory Board minutes", page)
             counts = people.write(data, d / "site", "https://example.org/")

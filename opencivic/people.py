@@ -202,26 +202,48 @@ def plain(item: dict, depth: int, vote: dict | None = None) -> str:
 
 
 def record_link(it: dict) -> str:
-    """Link to the official record. For Legistar that's the meeting page, so name the item to look for."""
+    """Where to check this decision on the government's own site, said plainly: what the link opens,
+    and what to look for once there. Every link here was checked to open in a browser (Nov 11, 2026);
+    our backup copies are GitHub release files, which download, so the text says so."""
     link = it.get("matter_url") or it.get("portal_url") or ""
     if not link and not it.get("minutes_url") and not it.get("minutes_copy_url"):
         return ""
-    if "MeetingDetail.aspx" in link:
+    j = JURISDICTIONS.get(it.get("county", ""), {})
+    govt = j.get("govt", "county")
+    page = it.get("minutes_page")
+
+    def src(body: str) -> str:
+        return f'<p class="src">Official record: {body}</p>'
+    if "LegislationDetail.aspx" in link:
         ref = it.get("file_number") or it.get("number") or ""
-        hint = f" (look for item {_e(ref)})" if ref else ""
-        return f'<p class="src"><a href="{_e(link)}">Official meeting record</a>{hint}</p>'
+        return src(f'<a href="{_e(link)}">{f"File # {_e(ref)}" if ref else "This item"} on the {govt}\'s meeting site</a>')
+    if "MeetingDetail.aspx" in link:
+        ref, num = it.get("file_number") or "", it.get("number") or ""
+        hint = (f". Find File # {_e(ref)}" + (f" (agenda item {_e(num)})" if num else "") if ref
+                else f". Find agenda item {_e(num)}" if num else "")
+        return src(f'<a href="{_e(link)}">the {govt}\'s page for this meeting</a>{hint} in its list.' if hint
+                   else f'<a href="{_e(link)}">the {govt}\'s page for this meeting</a>.')
+    where = f", page {page}" if page else ""
     if it.get("minutes_removed") and it.get("minutes_copy_url"):
-        where = f", page {it['minutes_page']}" if it.get("minutes_page") else ""
-        return (f'<p class="src"><a href="{_e(it["minutes_copy_url"])}">Minutes{where}</a> (our archived copy; the '
-                f'{"city" if it.get("county") == "templeterrace" else "county"} has taken its own copy down)</p>')
+        return src(f'the {govt} has taken its copy of these minutes down. <a href="{_e(it["minutes_copy_url"])}">Our '
+                   f'backup copy{where}</a> (downloads a PDF).')
     if it.get("minutes_url"):
-        where = f", page {it['minutes_page']}" if it.get("minutes_page") else ""
-        copy = f' (<a href="{_e(it["minutes_copy_url"])}">our copy</a>)' if it.get("minutes_copy_url") else ""
-        return (f'<p class="src"><a href="{_e(it["minutes_url"])}">Official minutes{where}</a>{copy}; '
-                f'votes read from the Clerk\'s minutes' + (f' (item {_e(it["minutes_code"])})' if it.get("minutes_code") else "") + '</p>')
+        code = f", item {_e(it['minutes_code'])}" if it.get("minutes_code") else ""
+        copy = (f' · <a href="{_e(it["minutes_copy_url"])}">our backup copy</a> (downloads a PDF)'
+                if it.get("minutes_copy_url") else "")
+        return src(f'<a href="{_e(it["minutes_url"])}">{_e(j.get("body_short", "Commission"))} minutes{where}</a>'
+                   f'{code}{copy}. Votes are read from these minutes.')
     if "hillsclerk" in link:
-        return f'<p class="src"><a href="{_e(link)}">Official record</a> (the Clerk\'s vote report, {_e(it.get("file_number", ""))})</p>'
-    return f'<p class="src"><a href="{_e(link)}">Official record</a></p>'
+        year = f"{_e(it['record_year'])} " if it.get("record_year") else ""
+        rcs = re.sub(r"^RCS\s*", "", it.get("file_number", ""))
+        if it.get("record_page"):
+            return src(f'<a href="{_e(link)}">the Clerk\'s {year}voting record, page {it["record_page"]}</a>. '
+                       f'Look for roll call (RCS) {_e(rcs)}.')
+        return src(f'<a href="{_e(link)}">the Clerk\'s {year}voting record</a> (a long PDF). Search it for RCS {_e(rcs)}.')
+    if "civicclerk.com" in link:
+        what = "the meeting agenda" if "/files/agenda/" in link else f"the {govt}\'s page for this meeting"
+        return src(f'<a href="{_e(link)}">{what}</a>.')
+    return src(f'<a href="{_e(link)}">the {govt}\'s website</a>.')
 
 
 def decision(row: dict, me: str) -> str:

@@ -53,6 +53,43 @@ def portal_event_url(tenant: str, event_id: int) -> str:
     return f"https://{tenant}.portal.civicclerk.com/event/{event_id}/files"
 
 
+def file_viewer_url(tenant: str, event_id: int, file_id: int) -> str:
+    """The portal's in-browser viewer for one of a meeting's files (agenda, packet, minutes).
+
+    Link people here, not to the API's GetMeetingFileStream, which answers Content-Disposition:
+    attachment, so a phone downloads "11751.pdf" and ignores #page (checked Nov 11, 2026). The route
+    is /event/:eventId/files/:itemFileType/:fileId, with itemFileType "agenda" for meeting-level files
+    (the portal's MeetingFiles bundle). There is no /event/N/agenda route: it redirects to the overview.
+    """
+    return f"https://{tenant}.portal.civicclerk.com/event/{event_id}/files/agenda/{file_id}"
+
+
+FILE_STREAM_RX = re.compile(r"^https://([a-z0-9-]+)\.api\.civicclerk\.com/v1/Meetings/"
+                            r"GetMeetingFileStream\(fileId=(\d+),plainText=false\)")
+
+
+def viewer_links(meetings: list[dict]) -> tuple[dict[int, str], dict[int, str]]:
+    """From a meetings listing: (file id -> viewer URL, event id -> where to read its agenda).
+
+    The agenda link is the Agenda's viewer, or the meeting's files page when there's no separate
+    Agenda (a packet can run to 86 MB, too much to open on a phone unasked).
+    """
+    by_file, agenda = {}, {}
+    for m in meetings:
+        tenant, ev = m.get("tenant") or "", m["event_id"]
+        for f in m.get("files") or []:
+            by_file[int(f["file_id"])] = file_viewer_url(tenant, ev, int(f["file_id"]))
+        a = next((f for f in m.get("files") or [] if f.get("kind") == "Agenda"), None)
+        agenda[ev] = file_viewer_url(tenant, ev, int(a["file_id"])) if a else m.get("portal_url", "")
+    return by_file, agenda
+
+
+def viewer_for(url: str, by_file: dict[int, str]) -> str:
+    """The viewer for an API file URL we know the meeting of; otherwise the URL unchanged."""
+    m = FILE_STREAM_RX.match(url or "")
+    return by_file.get(int(m.group(2)), url) if m else url
+
+
 @dataclass
 class PublishedFile:
     file_id: int          # changes per revision (assumed) -> usable as a version id
@@ -248,7 +285,7 @@ def parse_agenda_items(tenant: str, meeting: Meeting, raw: dict) -> list[dict]:
                      "content_type": a.get("contentType") or "", "bytes": a.get("fileSize") or 0}
                     for a in (n.get("attachmentsList") or []) if a.get("isPublished", True)
                 ],
-                "portal_url": meeting.portal_url.replace("/files", "/agenda"),
+                "portal_url": meeting.portal_url,  # the portal has no /event/N/agenda route; see file_viewer_url
             })
             walk(n.get("childItems") or [], here_section, full, depth + 1)
 

@@ -20,6 +20,7 @@ import re
 import sqlite3
 from pathlib import Path
 
+from .civicclerk import viewer_for, viewer_links
 from .jurisdictions import COUNTIES, JURISDICTIONS, civicclerk_tenants, jurisdiction_of, legistar_clients
 from .legistar import is_private_body
 
@@ -127,6 +128,12 @@ def full_names(short: list[str], full: set[str]) -> dict[str, str]:
     return {s: r(s, "2000-01-01") for s in short}
 
 
+def inline_report_url(url: str, page: int | None = None) -> str:
+    """The Clerk's report URL that opens in the browser, at the page when known."""
+    url = re.sub(r"[?&]download=true\b", "", url or "")
+    return f"{url}#page={page}" if url and page else url
+
+
 def _load_hillsclerk(lst: Path, out: dict) -> None:
     """Roll calls from the Hillsborough Clerk's Master Voting Record (hillsclerk.py)."""
     rows = _jsonl(lst / "hillsclerk-bocc-votes.jsonl")
@@ -160,7 +167,11 @@ def _load_hillsclerk(lst: Path, out: dict) -> None:
             "county": "hillsborough", "key": r["key"], "date": r["date"], "body": BODY,
             "number": r["item"] or f"RCS {r['rcs']}", "title": r["subject"], "file_number": f"RCS {r['rcs']}",
             "matter_type": r["category_name"], "action": "Roll call", "result": "", "mover": "", "seconder": "",
-            "action_text": "", "consent": False, "attachments": [], "matter_url": r["doc_url"], "portal_url": PAGE})
+            "action_text": "", "consent": False, "attachments": [], "portal_url": PAGE,
+            # without ?download=true the Clerk's site opens the PDF in the browser (Content-Disposition:
+            # inline, checked Nov 11, 2026), so #page lands on the roll call instead of a downloaded year
+            "matter_url": inline_report_url(r["doc_url"], r.get("page")), "record_page": r.get("page"),
+            "record_year": r["date"][:4]})
         for v in r["votes"]:
             out["votes"].append({
                 "county": "hillsborough", "key": f"{r['key']}:{v['name']}", "item_key": r["key"], "date": r["date"],
@@ -176,16 +187,24 @@ def load(data: Path) -> dict:
         for e in _jsonl(lst / f"legistar-{client}-events.jsonl"):
             if not is_private_body(e["body"]):
                 out["meetings"].append({**e, "county": slug})
+        # each item's own page, read from the meeting's web page by `legistar links`; matched by File #
+        links = {r["event_id"]: r["links"] for r in _jsonl(lst / f"legistar-{client}-links.jsonl")}
         for i in _jsonl(lst / f"legistar-{client}-items.jsonl"):
-            # listings saved before Nov 9, 2026 carry LegislationDetail links that Legistar rejects
-            out["items"].append({**i, "county": slug, "matter_url": ""})
+            # listings saved before Nov 9, 2026 carry LegislationDetail links built from API ids, which
+            # Legistar rejects; only links read from the meeting page are used
+            own = links.get(i.get("event_id"), {}).get((i.get("file_number") or "").strip(), "")
+            out["items"].append({**i, "county": slug, "matter_url": own})
         for v in _jsonl(lst / f"legistar-{client}-votes.jsonl"):
             out["votes"].append({**v, "county": slug})
+    viewers: dict[int, str] = {}
     for tenant, slug in civicclerk_tenants().items():
         if slug not in COUNTIES:
             continue
         private_events = set()
-        for m in _jsonl(lst / f"civicclerk-{tenant}-meetings.jsonl"):
+        cc_meetings = _jsonl(lst / f"civicclerk-{tenant}-meetings.jsonl")
+        by_file, agenda_at = viewer_links(cc_meetings)
+        viewers.update(by_file)
+        for m in cc_meetings:
             if is_private_body(m.get("category", "")) or is_private_body(m.get("name", "")):
                 private_events.add(m["event_id"])
                 continue
@@ -195,8 +214,8 @@ def load(data: Path) -> dict:
                 "time": m["start"].replace("Z", "")[11:16], "body": f"{m['name']} ({m['category']})",
                 "location": m["location"], "agenda_status": "Published" if "Agenda" in files else "",
                 "minutes_status": "Published" if "Minutes" in files else "",
-                "agenda_url": m["portal_url"] if "Agenda" in files else "",
-                "minutes_url": m["portal_url"] if "Minutes" in files else "",
+                "agenda_url": agenda_at[m["event_id"]] if "Agenda" in files else "",
+                "minutes_url": by_file[int(files["Minutes"]["file_id"])] if "Minutes" in files else "",
                 "portal_url": m["portal_url"], "comment": ""})
         for i in _jsonl(lst / f"civicclerk-{tenant}-items.jsonl"):
             if i.get("is_section") or i.get("event_id") in private_events or is_private_body(i.get("category", "")):
@@ -207,8 +226,8 @@ def load(data: Path) -> dict:
                 "matter_type": i.get("section", ""), "action": "", "result": "", "mover": "", "seconder": "",
                 "action_text": i.get("description", ""), "consent": "consent" in (i.get("section", "").lower()),
                 "attachments": [a["name"] for a in i.get("attachments", [])], "matter_url": "",
-                "portal_url": i["portal_url"]})
-    _load_pasco_minutes(lst, out)
+                "portal_url": agenda_at.get(i.get("event_id"), i["portal_url"].replace("/agenda", "/files"))})
+    _load_pasco_minutes(lst, out, viewers)
     _load_hillsclerk(lst, out)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
@@ -223,8 +242,9 @@ def load(data: Path) -> dict:
     return out
 
 
-def _load_pasco_minutes(lst: Path, out: dict) -> None:
-    """Pasco's votes, read from the Clerk's minutes by opencivic.pascominutes, joined to their agenda items."""
+def _load_pasco_minutes(lst: Path, out: dict, viewers: dict[int, str] | None = None) -> None:
+    """Pasco's votes, read from the Clerk's minutes by opencivic.pascominutes, joined to their agenda items.
+    The minutes link opens the portal's viewer (the API URL downloads the file); the page goes in the text."""
     actions = {a["item_key"]: a for a in _jsonl(lst / "pasco-minutes-actions.jsonl")}
     if not actions:
         return
@@ -232,7 +252,8 @@ def _load_pasco_minutes(lst: Path, out: dict) -> None:
         a = actions.get(i["key"])
         if a:
             i.update(action=a["action"], result=a["result"], mover=a.get("mover", ""), seconder=a.get("seconder", ""),
-                     minutes_url=a.get("minutes_url", ""), minutes_copy_url=a.get("minutes_copy_url", ""),
+                     minutes_url=viewer_for(a.get("minutes_url", "").split("#")[0], viewers or {}) if a.get("minutes_url") else "",
+                     minutes_copy_url=a.get("minutes_copy_url", ""),
                      minutes_code=a.get("code", ""), minutes_page=a.get("page"))
     keys = {i["key"] for i in out["items"]}
     out["votes"] += [{**v, "county": "pasco"} for v in _jsonl(lst / "pasco-minutes-votes.jsonl") if v["item_key"] in keys]
