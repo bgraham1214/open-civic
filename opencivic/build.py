@@ -339,6 +339,10 @@ def write_site(data: Path, out: Path, site_url: str) -> dict:
     recent = sorted((e for e in state.values() if e.get("sha256")), key=lambda e: e["date"], reverse=True)[:15]
     gone = sorted((e for e in state.values() if e.get("sha256") and not e.get("listed", True)),
                   key=lambda e: e.get("unlisted_at", ""), reverse=True)
+    # "City's copy" opens CivicClerk files in the portal's viewer; the API URL downloads them
+    from .civicclerk import viewer_for, viewer_links
+    by_file, _ = viewer_links(_jsonl(data / "listings" / "civicclerk-meetings.jsonl"))
+    recent = [{**x, "url": viewer_for(x.get("url", ""), by_file)} for x in recent]
     (out / "templeterrace.html").write_text(city_page(site_url, built, counts, recent, gone, feed_links, out), "utf-8")
     ftm = data / "entities" / "templeterrace.ftm.jsonl"
     if ftm.exists():
