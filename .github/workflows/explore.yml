@@ -39,7 +39,9 @@ jobs:
                   if ext != "pdf":  # never save signed storage URLs
                       body = redact_signed_urls(body.decode("utf-8", "replace")).encode("utf-8")
                   open(f"out/{name}.{ext}", "wb").write(body)
-                  index.append({"url": url, "file": f"{name}.{ext}", "bytes": len(body), "content_type": ctype})
+                  index.append({"url": url, "file": f"{name}.{ext}", "bytes": len(body), "content_type": ctype,
+                                "final_url": redact_signed_urls(f.last_url),
+                                "content_disposition": f.last_headers.get("content-disposition", "")})
               except FetchError as e:
                   index.append({"url": url, "error": str(e)})
               print(index[-1])

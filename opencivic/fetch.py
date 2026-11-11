@@ -70,6 +70,8 @@ class HttpFetcher:
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
         self._down: dict[str, str] = {}  # host -> first network error seen
         self.last_content_type = ""
+        self.last_headers: dict[str, str] = {}  # of the last response, e.g. Content-Disposition
+        self.last_url = ""  # after redirects
 
     def _allowed(self, url: str) -> bool:
         parts = urlsplit(url)
@@ -105,6 +107,8 @@ class HttpFetcher:
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     self.last_content_type = resp.headers.get("Content-Type", "")
+                    self.last_headers = {k.lower(): v for k, v in resp.headers.items()}
+                    self.last_url = resp.geturl()
                     return resp.read()
             except urllib.error.HTTPError as e:
                 if e.code in (429, 500, 502, 503, 504) and attempt < self.retries:
