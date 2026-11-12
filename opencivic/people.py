@@ -18,6 +18,7 @@ and they never call a vote good or bad.
 from __future__ import annotations
 
 import html
+import json
 import re
 from collections import defaultdict
 from datetime import date
@@ -71,10 +72,12 @@ def split_motion(text: str) -> tuple[str, str]:
 
 
 def commission_votes(data: Path) -> dict[str, dict]:
-    """Per county: the County Commission's decisions and each member's votes.
+    """Per government: its main board's decisions and each member's votes (the County Commission,
+    or a city's council, by its board_rx in jurisdictions.py).
 
     Hillsborough: the Clerk's record only (it covers every Commission meeting, so Legistar's
     land-use votes would count twice). Hernando: Legistar, County Commission meetings only.
+    Edgewater: Legistar, City Council meetings (regular, special, workshops).
     """
     d = load(data)
     items = {i["key"]: i for i in d["items"]}
@@ -83,7 +86,10 @@ def commission_votes(data: Path) -> dict[str, dict]:
         c = v["county"]
         if c == "hillsborough" and not v["item_key"].startswith("hillsclerk:"):
             continue
-        if board_of(v["body"]) != BOCC or v["item_key"] not in items:
+        rx = JURISDICTIONS.get(c, {}).get("board_rx")
+        if (not re.match(rx, (v["body"] or "").strip()) if rx else board_of(v["body"]) != BOCC) or v["item_key"] not in items:
+            continue
+        if items[v["item_key"]].get("consent_section"):  # each consent item carries this vote
             continue
         rec = out.setdefault(c, {"items": {}, "votes": defaultdict(list)})
         rec["items"][v["item_key"]] = items[v["item_key"]]
@@ -161,13 +167,16 @@ def tally(row: dict, me: str) -> str:
 COUNTY_SOURCE = re.compile(r"hcfl\.gov|planhillsborough|hillsborough_county", re.I)
 
 
-def cityify(text: str) -> str:
-    """A definition written for the counties, worded for the City Council."""
+def cityify(text: str, council: bool = True) -> str:
+    """A definition written for the counties, worded for a city (its City Council, or for a city with a
+    City Commission, council=False, which keeps "the Commission")."""
     for a, b in (("county law", "city law"), ("County gives up", "City gives up"), ("County leadership", "City leadership"),
                  ("the county area", "the city"), ("the county's", "the city's"), ("the county", "the city"), ("The county", "The city"),
                  ("county area", "city"), ("any commissioner", "any council member"), ("Any commissioner", "Any council member"),
                  ("the Commission", "the Council"), ("county budget", "city budget"), ("to the county", "to the city"),
                  ("from the county", "from the city")):
+        if not council and "ommission" in a:
+            continue
         text = text.replace(a, b)
     return text
 
@@ -180,11 +189,13 @@ def plain(item: dict, depth: int, vote: dict | None = None) -> str:
     e = explain(item.get("motion") or item["title"], item.get("matter_type") or "")
     facts = "".join(f"<li>{_e(f)}</li>" for f in e["facts"])
     means = ""
-    city = item.get("county") == "templeterrace"
+    j = JURISDICTIONS.get(item.get("county", ""), {})
+    city = j.get("govt") == "city"
+    council = j.get("body_short", "Council") == "Council"
     for t in e["terms"]:
         name, text, src = TERMS[t]
         if city:
-            text, src = cityify(text), ("" if COUNTY_SOURCE.search(src or "") else src)
+            text, src = cityify(text, council), ("" if COUNTY_SOURCE.search(src or "") else src)
         more = f' <a href="{_e(src)}">Source</a>.' if src else ""
         means += (f'<details class="means"><summary>What does “{_e(name)}” mean?</summary>'
                   f'<p>{_e(text)}{more} <a href="{"../" * depth}learn/{"money" if t in ("millage", "contract", "grant", "budget", "cdd", "incentive") else "land"}.html">More</a></p></details>')
@@ -192,7 +203,7 @@ def plain(item: dict, depth: int, vote: dict | None = None) -> str:
     official = (f'<details class="official"><summary>Official wording</summary><p>'
                 + (f'Motion: {_e(item["motion"])}</p><p>Agenda item: ' if item.get("motion") else "")
                 + f'{_e(full[:4000])}{"…" if len(full) > 4000 else ""}</p></details>')
-    headline = cityify(e["headline"]) if city else e["headline"]
+    headline = cityify(e["headline"], council) if city else e["headline"]
     from .spotlight import badges
     return (badges(item, vote, depth) + f'<p class="headline">{_e(headline)}</p>'
             + (f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
@@ -289,7 +300,7 @@ CITY_GLOSSARY = """
 <h2 id="words">What these words mean</h2>
 <dl>
 <dt>City Council</dt><dd>The elected board that runs city government: the mayor and the council members. It
-decides the city's laws, budget, taxes, zoning and contracts. In Temple Terrace the mayor votes too.</dd>
+decides the city's laws, budget, taxes, zoning and contracts. In {short} the mayor votes too.</dd>
 <dt>Motion</dt><dd>A formal proposal by one member for what the council should do. Another member seconds it,
 then the council votes.</dd>
 <dt>Consent agenda</dt><dd>A group of routine items approved together in one vote, to save time. Any member can
@@ -297,7 +308,7 @@ ask to pull an item off it for a separate discussion and vote.</dd>
 <dt>Resolution</dt><dd>A formal decision of the council, such as approving a contract or a purchase.</dd>
 <dt>Ordinance</dt><dd>A city law. It is usually read and voted on at two meetings (first and second reading)
 before it takes effect.</dd>
-<dt>Didn't vote</dt><dd>The member was absent from the meeting, or the minutes don't record their vote.</dd>
+<dt>Didn't vote</dt><dd>The member was absent from the meeting, or {record}.</dd>
 </dl>
 </section>"""
 
@@ -322,7 +333,9 @@ def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
         from .build import _lite
         search_url = _lite(site_url, f"/templeterrace/votes?_search={quote(p['name'].split()[-1])}&_sort_desc=date")
     else:
-        search_url = lite(site_url, f"/counties/votes?person={quote(p['name'])}&county={county}&_sort_desc=date")
+        from .jurisdictions import REGIONS, region_of
+        db = REGIONS[region_of(county)]["db"]
+        search_url = lite(site_url, f"/{db}/votes?person={quote(p['name'])}&county={county}&_sort_desc=date", db)
     name, last = p["name"], p["name"].split()[-1]
     n = len(p["rows"])
     areas = j["areas"]
@@ -342,7 +355,9 @@ def person_page(county: str, p: dict, footer: str, site_url: str = "") -> str:
 affect these areas too without naming them.</p>
 {listing(area_rows, name, f"No recorded decision names {' or '.join(areas)} yet.")}
 """ if areas else "")
-    glossary = (CITY_GLOSSARY if j["govt"] == "city" else
+    glossary = (CITY_GLOSSARY.format(short=_e(j["short"]), record=("the minutes don't record their vote" if county == "templeterrace"
+                                                                  else "the city's record doesn't show their vote"))
+                if j["govt"] == "city" else
                 GLOSSARY.format(areas=_e(' and '.join(areas)), xnote=XNOTE.get(county, "")))
     body = f"""<h1>{_e(name)}</h1>
 <p class="role">{_e(role_line)}</p>
@@ -397,7 +412,7 @@ def county_page(county: str, ppl: dict[str, dict], footer: str) -> str:
     areas = " and ".join(j["areas"])
     plural = "doesn't" if len(j["areas"]) == 1 else "don't"
     if j["govt"] == "city":
-        lede = (f"{_e(j['short'])}'s local decisions are made by its City Council: these {len(current)} members. "
+        lede = (f"{_e(j['short'])}'s local decisions are made by its {_e(j['body'])}: these {len(current)} members. "
                 "The mayor runs the meetings and votes too.")
     else:
         lede = (f"{_e(areas)} {plural} have a city government. Decisions about zoning, roads and county taxes "
@@ -437,6 +452,8 @@ FOOTERS = {
                      "Clerk updates about monthly, so the newest meetings can be a few weeks behind. Names are "
                      "printed by surname in the record; we match them to full names by date."),
     "hernando": "Votes from Hernando County's Legistar meeting records, County Commission meetings from 2025 on.",
+    "edgewater": ("Votes from the City of Edgewater's Legistar meeting records, City Council meetings from 2025 on. "
+                  "The consent agenda is approved in one vote, so each item on it shows that vote."),
     "templeterrace": ("Votes read from the City Clerk's minutes of each City Council meeting (from November 2025; the "
                       "city keeps its minutes online for about a year, and we keep copies). When a member didn't vote, "
                       "each decision says whether the minutes recorded them absent."),
@@ -457,10 +474,30 @@ def all_votes(data: Path) -> dict[str, dict]:
     return out
 
 
-def city_roles(data: Path) -> dict[str, list[str]]:
-    """Temple Terrace member -> ['Mayor'] or ['Council Member']. The vice-mayor seat rotates, so it isn't shown."""
-    from .council import members
-    return {o["name"]: ["Mayor"] if "Mayor" in o.get("roles", []) else ["Council Member"] for o in members(data)}
+def city_roles(data: Path, county: str = "templeterrace") -> dict[str, list[str]]:
+    """City member -> ['Mayor'] or ['Council Member'] (or ['City Commissioner']). The vice-mayor seat
+    rotates, so it isn't shown. Temple Terrace: officials.jsonl. A Legistar city: its office records
+    (legistar-<client>-officers.jsonl), latest seat on the main board; "Councilwoman" and
+    "Councilman" both read "Council Member"."""
+    j = JURISDICTIONS[county]
+    if county == "templeterrace":
+        from .council import members
+        return {o["name"]: ["Mayor"] if "Mayor" in o.get("roles", []) else ["Council Member"] for o in members(data)}
+    from .jurisdictions import legistar_clients
+    out: dict[str, tuple[str, list[str]]] = {}
+    for client, slug_ in legistar_clients().items():
+        if slug_ != county:
+            continue
+        path = data / "listings" / f"legistar-{client}-officers.jsonl"
+        rows = [json.loads(x) for x in path.read_text("utf-8").splitlines() if x.strip()] if path.exists() else []
+        for o in rows:
+            if j.get("board_rx") and not re.match(j["board_rx"], o["body"]):
+                continue
+            t = o["title"].lower()
+            role = "Mayor" if t == "mayor" else j["member_title"] if re.match(r"council|commission", t) else ""
+            if role and (o["name"] not in out or o["start"] >= out[o["name"]][0]):
+                out[o["name"]] = (o["start"], [role])
+    return {k: v for k, (_, v) in out.items()}
 
 
 def write(data: Path, out: Path, site_url: str = "") -> dict:
@@ -473,7 +510,7 @@ def write(data: Path, out: Path, site_url: str = "") -> dict:
         d = out / JURISDICTIONS[county]["people_dir"]
         d.mkdir(parents=True, exist_ok=True)
         if JURISDICTIONS[county]["govt"] == "city":
-            roles = city_roles(data)
+            roles = city_roles(data, county)
             for p in ppl.values():
                 p["roles"] = roles.get(p["name"], [])
         footer = f'<p>{_e(FOOTERS.get(county, ""))}</p>'

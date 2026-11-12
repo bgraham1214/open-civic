@@ -299,6 +299,24 @@ def crawl_items(client: str, events: list[dict], fetcher: Fetcher, *, previous_i
     return items, votes, stats
 
 
+def officers_url(client: str, since: str) -> str:
+    return f"{api_base(client)}officerecords?$filter=OfficeRecordEndDate%20ge%20datetime'{since}'"
+
+
+def parse_officer(client: str, raw: dict) -> dict:
+    """One seat held for a time: Edgewater lists "Mayor", "Councilwoman", "Councilman", and staff
+    (City Clerk, City Manager, City Attorney) on the City Council body. Staff never appear in roll calls."""
+    return {"source": "legistar", "client": client, "key": f"legistar:{client}:office:{raw['OfficeRecordId']}",
+            "name": (raw.get("OfficeRecordFullName") or "").strip(), "title": (raw.get("OfficeRecordTitle") or "").strip(),
+            "body": (raw.get("OfficeRecordBodyName") or "").strip(), "start": _date(raw.get("OfficeRecordStartDate")),
+            "end": _date(raw.get("OfficeRecordEndDate"))}
+
+
+def crawl_officers(client: str, fetcher: Fetcher, since: str) -> list[dict]:
+    rows = [parse_officer(client, r) for r in fetcher.get_json(officers_url(client, since))]
+    return sorted((r for r in rows if r["name"]), key=lambda r: (r["body"], r["name"], r["start"]))
+
+
 def _read_jsonl(path: str | None) -> list[dict]:
     if not path or not Path(path).exists():
         return []
@@ -311,7 +329,7 @@ def _write_jsonl(rows: list[dict], path: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.legistar")
-    ap.add_argument("what", choices=["events", "items", "links"])
+    ap.add_argument("what", choices=["events", "items", "links", "officers"])
     ap.add_argument("--client", required=True, help="Legistar client name, e.g. hernandocountyfl")
     ap.add_argument("--since", default="2025-01-01")
     ap.add_argument("--include-private-bodies", action="store_true",
@@ -332,6 +350,11 @@ def main(argv: list[str] | None = None) -> int:
             _write_jsonl(events, args.output or "/dev/stdout")
             print(f"{args.client}: {len(events)} events since {args.since}", file=sys.stderr)
             return 0
+        if args.what == "officers":
+            rows = crawl_officers(args.client, fetcher, args.since)
+            _write_jsonl(rows, args.output or "/dev/stdout")
+            print(f"{args.client}: {len(rows)} office records since {args.since}", file=sys.stderr)
+            return 0 if rows else 1
         events = _read_jsonl(args.events)
         if not events:
             print("error: no events", file=sys.stderr)

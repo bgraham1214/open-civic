@@ -22,7 +22,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from .jurisdictions import COUNTIES, JURISDICTIONS
+from .jurisdictions import JURISDICTIONS, REGIONS
 from .region import load
 
 WEBSITES = {"hillsborough": "https://hcfl.gov", "pasco": "https://www.pascocountyfl.net",
@@ -61,8 +61,11 @@ def _pasco_bodies(data: Path) -> dict[str, str]:
     return out
 
 
-def build(data: Path) -> list[dict]:
-    d = load(data)
+def build(data: Path, members: list[str] | None = None) -> list[dict]:
+    """FollowTheMoney entities for one region's governments (default: the counties)."""
+    members = members or REGIONS["counties"]["members"]
+    members = [m for m in members if not JURISDICTIONS[m].get("blocked")]
+    d = {k: [x for x in v if x.get("county") in members] for k, v in load(data).items()}
     pasco = _pasco_bodies(data)
     ents: dict[str, dict] = {}
 
@@ -72,7 +75,7 @@ def build(data: Path) -> list[dict]:
         return eid
 
     counties = {s: add("PublicBody", _id("county", s), name=JURISDICTIONS[s]["name"], jurisdiction="us",
-                       country="us", website=WEBSITES.get(s)) for s in COUNTIES}
+                       country="us", website=WEBSITES.get(s) or JURISDICTIONS[s].get("website")) for s in members}
     boards: dict[tuple[str, str], str] = {}
 
     def board(county: str, name: str) -> str:
@@ -128,15 +131,19 @@ def build(data: Path) -> list[dict]:
 
 
 def write(data: Path) -> dict:
-    ents = build(data)
+    """One file per region: data/entities/<db>.ftm.jsonl (counties, volusia)."""
     out = data / "entities"
     out.mkdir(parents=True, exist_ok=True)
-    (out / "counties.ftm.jsonl").write_text(
-        "".join(json.dumps(e, ensure_ascii=False, sort_keys=True) + "\n" for e in ents), "utf-8")
-    counts: dict[str, int] = defaultdict(int)
-    for e in ents:
-        counts[e["schema"]] += 1
-    return {"ftm_entities": len(ents), "schemata": dict(counts)}
+    result = {}
+    for region, r in REGIONS.items():
+        ents = build(data, r["members"])
+        (out / f"{r['db']}.ftm.jsonl").write_text(
+            "".join(json.dumps(e, ensure_ascii=False, sort_keys=True) + "\n" for e in ents), "utf-8")
+        counts: dict[str, int] = defaultdict(int)
+        for e in ents:
+            counts[e["schema"]] += 1
+        result[region] = {"ftm_entities": len(ents), "schemata": dict(counts)}
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:

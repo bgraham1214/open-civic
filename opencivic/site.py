@@ -311,6 +311,9 @@ AREAS = [  # (area, jurisdiction) in the order people asked for them
     ("Lutz", "hillsborough"),
     ("Wesley Chapel", "pasco"),
     ("Spring Hill", "hernando"),
+    ("New Smyrna Beach", "newsmyrnabeach"),  # added Nov 12, 2026 (Volusia County)
+    ("Edgewater", "edgewater"),
+    ("Oak Hill", "oakhill"),
 ]
 
 
@@ -319,15 +322,20 @@ def _meeting_dates(out: Path, county: str) -> list[str]:
     return sorted(p.stem for p in d.glob("*.html")) if d.is_dir() else []
 
 
-def home(out: Path, today: str, tt: dict) -> str:
-    """tt: {'latest': date, 'removed': n} for Temple Terrace."""
+def home(out: Path, today: str, tt: dict, latest: dict[str, str] | None = None) -> str:
+    """tt: {'latest': date, 'removed': n} for Temple Terrace. latest: {slug: newest meeting date} for
+    governments without meeting pages (Oak Hill)."""
+    latest = latest or {}
     cards = []
     for area, j in AREAS:
         jur = JURISDICTIONS[j]
         go: list[str] = []
         when = ""
-        if j == "templeterrace":
-            gov = "Has its own city government: the Temple Terrace City Council."
+        hub = jur.get("hub") or ("", "")
+        if jur["govt"] == "city":
+            gov = f"Has its own city government: the {e(jur['short'])} {e(jur['body'])}."
+            if jur.get("county"):
+                gov += f" In {e(jur['county'])} County."
         else:
             gov = (f"Has no city government. Local decisions are made by the "
                    f"{e(jur['name'])} Commission.")
@@ -340,6 +348,15 @@ def home(out: Path, today: str, tt: dict) -> str:
             go.append('<a href="templeterrace.html">Search agendas and minutes, and see removed records</a>')
             if tt.get("latest") and not dates:
                 when = f'Newest record: {e(long_date(tt["latest"]))}.'
+        elif jur.get("blocked"):
+            go.append(f'<a href="{e(jur["official_records"])}">The city\'s own agendas and minutes</a>')
+            when = e(jur["blocked"])
+        elif jur["govt"] == "city":
+            go.append(f'<a href="{hub[1]}#{j}">'
+                      + ("Agendas and minutes, archived and searchable" if not dates else "Search agendas, minutes and votes")
+                      + "</a>")
+            if latest.get(j) and not dates:
+                when = f'Latest meeting on record: {e(weekday_date(latest[j]))}. Votes aren\'t read from its minutes yet.'
         past = [d for d in dates if d <= today]
         coming = [d for d in dates if d > today]
         bits = []
@@ -353,8 +370,10 @@ def home(out: Path, today: str, tt: dict) -> str:
             bits.append("Votes are read from the Clerk's minutes, which come out a few weeks after each meeting.")
         if past or coming:
             when = " ".join(bits)
-        feed = ("feed.xml" if j == "templeterrace" else f"feeds/area-{area.lower().replace(' ', '-')}.xml")
-        go.append(f'<a href="{feed}">Get updates (RSS feed)</a>')
+        feed = ("feed.xml" if j == "templeterrace" else f"feeds/{j}.xml" if jur["govt"] == "city"
+                else f"feeds/area-{area.lower().replace(' ', '-')}.xml")
+        if not jur.get("blocked"):
+            go.append(f'<a href="{feed}">Get updates (RSS feed)</a>')
         cards.append(f'<li id="{area.lower().replace(" ", "-")}"><h3>{e(area)}</h3><p class="gov">{gov}</p>'
                      f'<ul class="go">{"".join(f"<li>{g}</li>" for g in go)}</ul>'
                      + (f'<p class="next">{when}</p>' if when else "") + "</li>")
@@ -365,18 +384,19 @@ def home(out: Path, today: str, tt: dict) -> str:
                    f'{n} {"document" if n == 1 else "documents"} we archived. Our copies are still here, unchanged. '
                    f'<a href="templeterrace.html#removed">See what was removed</a>.</p>')
     body = f"""<h1>What your local government decided, in plain words</h1>
-<p class="lede">Free, nonpartisan records of local government meetings around Tampa Bay: what was decided,
-who voted which way, and the official papers, collected every night.</p>
+<p class="lede">Free, nonpartisan records of local government meetings around Tampa Bay and in southeast
+Volusia County: what was decided, who voted which way, and the official papers, collected every night.</p>
 <p class="fair">Everything here comes from official government websites and links back to them. We explain
 what a decision was. We never say whether it was right.</p>
 <h2 id="areas">Where do you live?</h2>
 <p>If you live outside a city, your county commission is your local government. It decides zoning, roads
 and county taxes for your neighborhood.</p>
 <ul class="areas">{''.join(cards)}</ul>
-<p class="small">More places are planned. <a href="counties.html">Search all three counties' records</a>.</p>
+<p class="small">More places are planned. Search <a href="counties.html">all three counties' records</a> or
+<a href="volusia.html">southeast Volusia city records</a>.</p>
 <h2>Spotlight</h2>
 <p>New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases for
-companies, across all four governments. Each is tagged by fixed rules from the official wording.
+companies, across every government we follow. Each is tagged by fixed rules from the official wording.
 <a href="spotlight.html">See the spotlight</a>.</p>
 <h2>New to this?</h2>
 <ul class="links"><li><a href="learn/land.html">How building and land decisions work</a></li>
@@ -390,14 +410,17 @@ NetNewsWire) checks for you. Email and text alerts are planned.</p>
 <p>Every record is also available as a searchable database and as downloadable files.
 <a href="data.html">Data and downloads</a>.</p>"""
     return page(f"{NAME}: what your local government decided", body, 0, path="index.html",
-                description=("Free, nonpartisan, plain-language records of what Temple Terrace and the "
+                description=("Free, nonpartisan, plain-language records of what Temple Terrace, Edgewater, Oak Hill and the "
                              "Hillsborough, Pasco and Hernando county commissions decided, and how each member voted."),
                 jsonld=[{"@type": "WebSite", "name": NAME, "url": absolute("") or None, "inLanguage": "en",
                          "publisher": PUBLISHER, "isAccessibleForFree": True,
                          "about": [{"@type": "GovernmentOrganization", "name": JURISDICTIONS[j]["name"]}
                                    for j in JURISDICTIONS]}],
                 feeds=[("Temple Terrace: new records", "feed.xml")]
-                + [(f"{a}: county agenda items", f"feeds/area-{a.lower().replace(' ', '-')}.xml") for a, j in AREAS if j != "templeterrace"])
+                + [(f"{a}: county agenda items", f"feeds/area-{a.lower().replace(' ', '-')}.xml")
+                   for a, j in AREAS if JURISDICTIONS[j]["govt"] == "county"]
+                + [(f"{JURISDICTIONS[j]['name']}: new records", f"feeds/{j}.xml") for a, j in AREAS
+                   if j != "templeterrace" and JURISDICTIONS[j]["govt"] == "city" and not JURISDICTIONS[j].get("blocked")])
 
 
 # --- The glossary ----------------------------------------------------------------------------
@@ -466,6 +489,13 @@ def data_page(out: Path, lite: dict[str, str]) -> str:
                        lite.get("counties.db", ""))
     c_ftm, c_ftm_ld = dl("counties.ftm.jsonl", "County entities", "FollowTheMoney JSON lines",
                          "Each county and board, each commissioner and their membership, each meeting and archived document.")
+    v_db, v_db_ld = dl("volusia.db", "Southeast Volusia cities database", "SQLite",
+                       "Meetings, agenda items and each council member's vote for Edgewater (from 2025), and Oak Hill's "
+                       "archived agendas and minutes (full-text searchable).", lite.get("volusia.db", ""))
+    v_ftm, v_ftm_ld = dl("volusia.ftm.jsonl", "Southeast Volusia entities", "FollowTheMoney JSON lines",
+                         "Each city and board, each council member and their membership, each meeting and archived document.")
+    if not (out / "volusia.ftm.jsonl").exists():
+        v_ftm, v_ftm_ld = "", None
     feeds = sorted(p.name for p in (out / "feeds").glob("*.xml")) if (out / "feeds").is_dir() else []
     feed_items = ['<li><a href="feed.xml">Temple Terrace: everything new</a></li>'] + [
         f'<li><a href="feeds/{e(f)}">{e(_feed_label(f))}</a></li>' for f in feeds]
@@ -475,11 +505,11 @@ official source it came from.</p>
 <p class="fair">These are public records, read by software. Votes, amounts and names can be misread: check the
 official record before relying on a detail, and <a href="{REPO}/issues">tell us</a> if something is wrong.</p>
 <h2>Databases</h2>
-<ul class="records">{tt_db}{c_db}</ul>
+<ul class="records">{tt_db}{c_db}{v_db}</ul>
 <p class="small">Tables are described inside each database (Datasette shows the descriptions).
 SQLite opens in <a href="https://datasette.io">Datasette</a>, DB Browser for SQLite, Python, R and most data tools.</p>
 <h2>People, organisations and meetings</h2>
-<ul class="records">{tt_ftm}{c_ftm}</ul>
+<ul class="records">{tt_ftm}{c_ftm}{v_ftm}</ul>
 <p class="small"><a href="https://followthemoney.tech">FollowTheMoney</a> is the open data model used by
 OpenSanctions and Aleph. People appear only in their public roles (from roll-call votes), never from public comment.</p>
 <h2>Feeds</h2>
@@ -504,9 +534,13 @@ People, terms as DefinedTerms). Please identify your tool and keep request rates
          "description": "Meetings, agenda items and per-member roll-call votes of the Hillsborough (2014 on), Pasco and Hernando (2025 on) county commissions in Florida.",
          "spatialCoverage": ["Hillsborough County, Florida", "Pasco County, Florida", "Hernando County, Florida"],
          "temporalCoverage": "2014-01/..", "distribution": [c_db_ld, c_ftm_ld], **common},
+        {"@type": "Dataset", "name": "Southeast Volusia city records",
+         "description": "Meetings, agenda items and per-member roll-call votes of the Edgewater, Florida City Council, and the archived agendas and minutes of the Oak Hill, Florida City Commission, from 2025.",
+         "spatialCoverage": ["Edgewater, Florida", "Oak Hill, Florida"],
+         "temporalCoverage": "2025-01/..", "distribution": [x for x in (v_db_ld, v_ftm_ld) if x], **common},
     ]
     return page("Data and downloads", body, 0, path="data.html",
-                description="Free downloads of Temple Terrace and Tampa Bay county commission records: SQLite databases, FollowTheMoney entities, RSS feeds and raw files.",
+                description="Free downloads of Temple Terrace, Tampa Bay county commission and southeast Volusia city records: SQLite databases, FollowTheMoney entities, RSS feeds and raw files.",
                 jsonld=[{"@type": "DataCatalog", "name": f"{NAME} data", "url": absolute("data.html") or None,
                          "publisher": PUBLISHER, "dataset": datasets}])
 
@@ -535,7 +569,7 @@ def llms_txt(out: Path) -> str:
     def u(p: str) -> str:
         return absolute(p) or p
     lines = []
-    for j in ("templeterrace", "hillsborough", "pasco", "hernando"):
+    for j in JURISDICTIONS:
         jur = JURISDICTIONS[j]
         if (out / "meetings" / f"{j}.html").exists():
             lines.append(f"- [{jur['board']} meetings]({u(f'meetings/{j}.html')}): one page per meeting, decisions "
@@ -546,19 +580,23 @@ def llms_txt(out: Path) -> str:
     people = ""
     return f"""# {NAME}
 
-> Free, nonpartisan, plain-language public records of local government in the Tampa Bay area, Florida:
-> the Temple Terrace City Council and the Hillsborough, Pasco and Hernando county commissions (which govern
-> Brandon, Lutz, Wesley Chapel and Spring Hill). Collected nightly from official sources; every record links
-> to its source. Headlines are produced by fixed rules, not AI, and the official wording is always shown.
+> Free, nonpartisan, plain-language public records of local government in Florida: around Tampa Bay, the
+> Temple Terrace City Council and the Hillsborough, Pasco and Hernando county commissions (which govern
+> Brandon, Lutz, Wesley Chapel and Spring Hill); in southeast Volusia County, the Edgewater City Council and
+> the Oak Hill City Commission. Collected nightly from official sources; every record links to its source.
+> Headlines are produced by fixed rules, not AI, and the official wording is always shown.
 
 Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
-come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace votes are read from the Clerk's minutes.
+come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace votes are read from the Clerk's minutes;
+Hernando and Edgewater votes come from their Legistar records. New Smyrna Beach isn't collected: its records site asks
+automated tools not to.
 
 ## Start here
 
 - [Home: pick an area]({u('index.html')})
 - [Temple Terrace City Council records]({u('templeterrace.html')})
 - [County commission records and search]({u('counties.html')})
+- [Southeast Volusia city records and search]({u('volusia.html')}): Edgewater, Oak Hill, New Smyrna Beach
 - [Spotlight]({u('spotlight.html')}): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
 {counties}
 {people}
@@ -579,16 +617,18 @@ come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace v
 
 - [Temple Terrace database (SQLite)]({u('templeterrace.db')})
 - [County commissions database (SQLite)]({u('counties.db')})
+- [Southeast Volusia cities database (SQLite)]({u('volusia.db')})
 """
 
 
-def write_common(out: Path, *, today: str, tt: dict, lite: dict[str, str] | None = None) -> dict:
+def write_common(out: Path, *, today: str, tt: dict, lite: dict[str, str] | None = None,
+                 latest: dict[str, str] | None = None) -> dict:
     """Write the front door, glossary, data page, sitemap and llms.txt. Call after every other page exists."""
     write_assets(out)
     (out / "learn").mkdir(parents=True, exist_ok=True)
     (out / "learn" / "index.html").write_text(glossary(), "utf-8")
     (out / "data.html").write_text(data_page(out, lite or {}), "utf-8")
-    (out / "index.html").write_text(home(out, today, tt), "utf-8")
+    (out / "index.html").write_text(home(out, today, tt, latest), "utf-8")
     (out / "llms.txt").write_text(llms_txt(out), "utf-8")
     sm = sitemap(out)
     if SITE_URL:

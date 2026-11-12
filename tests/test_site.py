@@ -94,7 +94,7 @@ class Common(unittest.TestCase):
             self.assertIn("https://lite.datasette.io/?url=c", data)
             catalog = jsonld(data)[0]
             self.assertEqual(catalog["@type"], "DataCatalog")
-            self.assertEqual(len(catalog["dataset"]), 2)
+            self.assertEqual(len(catalog["dataset"]), 3)
             urls = [u[0].text for u in ET.parse(out / "sitemap.xml").getroot()]
             self.assertEqual(urls[0], SITE + "index.html")
             self.assertIn(SITE + "meetings/hernando/2026-11-20.html", urls)

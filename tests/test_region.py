@@ -67,7 +67,7 @@ class Region(unittest.TestCase):
             d = Path(d)
             data, out = make_data(d), d / "site"
             out.mkdir()
-            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
+            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)["counties"]
             bc = counts["by_county"]
             self.assertEqual((bc["hillsborough"]["meetings"], bc["hillsborough"]["votes"]), (1, 7))
             self.assertEqual((bc["pasco"]["meetings"], bc["pasco"]["documents"]), (1, 1))
@@ -101,7 +101,7 @@ class Region(unittest.TestCase):
             other = "legistar:hillsboroughcounty:item:131876"
             old_style = [{**v, "key": "legistar:hillsboroughcounty:vote:" + v["key"].rsplit(":", 1)[-1]} for v in votes]
             lst.write_text(jl(votes + [{**v, "item_key": other} for v in old_style]))
-            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
+            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)["counties"]
             self.assertEqual(counts["votes"], 14)
             self.assertTrue(all(len(v["key"].split(":")) == 5 for v in votes))
 
@@ -174,7 +174,7 @@ class Region(unittest.TestCase):
                                      "title": "VAB Agenda", "copy_url": "https://c/x.pdf"}) + "\n")
                 fh.write(json.dumps({"event": "excluded", "key": "civicclerk:pascocofl:8613", "at": "b",
                                      "reason": "Value Adjustment Board hearing"}) + "\n")
-            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)
+            counts = region.write(data, out, SITE, "2026-11-09T02:00:00Z", build._rss)["counties"]
             self.assertEqual(counts["by_county"]["pasco"]["meetings"], 1)
             self.assertEqual(counts["by_county"]["pasco"]["agenda_items"], 0)
             con = sqlite3.connect(out / "counties.db")

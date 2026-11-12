@@ -39,7 +39,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .fetch import FetchError, HttpFetcher
-from .jurisdictions import COUNTIES, JURISDICTIONS, group_of, jurisdiction_of
+from .jurisdictions import JURISDICTIONS, REGIONAL, group_of, jurisdiction_of
 
 # Guard: if a source's listing shrinks below this share of what was listed before,
 # assume a partial fetch and don't mark the missing documents as unlisted.
@@ -73,7 +73,7 @@ def docs_from_civicclerk(path: Path) -> list[Doc]:
     for line in path.read_text("utf-8").splitlines():
         m = json.loads(line)
         skip = _skip_kinds(f"civicclerk:{m['tenant']}:")
-        if jurisdiction_of(f"civicclerk:{m['tenant']}:") in COUNTIES and _private(m):
+        if jurisdiction_of(f"civicclerk:{m['tenant']}:") in REGIONAL and _private(m):
             continue
         for f in m["files"]:
             if f["kind"] in skip:
@@ -89,14 +89,21 @@ def docs_from_civicclerk(path: Path) -> list[Doc]:
 ARCHIVE_KINDS = {"agenda": "Agenda", "minutes": "Minutes"}
 
 
-def docs_from_hillsclerk(path: Path) -> list[Doc]:
-    """The Hillsborough Clerk's yearly BOCC Master Voting Record PDFs (see hillsclerk.py)."""
+def docs_from_links(path: Path) -> list[Doc]:
+    """A listing of {key, url, title, kind, date, body, page} rows: the Hillsborough Clerk's yearly
+    BOCC Master Voting Record PDFs (hillsclerk.py) or documents linked from a web page (weblinks.py).
+    The source is the key's first part."""
     out = []
     for line in path.read_text("utf-8").splitlines():
+        if not line.strip():
+            continue
         d = json.loads(line)
-        out.append(Doc(key=d["key"], source="hillsclerk", url=d["url"], title=d["title"], kind=d["kind"],
-                       date=d["date"], body=d["body"], page=d["page"]))
+        out.append(Doc(key=d["key"], source=d["key"].split(":", 1)[0], url=d["url"], title=d["title"],
+                       kind=d["kind"], date=d["date"], body=d["body"], page=d["page"]))
     return out
+
+
+docs_from_hillsclerk = docs_from_links
 
 
 def docs_from_archive(path: Path) -> list[Doc]:
@@ -245,6 +252,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--civicclerk", type=Path, nargs="*", default=[],
                     help="civicclerk meetings jsonl, one per tenant")
     ap.add_argument("--archive", type=Path, help="archivecenter items jsonl")
+    ap.add_argument("--links", type=Path, nargs="*", default=[],
+                    help="link listings (weblinks.py), one per account")
     ap.add_argument("--data-dir", type=Path, default=Path("data"))
     ap.add_argument("--store-dir", type=Path, help="save each distinct file as <sha256>.<ext>")
     ap.add_argument("--copy-base", help="URL prefix where stored copies will be published")
@@ -259,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
         inputs.append((args.archive, docs_from_archive, "civicplus_archive"))
     if args.hillsclerk is not None:
         inputs.append((args.hillsclerk, docs_from_hillsclerk, "hillsclerk"))
+    inputs += [(p, docs_from_links, "weblinks") for p in args.links]
     for path, loader, source in inputs:
         if path.exists() and path.stat().st_size > 0:
             loaded = loader(path)

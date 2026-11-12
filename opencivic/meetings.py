@@ -56,12 +56,18 @@ def _commission(body: str) -> bool:
     return board_of(b) == BOCC
 
 
+def _main_board(county: str, body: str) -> bool:
+    """A meeting of the government's main board: the County Commission, or a city's council (board_rx)."""
+    rx = JURISDICTIONS.get(county, {}).get("board_rx")
+    return bool(re.match(rx, (body or "").strip())) if rx else _commission(body)
+
+
 def meeting_info(data: Path) -> dict[tuple[str, str], dict]:
     """(county, date) -> the County Commission meeting record: time, place, status, official page.
     When a day has several Commission meetings, the one with a published agenda wins."""
     out: dict[tuple[str, str], dict] = {}
     for m in load(data)["meetings"]:
-        if not _commission(m.get("body") or ""):
+        if not _main_board(m["county"], m.get("body") or ""):
             continue
         k = (m["county"], m["date"])
         rank = (bool(m.get("agenda_url")), (m.get("agenda_status") or "").lower() != "cancelled")
@@ -91,9 +97,11 @@ def decisions_by_meeting(data: Path) -> dict[str, dict[str, list[dict]]]:
     city = city_items(data)
     for i in load(data)["items"] + city:
         c = i["county"]
-        if (c != "templeterrace" and not _commission(i.get("body") or "")) or i["key"] in voted:
+        if (c != "templeterrace" and not _main_board(c, i.get("body") or "")) or i["key"] in voted:
             continue
-        if c not in ("pasco", "templeterrace") and i["date"] in voted_dates.get(c, set()):
+        if i.get("consent_section"):  # its vote is shown on each consent item
+            continue
+        if c in ("hillsborough", "hernando") and i["date"] in voted_dates.get(c, set()):
             continue
         out[c][i["date"]].append({"item": i, "votes": [], "facts": None,
                                   "x": explain(i["title"], i.get("matter_type") or "")})
@@ -350,7 +358,7 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, 
                       f"<details><summary>{y} ({_plural(len(ds), 'meeting')})</summary>{inner}</details>")
     areas = " and ".join(j["areas"])
     people = (f'<p><a href="../{j["people_dir"]}/{county}.html">How each {j["member"]} voted</a></p>' if has_people else "")
-    who = (f"The City Council makes {_e(j['short'])}'s local decisions." if j["govt"] == "city"
+    who = (f"The {_e(j['body'])} makes {_e(j['short'])}'s local decisions." if j["govt"] == "city"
            else f"The County Commission makes the local decisions for {_e(areas)}.")
     body = f"""<h1>{_e(j['board'])} meetings</h1>
 <p class="role">What happened, in plain language</p>
@@ -358,13 +366,13 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, 
 decided, explained without the jargon.</p>
 {people}
 <p class="learn"><a href="../learn/land.html">How building and land decisions work</a> ·
-<a href="../learn/money.html">How county money works</a></p>
+<a href="../learn/money.html">How {"public" if j["govt"] == "city" else "county"} money works</a></p>
 {''.join(blocks)}"""
     return page(f"{j['board']} meetings", body, 1, path=f"meetings/{county}.html", here=f"{j['short']} meetings",
                 crumbs=[j["hub"]],
                 description=(f"Every {j['board']} meeting we have, explained in plain language: what was "
                              f"decided" + (f", for {areas}." if areas else ".")),
-                feeds=[(f"{j['name']}: new records", "feed.xml" if j["govt"] == "city" else f"feeds/{county}.xml")],
+                feeds=[(f"{j['name']}: new records", "feed.xml" if county == "templeterrace" else f"feeds/{county}.xml")],
                 jsonld=[{"@type": "CollectionPage", "name": f"{j['board']} meetings",
                          "about": {"@type": "GovernmentOrganization", "name": j["board_formal"]}}])
 

@@ -80,11 +80,11 @@ jobs:
           python -m opencivic.civicclerk items --tenant pascocofl --meetings out/civicclerk-pascocofl-meetings.jsonl \
             -o out/civicclerk-pascocofl-items.jsonl 2>&1 | tee -a out/pasco-log.txt
           test -s out/civicclerk-pascocofl-items.jsonl && cp out/civicclerk-pascocofl-items.jsonl data/listings/
-      - name: Hillsborough (land use) and Hernando (Legistar API, from 2025)
+      - name: Hillsborough (land use), Hernando and Edgewater (Legistar API, from 2025)
         continue-on-error: true
         run: |
           set -o pipefail
-          for c in hillsboroughcounty hernandocountyfl; do
+          for c in hillsboroughcounty hernandocountyfl cityofedgewater; do
             python -m opencivic.legistar events --client "$c" --since 2025-01-01 \
               -o "out/legistar-$c-events.jsonl" 2>&1 | tee -a out/legistar-log.txt || continue
             test -s "out/legistar-$c-events.jsonl" || continue
@@ -102,6 +102,17 @@ jobs:
               && test -s "out/legistar-$c-links.jsonl" && cp "out/legistar-$c-links.jsonl" data/listings/ \
               || echo "$c: item links not updated"
           done
+          # who holds which seat (Edgewater's mayor is elected separately; the API names the title)
+          python -m opencivic.legistar officers --client cityofedgewater --since 2025-01-01 \
+            -o out/legistar-cityofedgewater-officers.jsonl 2>&1 | tee -a out/legistar-log.txt \
+            && cp out/legistar-cityofedgewater-officers.jsonl data/listings/ \
+            || echo "cityofedgewater: office records not updated"
+      - name: Oak Hill agendas and minutes (links on the city's archive pages, from 2025)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.weblinks list --account oakhillfl -o out/weblinks-oakhillfl.jsonl 2>&1 \
+            | tee out/weblinks-log.txt
 
       - name: Hillsborough Clerk BOCC voting record (list the yearly reports, 2014 on)
         continue-on-error: true
@@ -112,7 +123,8 @@ jobs:
         run: |
           python -m opencivic.manifest update \
             --civicclerk out/civicclerk-meetings.jsonl out/civicclerk-pascocofl-meetings.jsonl \
-            --archive out/archive-items.jsonl --hillsclerk out/hillsclerk-listing.jsonl --max-downloads 500 \
+            --archive out/archive-items.jsonl --hillsclerk out/hillsclerk-listing.jsonl \
+            --links out/weblinks-oakhillfl.jsonl --max-downloads 500 \
             --data-dir data --store-dir out/files \
             --copy-base "https://github.com/${{ github.repository }}/releases/download/files" \
             2>&1 | tee out/manifest-log.txt
@@ -179,7 +191,8 @@ jobs:
           from followthemoney import model
           bad = 0
           import os
-          for path in ("data/entities/templeterrace.ftm.jsonl", "data/entities/counties.ftm.jsonl"):
+          for path in ("data/entities/templeterrace.ftm.jsonl", "data/entities/counties.ftm.jsonl",
+                       "data/entities/volusia.ftm.jsonl"):
               if not os.path.exists(path):
                   continue
               for line in open(path):
@@ -213,6 +226,8 @@ jobs:
           csize=$(stat -c %s site/counties.db 2>/dev/null || echo 0); echo "counties database: $csize bytes"
           if [ "$csize" -gt 95000000 ]; then echo "::error::counties.db over GitHub's 100 MB file limit"; exit 1; fi
           if [ "$csize" -gt 50000000 ]; then echo "::warning::counties.db is $csize bytes; Datasette Lite loads it whole, which is slow on phones"; fi
+          vsize=$(stat -c %s site/volusia.db 2>/dev/null || echo 0); echo "volusia database: $vsize bytes"
+          if [ "$vsize" -gt 95000000 ]; then echo "::error::volusia.db over GitHub's 100 MB file limit"; exit 1; fi
       - name: Fingerprints of the pages last sent to search engines
         continue-on-error: true
         run: |

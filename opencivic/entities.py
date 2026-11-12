@@ -30,7 +30,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .jurisdictions import COUNTIES, jurisdiction_of
+from .jurisdictions import REGIONAL, jurisdiction_of
 
 from . import minutes as mn
 
@@ -159,7 +159,7 @@ def _match(name: str, known: list[str]) -> str:
 def build(data: Path) -> dict:
     # Temple Terrace only: the minutes parser and the officials model are this city's.
     state = {k: e for k, e in json.loads((data / "state.json").read_text("utf-8")).items()
-             if jurisdiction_of(k) not in COUNTIES}
+             if jurisdiction_of(k) not in REGIONAL}
     items = _jsonl(data / "listings" / "civicclerk-items.jsonl")
     outlines_by_date: dict[str, dict[str, dict]] = defaultdict(dict)
     for i in items:

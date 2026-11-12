@@ -46,7 +46,8 @@ class CountyEntities(unittest.TestCase):
             # nobody from agenda text: every Person is someone recorded voting
             self.assertTrue(all("Recorded voting" in e["properties"]["notes"][0] for e in by["Person"]))
             self.assertEqual(len(by["Document"]), 1)  # the archived Pasco agenda
-            self.assertEqual(counts["ftm_entities"], len(ents))
+            self.assertEqual(counts["counties"]["ftm_entities"], len(ents))
+            self.assertEqual(counts["volusia"]["schemata"], {"PublicBody": 2})  # Edgewater, Oak Hill; no records in this sample
             # ids are stable across runs
             self.assertEqual(ents, [json.loads(x) for x in (data / "entities" / "counties.ftm.jsonl").read_text().splitlines()])
             ce.write(data)

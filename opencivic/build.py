@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
-from .jurisdictions import COUNTIES, jurisdiction_of
+from .jurisdictions import REGIONAL, jurisdiction_of
 
 LITE = "https://lite.datasette.io/"
 
@@ -88,7 +88,7 @@ def _jsonl(path: Path) -> list[dict]:
 def _city_state(data: Path) -> dict[str, dict]:
     """Temple Terrace's documents: everything except what belongs to a county."""
     return {k: e for k, e in json.loads((data / "state.json").read_text("utf-8")).items()
-            if jurisdiction_of(k) not in COUNTIES}
+            if jurisdiction_of(k) not in REGIONAL}
 
 
 def build_db(data: Path, db_path: Path) -> dict:
@@ -154,7 +154,7 @@ def build_db(data: Path, db_path: Path) -> dict:
          len(i["attachments"]), "; ".join(a["name"] for a in i["attachments"]), i["key"]) for i in items])
     counts["agenda_items"] = len(items)
 
-    ev = [x for x in _jsonl(data / "manifest.jsonl") if jurisdiction_of(x["key"]) not in COUNTIES]
+    ev = [x for x in _jsonl(data / "manifest.jsonl") if jurisdiction_of(x["key"]) not in REGIONAL]
     con.executemany("INSERT INTO changes (at,event,document_key,date,kind,title,sha256,previous_sha256,bytes,city_url,our_copy) "
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
         (x["at"], x["event"], x["key"], x.get("date"), x.get("kind"), x.get("title"), x.get("sha256"),
@@ -449,14 +449,24 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"commissioner_pages": people.write(args.data_dir, args.out, site_url)}))
         from . import meetings
         print(json.dumps({"meeting_pages": meetings.write(args.data_dir, args.out)}))
-        print(json.dumps({"counties": region.write(args.data_dir, args.out, site_url, built, _rss)}))
+        print(json.dumps({"regions": region.write(args.data_dir, args.out, site_url, built, _rss)}))
     except Exception as e:  # noqa: BLE001
         import traceback
         traceback.print_exc()
         print(f"::warning::county pages not built: {e}")
     today = site.to_eastern(built).date().isoformat()
-    lite = {"templeterrace.db": _lite(site_url), "counties.db": region.lite(site_url)}
-    print(json.dumps({"common": site.write_common(args.out, today=today, tt=city_summary(args.data_dir), lite=lite)}))
+    from .jurisdictions import REGIONS
+    lite = {"templeterrace.db": _lite(site_url),
+            **{f"{r['db']}.db": region.lite(site_url, "", r["db"]) for r in REGIONS.values()}}
+    latest: dict[str, str] = {}
+    try:  # newest meeting of governments with documents but no meeting pages yet (Oak Hill)
+        for m in region.weblinks_meetings(json.loads((args.data_dir / "state.json").read_text("utf-8"))):
+            if m["date"] <= today and m["date"] > latest.get(m["county"], ""):
+                latest[m["county"]] = m["date"]
+    except (OSError, ValueError):
+        pass
+    print(json.dumps({"common": site.write_common(args.out, today=today, tt=city_summary(args.data_dir), lite=lite,
+                                                  latest=latest)}))
     from . import indexnow
     print(json.dumps({"indexnow_pages": indexnow.prepare(args.out)}))
     return 0
