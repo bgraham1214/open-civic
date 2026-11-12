@@ -57,6 +57,8 @@ class HostDown(FetchError):
 class HttpFetcher:
     """Rate-limited, retrying HTTP client that checks robots.txt once per host.
 
+    Waits at least min_interval between any two requests, and at least the host's robots.txt
+    Crawl-delay between requests to that host (CivicPlus sites ask for 10 seconds).
     Gives up on a host for the rest of the run once it stops answering (see HostDown).
     """
 
@@ -67,6 +69,8 @@ class HttpFetcher:
         self.retries = retries
         self.timeout = timeout
         self._last = 0.0
+        self._host_last: dict[str, float] = {}  # netloc -> time of its last request
+        self._delays: dict[str, float] = {}     # netloc -> robots.txt Crawl-delay
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
         self._down: dict[str, str] = {}  # host -> first network error seen
         self.last_content_type = ""
@@ -82,6 +86,9 @@ class HttpFetcher:
                 body = self._raw(host + "/robots.txt", check_robots=False)
                 rp.parse(body.decode("utf-8", "replace").splitlines())
                 self._robots[host] = rp
+                delay = rp.crawl_delay(USER_AGENT)
+                if delay:
+                    self._delays[parts.netloc] = float(delay)
             except HostDown:
                 raise  # unreachable is not "no robots.txt"; don't fetch the page either
             except FetchError:
@@ -89,11 +96,19 @@ class HttpFetcher:
         rp = self._robots[host]
         return rp is None or rp.can_fetch(USER_AGENT, url)
 
-    def _wait(self) -> None:
-        delay = self.min_interval - (time.monotonic() - self._last)
+    def crawl_delay(self, netloc: str) -> float:
+        return self._delays.get(netloc, 0.0)
+
+    def _wait(self, netloc: str = "") -> None:
+        now = time.monotonic()
+        delay = self.min_interval - (now - self._last)
+        if netloc in self._host_last:
+            delay = max(delay, self.crawl_delay(netloc) - (now - self._host_last[netloc]))
         if delay > 0:
             time.sleep(delay)
         self._last = time.monotonic()
+        if netloc:
+            self._host_last[netloc] = self._last
 
     def _raw(self, url: str, check_robots: bool = True, accept: str = "*/*") -> bytes:
         netloc = urlsplit(url).netloc
@@ -103,7 +118,7 @@ class HttpFetcher:
             raise FetchError(f"robots.txt disallows {url}")
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
         for attempt in range(self.retries + 1):
-            self._wait()
+            self._wait(netloc)
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     self.last_content_type = resp.headers.get("Content-Type", "")

@@ -60,3 +60,52 @@ class HostDownTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CrawlDelayTest(unittest.TestCase):
+    """robots.txt Crawl-delay is honored per host (Temple Terrace's CivicPlus site asks for 10 s)."""
+
+    def test_waits_crawl_delay_between_requests_to_that_host(self):
+        clock = [1000.0]
+        slept = []
+
+        def sleep(s):
+            slept.append(round(s, 3))
+            clock[0] += s
+
+        class Resp:
+            headers = {"Content-Type": "text/plain"}
+
+            def __init__(self, body):
+                self.body = body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self):
+                return self.body
+
+            def geturl(self):
+                return ""
+
+        def urlopen(req, timeout):
+            if req.full_url == "https://city.example/robots.txt":
+                return Resp(b"User-agent: *\nDisallow: /admin\nCrawl-delay: 10\n")
+            if req.full_url.endswith("/robots.txt"):
+                return Resp(b"User-agent: *\nDisallow: /admin\n")
+            return Resp(b"ok")
+
+        with mock.patch.object(fetch.urllib.request, "urlopen", urlopen), \
+                mock.patch.object(fetch.time, "sleep", sleep), \
+                mock.patch.object(fetch.time, "monotonic", lambda: clock[0]):
+            f = fetch.HttpFetcher(min_interval=1.0, retries=0)
+            f.get_text("https://city.example/a")
+            f.get_text("https://city.example/b")
+            f.get_text("https://other.example/c")  # no robots delay: only the 1 s minimum
+        self.assertEqual(f.crawl_delay("city.example"), 10.0)
+        # robots.txt counts as a request to the host: robots.txt -> /a and /a -> /b wait 10 s;
+        # other.example asks for no delay, so its robots.txt and page wait only the 1 s minimum
+        self.assertEqual(slept, [10.0, 10.0, 1.0, 1.0])
