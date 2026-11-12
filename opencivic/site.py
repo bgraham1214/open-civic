@@ -155,7 +155,7 @@ def page(title: str, body: str, depth: int, *, path: str = "", description: str 
 <link rel="stylesheet" href="{up}plain.css"></head>
 <body><a class="skip" href="#main">Skip to main content</a>
 <header class="site"><div class="wrap"><a class="brand" href="{up}index.html">{NAME}</a>
-<nav aria-label="Site"><ul><li><a href="{up}index.html#areas">Your area</a></li><li><a href="{up}spotlight.html">Spotlight</a></li><li><a href="{up}learn/index.html">Learn</a></li><li><a href="{up}data.html">Data</a></li></ul></nav></div></header>
+<nav aria-label="Site"><ul><li><a href="{up}index.html#areas">Your area</a></li><li><a href="{up}spotlight.html">Spotlight</a></li><li><a href="{up}companies.html">Money</a></li><li><a href="{up}learn/index.html">Learn</a></li><li><a href="{up}data.html">Data</a></li></ul></nav></div></header>
 <div class="wrap">{crumb_html}
 <main id="main" tabindex="-1">
 {body}
@@ -243,6 +243,8 @@ summary{cursor:pointer;font-weight:700;padding:.5rem 0}
 .tag.restriction{background:var(--ink);color:#fff}
 .tag.business{border-style:dashed}
 .tag.restriction:focus-visible{color:var(--ink)}
+.tag.look{border-style:dotted}
+.amount{font-weight:700;margin:0 0 .3rem}
 .subject{font-size:1rem;color:var(--quiet);margin:0 0 .3rem}
 .facts{margin:.2rem 0 .5rem;padding-left:1.2rem}
 .facts li{margin:.1rem 0}
@@ -398,6 +400,10 @@ and county taxes for your neighborhood.</p>
 <p>New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases for
 companies, across every government we follow. Each is tagged by fixed rules from the official wording.
 <a href="spotlight.html">See the spotlight</a>.</p>
+<h2>Public money to companies</h2>
+<p>Every company the record shows these governments agreed to pay, with each decision, its vote and the
+official record, plus plain facts worth a second look (no competitive bidding, money added to a contract,
+approval over a no vote). <a href="companies.html">See who gets paid</a>.</p>
 <h2>New to this?</h2>
 <ul class="links"><li><a href="learn/land.html">How building and land decisions work</a></li>
 <li><a href="learn/money.html">How county money works</a></li>
@@ -597,6 +603,7 @@ automated tools not to.
 - [Temple Terrace City Council records]({u('templeterrace.html')})
 - [County commission records and search]({u('counties.html')})
 - [Southeast Volusia city records and search]({u('volusia.html')}): Edgewater, Oak Hill, New Smyrna Beach
+- [Public money to companies]({u('companies.html')}): companies and organizations the governments agreed to pay (contracts, purchases, change orders, grants), decision by decision, with approved amounts (not payments) and factual flags (no competitive bidding, money added to a contract, approved over a no vote, $1 million or more on consent, conflict-of-interest abstentions)
 - [Spotlight]({u('spotlight.html')}): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
 {counties}
 {people}
