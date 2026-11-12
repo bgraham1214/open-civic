@@ -252,6 +252,19 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
             headline = "Approved the minutes of an earlier meeting"
         else:
             headline = "Approved changes to the day's agenda"
+    # --- moratoriums: a pause (or, when "permanent", a stop) on approvals or permits. Checked before the
+    # land rules: a moratorium on "comprehensive plan amendments" doesn't change the map (Edgewater, Jan 6, 2025).
+    elif re.search(r"\bmoratori(um|a)\b", low) and not re.search(r"\b(report|update|presentation|workshop|discuss)\b|hc/cpa", low):
+        topic = "land" if re.search(r"permit|zoning|rezon|annex|plat|site plan|development|land use|building", low) else "other"
+        mlow = re.sub(r"unless extended or terminated", "", low)  # Hernando's boilerplate, not an extension
+        if re.search(r"\bextend(s|ed|ing)?\b[^.;:]{0,40}\bmoratori|\bextension\b", mlow):
+            headline = "Moratorium extended"
+        elif re.search(r"\b(amend|modify|repeal|lift|end)\w*\s+(the|a|an|its)\b[^.;:]{0,80}\bmoratori", mlow):
+            headline = "Change to a moratorium"
+        elif "permanent" in low:
+            headline = "Permanent stop on new approvals or permits (called a moratorium)"
+        else:
+            headline = "Pause on new approvals or permits (a moratorium)"
     # --- building and land use
     elif re.search(r"\bprs\s*\d", low):
         topic, headline, terms = "land", f"Small change to an approved development{at}", ["prs"]

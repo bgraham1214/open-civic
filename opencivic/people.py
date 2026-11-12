@@ -116,9 +116,10 @@ def outcome(f: dict) -> str:
         return f"Tied, {f['yes']} to {f['no']}"
     count = f"{max(f['yes'], f['no'])} to {min(f['yes'], f['no'])}"
     act = (f.get("action") or "").lower()
-    if f["passed"] and act.startswith("denied"):
+    # past tense in the counties' records ("denied", "tabled"), verbs in Edgewater's ("deny", "table")
+    if f["passed"] and act.startswith(("denied", "deny")):
         return f"Denied, {count}"
-    if f["passed"] and act.startswith(("continued", "postponed", "tabled", "deferred")):
+    if f["passed"] and act.startswith(("continu", "postpon", "tabl", "defer")):
         return f"Moved to a later meeting, {count}"
     return f"{'Passed' if f['passed'] else 'Failed'} {count}"
 

@@ -66,7 +66,8 @@ NOT_RESTRICT_RX = re.compile(
     r"\b(?:rz|prs|mm)[- ]?(?:pd|std)?\s*\d{2}-\d{3,}|\bpd \d{2}-\d{3,}|rezone (?:from|to)\b|"   # zoning conditions
     r"with (?:the )?(?:\w+ )?restrictions|restrict\w* use ag\w*|alternative standards?|use of (?:the )?funds|"
     r"board polic\w+|prohibiting commissioners|commissioners? (?:shall|from)|public officers?|letterhead|"
-    r"county applications|lame duck|county roadway|in county road",
+    r"county applications|lame duck|county roadway|in county road|"
+    r"\bamend\w* (?:the|an?|its) [^.;:]{0,80}\bmoratori",   # changing an existing moratorium may loosen it
     re.I)
 UNDO_RX = re.compile(r"\b(?:repeal\w*|remov\w*|eliminat\w*|strik\w*|lift\w*|rescind\w*|end(?:s|ing)?|expir\w*|"
                      r"terminat\w*)\b(?: \w+){0,4} (?:the )?(?:moratori\w+|ban|prohibit\w*|restrictions?)", re.I)
@@ -131,7 +132,10 @@ def spot(text: str, motion: str = "", action: str = "") -> list[dict]:
         reason = ("moratorium" if re.search(r"moratori", full, re.I) else
                   "new crime" if re.search(r"misdemeanor|criminal", full, re.I) else
                   "limit on sales or use" if re.search(r"restrict", full, re.I) else "ban")
-        tags.append({"kind": "restriction", "reason": reason, "stage": _stage(full, motion, action)})
+        tag = {"kind": "restriction", "reason": reason, "stage": _stage(full, motion, action)}
+        if reason == "moratorium" and re.search(r"\bpermanent moratori", full, re.I):
+            tag["permanent"] = True  # Edgewater's data-center moratorium (2026-O-21) has no end date
+        tags.append(tag)
     elif PENALTY_RX.search(full) and not NOT_RESTRICT_RX.search(full):
         tags.append({"kind": "restriction", "reason": "fines", "stage": _stage(full, motion, action)})
 
@@ -176,8 +180,8 @@ def label(tag: dict, facts: dict | None) -> str:
     kind, reason, stage = tag["kind"], tag["reason"], tag["stage"]
     passed = bool(facts and facts.get("passed"))
     act = ((facts or {}).get("action") or "").lower()
-    later = act.startswith(("continued", "postponed", "tabled", "deferred"))
-    denied = act.startswith("denied")
+    later = act.startswith(("continu", "postpon", "tabl", "defer"))  # "tabled" or Edgewater's "table"
+    denied = act.startswith(("denied", "deny"))
     if kind == "restriction":
         if not facts:
             return "On the agenda: " + ("fines or penalties" if reason == "fines" else "a new restriction")
@@ -205,6 +209,8 @@ def label(tag: dict, facts: dict | None) -> str:
 def detail(tag: dict) -> str:
     """One plain sentence under the tag: what the rule saw."""
     if tag["kind"] == "restriction":
+        if tag.get("permanent"):
+            return "The official wording describes a permanent moratorium."
         return f"The official wording describes {REASONS['restriction'][tag['reason']]}."
     return {"tax break": "The official wording describes a property-tax exemption or tax refund for a business.",
             "incentive": "The official wording describes an incentive agreement or payment to a named company or corporation.",
@@ -259,7 +265,7 @@ HOW = """<h2 id="how">How the tags work</h2>
 official wording is always one tap away.</p>
 <h3>New bans, fines or penalties</h3>
 <p>The test: <strong>you can't do it now, but you could yesterday.</strong> A decision is tagged when its
-wording describes a ban or prohibition, a temporary moratorium (for example on building permits), a new crime,
+wording describes a ban or prohibition, a moratorium, temporary or permanent (for example on building permits), a new crime,
 a limit on sales or use, or new or changed fines. Rules the board sets only for itself, such as its own ethics
 or letterhead policies, aren't tagged.</p>
 <ul class="links"><li><strong>New restriction</strong>: adopted at this vote.</li>

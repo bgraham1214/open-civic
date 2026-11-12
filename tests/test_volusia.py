@@ -185,6 +185,51 @@ class Edgewater(unittest.TestCase):
             self.assertIn("volusia.html", (out / "llms.txt").read_text())
 
 
+class EdgewaterWording(unittest.TestCase):
+    """Edgewater's Legistar records actions as verbs ("table", "deny"), and its moratoriums gave the
+    decoder and the spotlight trouble on the first live run (Nov 12, 2026)."""
+
+    def test_verb_actions(self):
+        from opencivic import spotlight
+        facts = {"yes": 3, "no": 0, "passed": True, "action": "table"}
+        self.assertEqual(people.outcome(facts), "Moved to a later meeting, 3 to 0")
+        self.assertEqual(people.outcome({**facts, "action": "deny"}), "Denied, 3 to 0")
+        self.assertEqual(people.outcome({**facts, "action": "tabled"}), "Moved to a later meeting, 3 to 0")  # counties
+        tag = {"kind": "restriction", "reason": "moratorium", "stage": "act"}
+        self.assertEqual(spotlight.label(tag, facts), "Proposed restriction (put off)")
+
+    def test_moratorium_headlines(self):
+        from opencivic.explain import explain
+        h = lambda t: explain(t)["headline"]
+        self.assertEqual(h("2nd Reading - Ordinance 2024-O-62: Request for approval for a City wide Moratorium regarding "
+                           "annexations, rezoning’s, comprehensive plan amendments, site plans, preliminary plats, and final plats"),
+                         "Pause on new approvals or permits (a moratorium)")  # was "Change to the future land-use map"
+        self.assertEqual(h("2nd Reading - Ordinance No. 2026-O-21 - Permanent Moratorium on the Acceptance, Processing, "
+                           "Review, Approval, and Issuance of Development Orders … for Data Centers"),
+                         "Permanent stop on new approvals or permits (called a moratorium)")
+        self.assertEqual(h("2nd Reading - Ordinance No. 2025-O-06: Request to amend the Florida Shores Drainage Basin "
+                           "Building Permit Moratorium."), "Change to a moratorium")
+        # Hernando's boilerplate "Unless Extended or Terminated" is not an extension
+        self.assertEqual(h("Second Public Hearing to Consider Ordinance Amending Hernando County Code to Impose Moratorium "
+                           "on Processing Applications for Development Orders and Development Permits for Data Centers for "
+                           "Period Up to 365 Days, Unless Extended or Terminated: Enacting a Temporary Moratorium on Data Centers"),
+                         "Pause on new approvals or permits (a moratorium)")
+        self.assertEqual(h("Hold a second public hearing and consider adoption of an ordinance providing for an extension of "
+                           "the moratorium on the acceptance and processing of new applications for rezonings"),
+                         "Moratorium extended")
+
+    def test_amending_a_moratorium_is_not_a_new_restriction(self):
+        from opencivic.spotlight import spot
+        self.assertEqual(spot("2nd Reading - Ordinance No. 2025-O-06: Request to amend the Florida Shores Drainage Basin "
+                              "Building Permit Moratorium.", "", "approve"), [])
+        self.assertEqual(spot("2nd Reading - Ordinance 2024-O-63: Request for approval for a Building Permit Moratorium "
+                              "within the Florida Shores Drainage Basin", "", "approve")[0]["reason"], "moratorium")
+        from opencivic.spotlight import detail
+        perm = spot("2nd Reading - Ordinance No. 2026-O-21 - Permanent Moratorium on the Acceptance, Processing, Review, "
+                    "Approval, and Issuance of Development Orders … for Data Centers", "", "approve")[0]
+        self.assertEqual(detail(perm), "The official wording describes a permanent moratorium.")
+
+
 class Vocabulary(unittest.TestCase):
     def test_city_words(self):
         e, o = JURISDICTIONS["edgewater"], JURISDICTIONS["oakhill"]
