@@ -132,8 +132,18 @@ jobs:
           echo "uploaded $uploaded new file(s)" | tee -a out/manifest-log.txt
 
       # --- 3. Text, page by page; OCR for scanned pages (Phase 1, step 4). ---
+      # Ubuntu's package mirrors sometimes stop resolving for a few minutes (Nov 11, 2026: the
+      # whole night was lost). Try four times, two minutes apart, before giving up.
       - name: Install PDF and OCR tools
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null
+        run: |
+          for i in 1 2 3 4; do
+            sudo apt-get update -qq -o Acquire::Retries=3 \
+              && sudo apt-get install -y -qq -o Acquire::Retries=3 poppler-utils tesseract-ocr >/dev/null \
+              && exit 0
+            echo "::warning::package install attempt $i failed; retrying in 2 minutes"
+            sleep 120
+          done
+          exit 1
       - name: Hillsborough Clerk BOCC roll calls (parse the reports)
         continue-on-error: true
         run: |
@@ -232,6 +242,13 @@ jobs:
         if: always()
         run: |
           rm -rf out/files
+          # A run that stopped early never reached IndexNow; keep the last record so the
+          # next night sends only what changed, not every page again.
+          if [ ! -s out/indexnow-submitted.json ]; then
+            git fetch -q --depth 1 origin +live-samples:refs/remotes/origin/live-samples \
+              && git show origin/live-samples:indexnow-submitted.json > out/indexnow-submitted.json \
+              || rm -f out/indexnow-submitted.json
+          fi
           cd out
           git init -q -b live-samples
           git add -A
