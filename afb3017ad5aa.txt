@@ -1,0 +1,51 @@
+﻿User-agent: *
+
+# Admin and internal areas
+Disallow: /_Admin/
+Disallow: /elmah.axd/
+Disallow: /Elmah/
+Disallow: /ex/
+Disallow: /Error/
+Disallow: /Webcheck
+
+# API endpoints
+Disallow: /api/
+Disallow: /API/
+
+# Email functionality
+Disallow: /_Email
+Disallow: /Senators/*/email
+Disallow: /Offices/email/
+
+# Tracker functionality
+Disallow: /Tracker/Login
+Disallow: /Tracker/ManageAccount/
+Disallow: /Tracker/Signup
+Disallow: /Tracker/ChangeEmail
+Disallow: /Tracker/ResetPassword
+Disallow: /Tracker/RemoveAccount
+
+# Legacy redirects
+Disallow: /Legislators/index.cfm
+Disallow: /Public/GetFile.cfm
+Disallow: /SenateKids/
+Disallow: /Mail
+
+# Mobile Site
+Disallow: /MobileSite/
+
+
+# Allow search engines to crawl main content areas
+Allow: /About/
+Allow: /Committees/
+Allow: /Jobs/
+Allow: /Laws/
+Allow: /Media/
+Allow: /Offices/
+Allow: /Public/
+Allow: /Reference/
+Allow: /Search/
+Allow: /Senators/
+Allow: /Session/
+
+Crawl-delay: 10
