@@ -1,0 +1,1 @@
+{"indexnow_submitted": 10, "status": [200], "sample": ["companies.html", "companies/aqua-clean-environmental.html", "companies/kenyon-and-partners.html", "companies/shamrock-environmental.html", "counties.html"]}

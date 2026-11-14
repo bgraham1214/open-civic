@@ -1,0 +1,34 @@
+warning: 2017: unparsed row: 522      V17-0006           3/7/2017 9:14 AM 9
+warning: 2017: unparsed row: 523      CDD17-0025          3/7/2017 9:16 AM 5
+warning: 2017: unparsed row: 524       PRS17-0257           3/7/2017 9:34 AM 9
+warning: 2017: unparsed row: 525       PRS17-0336           3/7/2017 9:37 AM 9
+warning: 2017: unparsed row: 526       PRS17-0357           3/7/2017 9:39 AM 9
+warning: 2017: unparsed row: 534     PH/LDC              3/7/2017 6:14 PM 0
+warning: 2017: unparsed row: 535      PH/LDC              3/7/2017 6:55 PM 0
+warning: 2017: RCS 620: unreadable vote code ['V']
+warning: 2017: RCS 621: unreadable vote code ['V']
+warning: 2017: unparsed row: 654      OFF AGENDA          5/9/2017 9:46 AM 9
+warning: 2017: RCS 686: votes don't line up with the 6 member columns
+warning: 2017: RCS 687: votes don't line up with the 6 member columns
+warning: 2017: RCS 688: votes don't line up with the 6 member columns
+warning: 2017: RCS 689: votes don't line up with the 6 member columns
+warning: 2017: RCS 690: votes don't line up with the 6 member columns
+warning: 2017: RCS 691: votes don't line up with the 6 member columns
+warning: 2017: RCS 692: votes don't line up with the 6 member columns
+warning: 2017: RCS 693: votes don't line up with the 6 member columns
+warning: 2017: RCS 694: votes don't line up with the 6 member columns
+warning: 2017: RCS 695: votes don't line up with the 6 member columns
+warning: 2017: RCS 696: votes don't line up with the 6 member columns
+warning: 2017: RCS 697: votes don't line up with the 6 member columns
+warning: 2017: unparsed row: 707        D-2                 6/7/2017 11:48 AM 5                                                  NI/            Y    
+warning: 2017: unparsed row: 713     B-9 & B-10          6/7/2017 12:54 PM 0
+warning: 2017: unparsed row: 714       B-9 & B-10         6/7/2017 12:57 PM 0
+warning: 2017: unparsed row: 715       B-13               6/7/2017 1:01 PM 0
+warning: 2017: unparsed row: 724       B-11                6/7/2017 2:04 PM 0
+warning: 2017: unparsed row: 725       B-12                6/7/2017 2:09 PM 0
+warning: 2017: unparsed row: 730      B-11                 6/7/2017 2:24 PM 0
+warning: 2017: unparsed row: 734       V170004             6/13/2017 9:13 AM 9
+warning: 2017: unparsed row: 735      V170005             6/13/2017 9:14 AM 9
+warning: 2017: unparsed row: 770        F-1                6/21/2017 12:47 PM 0
+warning: 2017: RCS 778: unreadable vote code ['V']
+8128 roll calls, 2014-01-08 to 2026-09-24, 33 problems

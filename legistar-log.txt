@@ -1,0 +1,12 @@
+hillsboroughcounty: 73 events since 2025-01-01
+hillsboroughcounty: 3154 items, 5026 votes; {"events": 73, "fetched": 7, "reused": 66, "deferred": 0, "requests": 81, "errors": 0}
+hillsboroughcounty: item links {"events": 73, "fetched": 7, "reused": 66, "deferred": 0, "errors": 0, "links": 1871}
+hernandocountyfl: 128 events since 2025-01-01
+hernandocountyfl: 5121 items, 10137 votes; {"events": 128, "fetched": 24, "reused": 104, "deferred": 0, "requests": 123, "errors": 0}
+error: HTTP 410 for https://hernandocountyfl.legistar.com/MeetingDetail.aspx?LEGID=1509&GID=881&G=6D9E70B1-EE34-4778-AE40-08B82D73C4B2
+error: HTTP 410 for https://hernandocountyfl.legistar.com/MeetingDetail.aspx?LEGID=1538&GID=881&G=6D9E70B1-EE34-4778-AE40-08B82D73C4B2
+hernandocountyfl: item links {"events": 128, "fetched": 12, "reused": 114, "deferred": 0, "errors": 2, "links": 2290}
+cityofedgewater: 174 events since 2025-01-01
+cityofedgewater: 2237 items, 2489 votes; {"events": 174, "fetched": 28, "reused": 146, "deferred": 0, "requests": 67, "errors": 0}
+cityofedgewater: item links {"events": 174, "fetched": 11, "reused": 163, "deferred": 0, "errors": 0, "links": 737}
+cityofedgewater: 152 office records since 2025-01-01
