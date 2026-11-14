@@ -1,0 +1,46 @@
+{
+ "title": "Tampa Bay county records",
+ "license": "Public records",
+ "about": "Open Civic Web",
+ "about_url": "https://github.com/bgraham1214/open-civic",
+ "source": "Hillsborough County: Every roll-call vote of the County Commission since January 2014, from the Clerk's Master Voting Record (updated monthly by the Clerk, so the newest meetings appear a few weeks late; some 2016-2017 pages are scans, and 33 rows we couldn't read reliably are left out rather than guessed), plus land-use and zoning hearings (BOCC Land Use, Zoning Hearing Master, Land Use Hearing Officer) from Hillsborough's Legistar. The county's regular agendas are on a site that asks automated tools not to collect it, so full agendas are not here.; Pasco County: Agendas and minutes for the County Commission, Planning Commission and other boards, from Pasco's CivicClerk portal, and each commissioner's vote on Commission decisions, read from the Clerk's minutes (from 2025). Agenda packets are linked but not yet archived.; Hernando County: County Commission, Planning & Zoning, MPO and other public meetings from Hernando's Legistar, with agenda items, actions and each commissioner's vote. Value Adjustment Board and Special Master hearings (private residents' cases) are left out.",
+ "databases": {
+  "counties": {
+   "description": "Built 2026-11-14T15:33:59Z. Updated nightly.",
+   "tables": {
+    "meetings": {
+     "description": "Every public meeting we list, per county. agenda_link and minutes_link go to the county's own copies.",
+     "sort_desc": "date"
+    },
+    "agenda_items": {
+     "description": "Agenda items with the action taken, result, mover and seconder, as the county recorded them. votes summarises the roll call; nays names anyone voting no. areas lists Brandon, Lutz, Wesley Chapel or Spring Hill when the item's text names them.",
+     "fts_table": "agenda_items_fts",
+     "sort_desc": "date"
+    },
+    "votes": {
+     "description": "Each commissioner's or member's vote on each item (item_title is shortened; the full wording and links are in agenda_items, matched by item_key), from the county's Legistar or, for Hillsborough's full Commission, the Clerk's Master Voting Record. The Clerk's report uses Y and N (shown as Yes and No) and also X and A, which it does not define; they are shown exactly as printed.",
+     "sort_desc": "date"
+    },
+    "documents": {
+     "description": "County documents we archive (Pasco agendas and minutes). our_copy is our copy; sha256 is its fingerprint.",
+     "sort_desc": "date"
+    },
+    "pages": {
+     "description": "One row per page of every archived county document. method = ocr means machine-read from a scan.",
+     "fts_table": "pages_fts",
+     "sort_desc": "date"
+    },
+    "changes": {
+     "description": "County documents appearing, changing or disappearing.",
+     "sort_desc": "at"
+    },
+    "agenda_items_fts": {
+     "hidden": true
+    },
+    "pages_fts": {
+     "hidden": true
+    }
+   }
+  }
+ }
+}

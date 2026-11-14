@@ -1,0 +1,71 @@
+{
+ "title": "Temple Terrace City Council records",
+ "description_html": "<p>Every City Council agenda, agenda packet and set of minutes Temple Terrace has published online since Oct 2025, searchable. Each document links to the city's copy and to ours, with its SHA-256 fingerprint and the date we retrieved it.</p><p><strong>Machine-read text:</strong> pages marked <code>ocr</code> were read from scans by software and can contain errors. Always check the original page before quoting.</p>",
+ "source": "City of Temple Terrace: CivicClerk portal and CivicPlus Archive Center",
+ "license": "Public records",
+ "about": "Open Civic Web",
+ "about_url": "https://github.com/bgraham1214/open-civic",
+ "databases": {
+  "templeterrace": {
+   "description": "Built 2026-11-14T15:33:59Z. Updated nightly.",
+   "tables": {
+    "pages": {
+     "description": "One row per page of every document. method = pdftotext (the document's own text) or ocr (machine-read from a scan; may contain errors). link opens that page.",
+     "fts_table": "pages_fts",
+     "fts_pk": "id",
+     "sort_desc": "date"
+    },
+    "agenda_items": {
+     "description": "Every item on every CivicClerk agenda, with the city's item number. agenda_link opens the agenda on the city's portal.",
+     "fts_table": "agenda_items_fts",
+     "sort_desc": "date"
+    },
+    "documents": {
+     "description": "Every document version we hold. our_copy is our archived copy; sha256 is its fingerprint. still_listed = 0 means the city removed it from its listing.",
+     "sort_desc": "date"
+    },
+    "votes": {
+     "description": "Every motion recorded in the minutes: who moved and seconded it, who voted aye and nay, and the result. Machine-read from the minutes (some pages by OCR); minutes_link opens the page it came from. roll_call = 0 means the minutes only say \"unanimously carried\", so ayes lists the members recorded as present.",
+     "fts_table": "votes_fts",
+     "sort_desc": "date"
+    },
+    "contracts": {
+     "description": "Agenda items that approve a purchase, contract or agreement. Vendor names and amounts are machine-extracted from the item's wording and may be missing or incomplete; amount_stated is the first dollar figure in the text. council_vote comes from the minutes. Always check the agenda_link.",
+     "fts_table": "contracts_fts",
+     "sort_desc": "date"
+    },
+    "vendors": {
+     "description": "Vendors named in agenda items, with how many items name them. amounts_stated_when_sole_vendor adds stated amounts only for items naming one vendor. Machine-extracted; spelling variants of one company may appear separately.",
+     "sort_desc": "contracts"
+    },
+    "officials": {
+     "description": "Elected officials and charter officers, with attendance as recorded in the minutes we hold (Nov 2025 onward)."
+    },
+    "votes_fts": {
+     "hidden": true
+    },
+    "contracts_fts": {
+     "hidden": true
+    },
+    "changes": {
+     "description": "Log of documents appearing, changing, or disappearing from the city's listings, from data/manifest.jsonl.",
+     "sort_desc": "at"
+    },
+    "meetings": {
+     "description": "CivicClerk events. Times are local (Eastern). video links the city's YouTube recording when one was matched.",
+     "sort_desc": "date"
+    },
+    "videos": {
+     "description": "Uploads on the city's YouTube channel (@cityoftempleterrace), matched to meetings by the CivicClerk link in the description, the date in the title, or the live stream's start date. matched_by says which.",
+     "sort_desc": "published"
+    },
+    "pages_fts": {
+     "hidden": true
+    },
+    "agenda_items_fts": {
+     "hidden": true
+    }
+   }
+  }
+ }
+}

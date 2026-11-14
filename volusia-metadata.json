@@ -1,0 +1,46 @@
+{
+ "title": "Southeast Volusia city records",
+ "license": "Public records",
+ "about": "Open Civic Web",
+ "about_url": "https://github.com/bgraham1214/open-civic",
+ "source": "City of Edgewater: City Council meetings (regular, special and workshops) and the city's boards, from Edgewater's Legistar, with agenda items, actions and each council member's vote, from 2025. Code Enforcement/Special Magistrate hearings (private residents' cases) are left out. Agendas and minutes are linked on the city's site (its file server asks automated tools not to copy them).; City of Oak Hill: City Commission agendas and minutes posted on the city's website, from 2025, archived and searchable (the minutes are scans, read by machine). Each commissioner's vote isn't read from the minutes yet.; City of New Smyrna Beach: The city publishes its City Commission agendas and minutes only on a site that asks automated tools not to collect it, so we don't. Its own page is linked here instead.",
+ "databases": {
+  "volusia": {
+   "description": "Built 2026-11-14T15:33:59Z. Updated nightly.",
+   "tables": {
+    "meetings": {
+     "description": "Every public meeting we list, per city. agenda_link and minutes_link go to the city's own copies.",
+     "sort_desc": "date"
+    },
+    "agenda_items": {
+     "description": "Agenda items with the action taken, result, mover and seconder, as the city recorded them. votes summarises the roll call; nays names anyone voting no. Items under a consent agenda carry the consent agenda's single vote.",
+     "fts_table": "agenda_items_fts",
+     "sort_desc": "date"
+    },
+    "votes": {
+     "description": "Each council member's vote on each item, from the city's Legistar (item_title is shortened; the full wording and links are in agenda_items, matched by item_key).",
+     "sort_desc": "date"
+    },
+    "documents": {
+     "description": "City documents we archive (Oak Hill agendas and minutes). our_copy is our copy; sha256 is its fingerprint.",
+     "sort_desc": "date"
+    },
+    "pages": {
+     "description": "One row per page of every archived city document. method = ocr means machine-read from a scan.",
+     "fts_table": "pages_fts",
+     "sort_desc": "date"
+    },
+    "changes": {
+     "description": "City documents appearing, changing or disappearing.",
+     "sort_desc": "at"
+    },
+    "agenda_items_fts": {
+     "hidden": true
+    },
+    "pages_fts": {
+     "hidden": true
+    }
+   }
+  }
+ }
+}

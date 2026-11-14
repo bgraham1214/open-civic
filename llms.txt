@@ -1,0 +1,50 @@
+# Open Civic Web
+
+> Free, nonpartisan, plain-language public records of local government in Florida: around Tampa Bay, the
+> Temple Terrace City Council and the Hillsborough, Pasco and Hernando county commissions (which govern
+> Brandon, Lutz, Wesley Chapel and Spring Hill); in southeast Volusia County, the Edgewater City Council and
+> the Oak Hill City Commission. Collected nightly from official sources; every record links to its source.
+> Headlines are produced by fixed rules, not AI, and the official wording is always shown.
+
+Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
+come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace votes are read from the Clerk's minutes;
+Hernando and Edgewater votes come from their Legistar records. New Smyrna Beach isn't collected: its records site asks
+automated tools not to.
+
+## Start here
+
+- [Home: pick an area](https://bgraham1214.github.io/open-civic/index.html)
+- [Temple Terrace City Council records](https://bgraham1214.github.io/open-civic/templeterrace.html)
+- [County commission records and search](https://bgraham1214.github.io/open-civic/counties.html)
+- [Southeast Volusia city records and search](https://bgraham1214.github.io/open-civic/volusia.html): Edgewater, Oak Hill, New Smyrna Beach
+- [Public money to companies](https://bgraham1214.github.io/open-civic/companies.html): companies and organizations the governments agreed to pay (contracts, purchases, change orders, grants), decision by decision, with approved amounts (not payments) and factual flags (no competitive bidding, money added to a contract, approved over a no vote, $1 million or more on consent, conflict-of-interest abstentions)
+- [Spotlight](https://bgraham1214.github.io/open-civic/spotlight.html): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
+- [Temple Terrace City Council meetings](https://bgraham1214.github.io/open-civic/meetings/templeterrace.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Temple Terrace City Council members](https://bgraham1214.github.io/open-civic/council/templeterrace.html): each member's recorded votes
+- [Hillsborough County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hillsborough.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hillsborough County Commission members](https://bgraham1214.github.io/open-civic/commissioners/hillsborough.html): each member's recorded votes
+- [Pasco County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/pasco.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pasco County Commission members](https://bgraham1214.github.io/open-civic/commissioners/pasco.html): each member's recorded votes
+- [Hernando County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hernando.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hernando County Commission members](https://bgraham1214.github.io/open-civic/commissioners/hernando.html): each member's recorded votes
+- [Edgewater City Council meetings](https://bgraham1214.github.io/open-civic/meetings/edgewater.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Edgewater City Council members](https://bgraham1214.github.io/open-civic/council/edgewater.html): each member's recorded votes
+
+
+## Explanations
+
+- [Words you'll see](https://bgraham1214.github.io/open-civic/learn/index.html): defined terms with official sources
+- [How building and land decisions work](https://bgraham1214.github.io/open-civic/learn/land.html)
+- [How county money works](https://bgraham1214.github.io/open-civic/learn/money.html)
+
+## Data
+
+- [Data and downloads](https://bgraham1214.github.io/open-civic/data.html): SQLite databases, FollowTheMoney entities, RSS feeds
+- [Sitemap](https://bgraham1214.github.io/open-civic/sitemap.xml)
+- [Source code and raw data](https://github.com/bgraham1214/open-civic)
+
+## Optional
+
+- [Temple Terrace database (SQLite)](https://bgraham1214.github.io/open-civic/templeterrace.db)
+- [County commissions database (SQLite)](https://bgraham1214.github.io/open-civic/counties.db)
+- [Southeast Volusia cities database (SQLite)](https://bgraham1214.github.io/open-civic/volusia.db)
