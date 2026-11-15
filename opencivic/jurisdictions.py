@@ -67,9 +67,11 @@ JURISDICTIONS: dict[str, dict] = {
         "website": "https://www.oakhillfl.gov",
         "listing_pages": ["https://www.oakhillfl.gov/archives/city-commission-archive",
                           "https://www.oakhillfl.gov/archives/agenda-archives-by-year/2025-archive"],
+        # regular and special meetings and workshops; not Shade (closed) or Neighborhood meetings, or the TRC
+        "board_rx": r"^City Commission( (Special Meeting|Workshop|Budget Workshop))?$",
         "coverage": ("City Commission agendas and minutes posted on the city's website, from 2025, archived and "
-                     "searchable (the minutes are scans, read by machine). Each commissioner's vote isn't read "
-                     "from the minutes yet."),
+                     "searchable (the minutes are scans, read by machine), and each commissioner's vote, read "
+                     "from the minutes. Votes the minutes don't state clearly are left out, not guessed."),
     },
     "newsmyrnabeach": {
         "name": "City of New Smyrna Beach", "short": "New Smyrna Beach", "body": "City Commission",

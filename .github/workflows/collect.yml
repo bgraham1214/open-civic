@@ -174,6 +174,12 @@ jobs:
           set -o pipefail
           python -m opencivic.pascominutes --data-dir data --problems out/pasco-minutes-problems.jsonl 2>&1 \
             | tee out/pasco-minutes-log.txt
+      - name: Oak Hill votes (read from the Commission's minutes)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.oakhillminutes --data-dir data --problems out/oakhill-minutes-problems.jsonl 2>&1 \
+            | tee out/oakhill-minutes-log.txt
 
       # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
       - name: Build entities

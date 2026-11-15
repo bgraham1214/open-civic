@@ -21,6 +21,7 @@ import gzip
 import json
 import re
 import sqlite3
+from datetime import date
 from pathlib import Path
 
 from .civicclerk import viewer_for, viewer_links
@@ -241,11 +242,12 @@ def load(data: Path) -> dict:
                 "attachments": [a["name"] for a in i.get("attachments", [])], "matter_url": "",
                 "portal_url": agenda_at.get(i.get("event_id"), i["portal_url"].replace("/agenda", "/files"))})
     _load_pasco_minutes(lst, out, viewers)
+    _load_oakhill_minutes(lst, out)
     _load_hillsclerk(lst, out)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
                    if jurisdiction_of(k) in REGIONAL and e.get("sha256") and not is_private_body(e.get("body", ""))]
-    out["meetings"] += weblinks_meetings(state)
+    out["meetings"] += weblinks_meetings(state, misfiled_minutes(lst))
     events = [x for x in _jsonl(data / "manifest.jsonl") if jurisdiction_of(x["key"]) in REGIONAL]
     # Documents excluded under the public-roles rule: hide their earlier events (titles, links to
     # copies) and keep only the exclusion itself, with its reason.
@@ -344,9 +346,18 @@ def consent_exclusions(motion: str) -> set[str]:
     return {x.lower() for x in re.findall(r"(?<![A-Za-z])\(?\d*\.?([A-Za-z])\)?(?![A-Za-z])", m.group(1))}
 
 
-def weblinks_meetings(state: dict) -> list[dict]:
+def misfiled_minutes(lst: Path) -> dict[str, str]:
+    """Minutes the city posted under another meeting's name: document key -> the date the minutes
+    themselves give (read by opencivic.oakhillminutes)."""
+    return {d["key"]: d["stated_date"] for d in _jsonl(lst / "oakhill-minutes-docs.jsonl")
+            if d.get("stated_date") and d["stated_date"] != d["date"]}
+
+
+def weblinks_meetings(state: dict, misfiled: dict[str, str] | None = None) -> list[dict]:
     """Meetings of governments that post documents as web-page links (Oak Hill), one per date and
-    meeting type, built from the documents themselves. An amended agenda or minutes wins."""
+    meeting type, built from the documents themselves. An amended agenda or minutes wins. Minutes
+    that turn out to be another meeting's (misfiled) aren't this meeting's minutes; the comment says so."""
+    misfiled = misfiled or {}
     accounts = weblinks_sites()
     groups: dict[tuple, list[dict]] = {}
     for k, e in state.items():
@@ -357,7 +368,7 @@ def weblinks_meetings(state: dict) -> list[dict]:
     out = []
     for (slug, account, d, body), docs in sorted(groups.items()):
         def best(kind: str) -> dict:
-            ds = [x for x in docs if x["kind"] == kind]
+            ds = [x for x in docs if x["kind"] == kind and x.get("key") not in misfiled]
             return next((x for x in ds if re.search(r"amend", x["title"], re.I)), ds[0] if ds else {})
         ag, mn = best("Agenda"), best("Minutes")
         out.append({"county": slug, "key": f"weblinks:{account}:meeting:{d}:{re.sub(r'[^a-z]+', '-', body.lower()).strip('-')}",
@@ -365,8 +376,38 @@ def weblinks_meetings(state: dict) -> list[dict]:
                     "agenda_status": "Published" if ag else "", "minutes_status": "Published" if mn else "",
                     "agenda_url": ag.get("url", ""), "minutes_url": mn.get("url", ""),
                     "agenda_copy_url": ag.get("copy_url", ""), "minutes_copy_url": mn.get("copy_url", ""),
-                    "portal_url": "", "comment": ""})
+                    "portal_url": "", "comment": "; ".join(
+                        f"The file the city posted as these minutes is the minutes of {_long(misfiled[x['key']])}."
+                        for x in docs if x["kind"] == "Minutes" and x.get("key") in misfiled)})
     return out
+
+
+def _long(d: str) -> str:
+    y, m, dd = (int(x) for x in d.split("-"))
+    return f"{date(y, m, dd):%B} {dd}, {y}"
+
+
+def _load_oakhill_minutes(lst: Path, out: dict) -> None:
+    """Oak Hill's decisions and votes, read from the Commission's minutes by opencivic.oakhillminutes.
+    A short motion ("To accept") reads better under its agenda item's title; a motion with its own
+    wording is the headline, with the agenda item beneath, as for Temple Terrace."""
+    for n, a in enumerate(_jsonl(lst / "oakhill-minutes-actions.jsonl")):
+        motion, title = a.get("motion", ""), a.get("title", "")
+        if not motion and not title:
+            title = f"A motion (the minutes don't give its wording; see page {a['page']})"
+        own = motion if motion and title and len(motion.split()) > 3 else ""
+        if a.get("caption"):  # the ordinance's own words: "AN ORDINANCE … PROHIBITING SLEEPING ON PUBLIC PROPERTY …"
+            title = f"{title}. {a['caption']}" if title else a["caption"]
+        out["items"].append({
+            "county": "oakhill", "key": a["key"], "date": a["date"], "body": a["body"], "number": a.get("number", ""),
+            "title": title or motion, **({"motion": own} if own else {}), "matter_type": "", "file_number": "",
+            "action": a["action"], "result": a["result"], "mover": a.get("mover", ""), "seconder": a.get("seconder", ""),
+            "action_text": f"Motion: {motion}" if motion else "", "consent": False, "attachments": [],
+            "matter_url": "", "portal_url": "", "minutes_url": a.get("minutes_url", ""),
+            "minutes_copy_url": a.get("minutes_copy_url", ""), "minutes_page": a.get("page"),
+            "minutes_code": a.get("number", ""), "sequence": n, "event_id": None})
+    keys = {i["key"] for i in out["items"] if i["county"] == "oakhill"}
+    out["votes"] += [{**v, "county": "oakhill"} for v in _jsonl(lst / "oakhill-minutes-votes.jsonl") if v["item_key"] in keys]
 
 
 def _load_pasco_minutes(lst: Path, out: dict, viewers: dict[int, str] | None = None) -> None:

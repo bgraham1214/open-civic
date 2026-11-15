@@ -459,8 +459,11 @@ def main(argv: list[str] | None = None) -> int:
     lite = {"templeterrace.db": _lite(site_url),
             **{f"{r['db']}.db": region.lite(site_url, "", r["db"]) for r in REGIONS.values()}}
     latest: dict[str, str] = {}
-    try:  # newest meeting of governments with documents but no meeting pages yet (Oak Hill)
+    try:  # newest Commission meeting of governments that post documents as links (Oak Hill), minutes or not
+        from .jurisdictions import JURISDICTIONS
         for m in region.weblinks_meetings(json.loads((args.data_dir / "state.json").read_text("utf-8"))):
+            if not re.match(JURISDICTIONS[m["county"]].get("board_rx") or "", m.get("body") or ""):
+                continue
             if m["date"] <= today and m["date"] > latest.get(m["county"], ""):
                 latest[m["county"]] = m["date"]
     except (OSError, ValueError):

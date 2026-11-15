@@ -276,7 +276,8 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
         topic, headline, terms = "land", f"Zoning decision on a planned development{at}", ["rz-pd"]
     elif re.search(r"\brz-std\b", low):
         topic, headline, terms = "land", f"Rezoning to a standard zone{at}", ["rz-std"]
-    elif re.search(r"hc/cpa|comprehensive plan|future land use|land use plan amendment", low):
+    elif re.search(r"hc/cpa|comprehensive plan|future land use|land use plan amendment", low) and not re.search(
+            r"comprehensive plan (?:review )?(?:committee|board)", low):  # a committee's members (Oak Hill, Dec 8, 2025)
         topic = "land"
         if re.search(r"text amendment", low) or (
                 not re.search(r"future land use|land use map|\bflu\b", low)
@@ -327,7 +328,8 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
         headline = ("County law on synthetic drugs" if "synthetic drug" in low
                     else "New or changed county law (ordinance)")
     # --- people
-    elif re.search(r"\b(appoint|reappoint|appointments?|nominat)", low):
+    elif re.search(r"\b(appoint|reappoint|appointments?|nominat)", low) or re.search(
+            r"^to approve [a-z .,'’&-]{3,200}? (?:to|for) the [\w ]{0,50}\b(?:committee|board)\b", low):
         topic, headline = "people", "Appointments to boards and committees"
     elif re.search(r"employment agreement|contract extension with county administrator|(hire|select|appoint)\w* [\w ]{0,30}county (administrator|attorney)", low):
         topic, headline = "people", "County leadership contract or staffing"

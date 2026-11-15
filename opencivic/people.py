@@ -462,6 +462,10 @@ FOOTERS = {
               "only members who voted no, abstained or were absent; everyone else present is counted as yes. "
               "Items whose minutes we couldn't read with confidence (several motions on one item, for example) "
               "are left out."),
+    "oakhill": ("Votes read from the Oak Hill City Commission's minutes, which are scanned documents read by machine "
+                "(2025 on). Some minutes list each member's vote; others say \"passed unanimously\" or name only "
+                "the members who voted no, and then everyone else at the roll call is counted as yes. Votes the "
+                "minutes don't state clearly are left out, not guessed."),
 }
 
 
@@ -481,6 +485,10 @@ def city_roles(data: Path, county: str = "templeterrace") -> dict[str, list[str]
     (legistar-<client>-officers.jsonl), latest seat on the main board; "Councilwoman" and
     "Councilman" both read "Council Member"."""
     j = JURISDICTIONS[county]
+    if county == "oakhill":  # titles as the newest minutes write them (opencivic.oakhillminutes)
+        path = data / "listings" / "oakhill-minutes-members.jsonl"
+        rows = [json.loads(x) for x in path.read_text("utf-8").splitlines() if x.strip()] if path.exists() else []
+        return {o["name"]: ["Mayor"] if o.get("title") == "Mayor" else [j["member_title"]] for o in rows}
     if county == "templeterrace":
         from .council import members
         return {o["name"]: ["Mayor"] if "Mayor" in o.get("roles", []) else ["Council Member"] for o in members(data)}

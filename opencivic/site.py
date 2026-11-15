@@ -370,6 +370,9 @@ def home(out: Path, today: str, tt: dict, latest: dict[str, str] | None = None) 
             bits.append("The Clerk publishes votes a few weeks after each meeting.")
         if j in ("pasco", "templeterrace"):
             bits.append("Votes are read from the Clerk's minutes, which come out a few weeks after each meeting.")
+        if latest.get(j) and past and latest[j] > past[-1]:  # Oak Hill: agendas are posted long before minutes
+            bits.append(f"Agendas are archived through {e(weekday_date(latest[j]))}; a meeting's votes appear "
+                        "here once the city posts its minutes.")
         if past or coming:
             when = " ".join(bits)
         feed = ("feed.xml" if j == "templeterrace" else f"feeds/{j}.xml" if jur["govt"] == "city"
