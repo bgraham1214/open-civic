@@ -119,6 +119,71 @@ class Edgewater(unittest.TestCase):
                               ("Eric Rainbird", "Yes"), ("Mike Thomas", "Yes")])
             self.assertEqual(items[52956]["number"], "9.c.")  # Legistar's sequence puts it under 9. Public Hearings
 
+    def _outline(self, rows):
+        """rows: (number, title, action_text or None); items with action_text carry a 2-person roll call."""
+        out = {"items": [], "votes": []}
+        for seq, (n, title, motion) in enumerate(rows):
+            key = f"legistar:cityofedgewater:item:{seq}"
+            out["items"].append({"county": "edgewater", "event_id": 1, "sequence": seq, "item_id": seq, "key": key,
+                                 "number": n, "title": title, "action": "approve" if motion else "",
+                                 "result": "Pass" if motion else "", "action_text": motion or ""})
+            if motion:
+                out["votes"] += [{"county": "edgewater", "item_key": key, "person": p, "vote": "Yes",
+                                  "key": f"legistar:cityofedgewater:vote:{seq}:{k}"} for k, p in enumerate(("A", "B"))]
+        region._legistar_outline("edgewater", out)
+        items = {i["number"]: i for i in out["items"]}
+        voted = {}
+        for v in out["votes"]:
+            voted.setdefault(v["item_key"], []).append(v)
+        return items, {n: len(voted.get(i["key"], [])) for n, i in items.items()}
+
+    def test_consent_vote_filed_on_an_item(self):
+        # Sep 14, 2026: no action on the section line; 8b pulled and voted alone; 8d carries the consent vote
+        items, votes = self._outline([
+            ("8.", "CONSENT AGENDA", None),
+            ("a.", "Authorization to Dispose of Surplus Asset Item", None),
+            ("b.", "Approval of Mitigation Credit Agreements", "A motion was made by Councilwoman Dolbow, second by "
+             "Councilman Thomas, to approve Consent Agenda Item 8b. The MOTION was APPROVED by the following vote:"),
+            ("c.", "Lines of Coverage Insurance for FY 2027", None),
+            ("d.", "Lift Station #21 and Lift Station #27 Rehabilitation", "A motion was made by Councilwoman Dolbow, "
+             "second by Councilwoman Gillis, to approve the Consent Agenda excluding Item 8b. The MOTION was APPROVED by the following vote:"),
+            ("9.", "PUBLIC HEARINGS, ORDINANCES AND RESOLUTIONS", None),
+            ("a.", "Resolution No. 2026-R-29", None),
+        ])
+        self.assertNotIn("8.", items)  # no action: dropped
+        self.assertEqual(votes, {"8.a.": 2, "8.b.": 2, "8.c.": 2, "8.d.": 2, "9.a.": 0})
+        self.assertEqual(items["8.a."]["consent_of"], items["8.d."]["key"])
+        self.assertNotIn("consent_of", items["8.b."])  # its own vote
+        self.assertFalse(items["8.d."].get("consent_section"))  # 8d is a decision of its own, not a section line
+
+    def test_items_left_out_of_the_consent_vote(self):
+        # Sep 22, 2025: 8e was pulled and has no recorded vote, so it doesn't take the consent vote
+        items, votes = self._outline([
+            ("8.", "CONSENT AGENDA", "A motion was made by Councilwoman Gillis, second by Councilwoman Dolbow, to approve the "
+             "Consent Agenda with the exception of items 8d & 8e. The MOTION was APPROVED by the following vote:"),
+            ("a.", "Approve the agreement with Ryan Knight, Esq.", None),
+            ("d.", "Accept the Donation of a Used Custom Concession Trailer", "A motion was made by Councilwoman Dolbow, "
+             "second by Councilwoman Gillis, to approve Consent No. AR-2025-0365. The MOTION was APPROVED by the following vote:"),
+            ("e.", "AR-2025-0384: Request for the acceptance of a donation", None),
+        ])
+        self.assertEqual(votes, {"8.": 2, "8.a.": 2, "8.d.": 2, "8.e.": 0})
+        self.assertFalse(items["8.e."].get("consent"))
+        self.assertTrue(items["8."]["consent_section"])
+
+    def test_consent_exclusion_wording(self):
+        ex = region.consent_exclusions
+        self.assertEqual(ex("to approve the Consent Agenda excluding (d) and (e). The MOTION was APPROVED"), {"d", "e"})
+        self.assertEqual(ex("to approve the Consent Agenda minus A and B. The MOTION was APPROVED"), {"a", "b"})
+        # Aug 4, 2025, under section 8.: the letters still count, whatever number comes first
+        self.assertEqual(ex("to approve the Consent Agenda excluding items 7d and 7g. The MOTION was APPROVED"), {"d", "g"})
+        self.assertEqual(ex("to approve the Consent Agenda excluding Item 8b. The MOTION was APPROVED"), {"b"})
+        self.assertEqual(ex("to approve the Consent Agenda. The MOTION was APPROVED by the following vote: except"), set())
+        rx = region.CONSENT_MOTION_RX
+        self.assertTrue(rx.search("to approve the CONSENT AGENDA. The MOTION"))
+        self.assertTrue(rx.search("to approve all items listed within the Consent Agenda."))
+        self.assertFalse(rx.search("to approve Consent Agenda Item 8b."))
+        self.assertFalse(rx.search("to approve Consent Agenda A."))
+
     def test_council_pages_and_hub(self):
         with tempfile.TemporaryDirectory() as d:
             data = make_data(Path(d))

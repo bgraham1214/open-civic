@@ -266,6 +266,16 @@ def _legistar_outline(slug: str, out: dict) -> None:
     section line is then marked consent_section, so the vote isn't counted twice. Section headings with
     no action ("6. CITIZEN COMMENTS") and unnumbered notices ("Pursuant to Chapter 286, F.S. …") are
     left out: they aren't items anyone decides on.
+
+    Two variants seen in Edgewater's record (checked Nov 15, 2026 over every meeting since 2025):
+    - The Clerk sometimes files the consent vote on one item under the section instead of on the
+      section line (Sep 14, 2026: item 8d's motion is "to approve the Consent Agenda excluding Item
+      8b"). That item keeps its vote as its own decision, and the other items take it.
+    - The motion can leave items out ("excluding (d) and (e)", "minus A and B", "with the exception of
+      items 8d & 8e"). A left-out item never takes the consent vote, even when it has no vote of its
+      own (Sep 22, 2025: 8e was pulled and no vote was recorded). Letters are matched whatever number
+      the motion puts before them ("excluding items 7d and 7g" under section 8., Aug 4, 2025), so an
+      item the motion might mean is never given a vote it might not have had.
     """
     items = [i for i in out["items"] if i["county"] == slug]
     votes_by_item: dict[str, list[dict]] = {}
@@ -276,7 +286,8 @@ def _legistar_outline(slug: str, out: dict) -> None:
     for i in items:
         by_event.setdefault(i.get("event_id"), []).append(i)
     for ev_items in by_event.values():
-        section, consent_head = "", None
+        sections: list[tuple[dict, list[dict]]] = []
+        section = ""
         for i in sorted(ev_items, key=lambda i: (i.get("sequence", 0), i.get("item_id", 0))):
             n = (i.get("number") or "").strip()
             if not n and not i.get("action"):
@@ -284,24 +295,53 @@ def _legistar_outline(slug: str, out: dict) -> None:
                 continue
             if re.fullmatch(r"\d+\.", n):
                 section = n
-                consent_head = i if re.search(r"\bconsent agenda\b", i["title"], re.I) and i.get("action") else None
+                sections.append((i, []))
                 if not i.get("action"):
                     i["_drop"] = True
                 continue
             if section and re.fullmatch(r"[a-z]\.", n):
                 i["number"] = f"{section}{n}"
-            if consent_head and section and not i.get("action") and n:
-                head_votes = votes_by_item.get(consent_head["key"], [])
-                if not head_votes:
+            if section and n:
+                sections[-1][1].append(i)
+        for head, subs in sections:
+            if not re.search(r"\bconsent agenda\b", head["title"], re.I):
+                continue
+            carrier = head if head.get("action") else next(
+                (s for s in subs if s.get("action") and CONSENT_MOTION_RX.search(s.get("action_text") or "")), None)
+            if carrier is None or not votes_by_item.get(carrier["key"]):
+                continue
+            head_votes = votes_by_item[carrier["key"]]
+            left_out = consent_exclusions(carrier.get("action_text") or "")
+            for i in subs:
+                if i is carrier:
+                    i["consent"] = True
                     continue
-                i.update(consent=True, action=consent_head["action"], result=consent_head.get("result", ""),
-                         mover=consent_head.get("mover", ""), seconder=consent_head.get("seconder", ""),
-                         consent_of=consent_head["key"])
-                consent_head["consent_section"] = True
+                if i.get("action") or i["number"].rstrip(".")[-1:].lower() in left_out:
+                    continue
+                i.update(consent=True, action=carrier["action"], result=carrier.get("result", ""),
+                         mover=carrier.get("mover", ""), seconder=carrier.get("seconder", ""),
+                         consent_of=carrier["key"])
+                if carrier is head:
+                    head["consent_section"] = True
                 # same roll call, filed under this item: legistar:<client>:vote:<item id>:<VoteId>
                 out["votes"] += [{**v, "key": ":".join(v["key"].split(":")[:3] + [str(i["item_id"]), v["key"].split(":")[-1]]),
-                                  "item_key": i["key"], "consent_of": consent_head["key"]} for v in head_votes]
+                                  "item_key": i["key"], "consent_of": carrier["key"]} for v in head_votes]
     out["items"] = [i for i in out["items"] if not i.pop("_drop", False)]
+
+
+# "to approve the Consent Agenda", "approve all items listed within the Consent Agenda"; not "approve
+# Consent Agenda Item 8b" (one pulled item) or "approve Consent No. AR-2025-0365"
+CONSENT_MOTION_RX = re.compile(r"\bapprove (?:all items listed within )?the consent agenda\b(?!\s+items?\b)", re.I)
+_EXCLUDE_RX = re.compile(r"\b(?:excluding|minus|with the exception of|except(?: for)?)\b(.*?)(?:\.\s|\. The MOTION|$)", re.I | re.S)
+
+
+def consent_exclusions(motion: str) -> set[str]:
+    """The item letters a consent motion leaves out, lower case: "excluding (d) and (e)" → {d, e};
+    "with the exception of items 8d & 8e" → {d, e}; "minus A and B" → {a, b}."""
+    m = _EXCLUDE_RX.search(re.split(r"The MOTION", motion, maxsplit=1, flags=re.I)[0])
+    if not m:
+        return set()
+    return {x.lower() for x in re.findall(r"(?<![A-Za-z])\(?\d*\.?([A-Za-z])\)?(?![A-Za-z])", m.group(1))}
 
 
 def weblinks_meetings(state: dict) -> list[dict]:
