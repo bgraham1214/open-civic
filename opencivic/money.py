@@ -52,6 +52,9 @@ LEAD_WORDS = re.compile(
     r"first|second|third|fourth|fifth|no\.?|number|and/or|its|their|that|this|which|subject)\s+)+", re.I)
 # A person introduced before the company ("Mark Keschl of Meridien Development, LLC"): keep the company only.
 PERSON_OF = re.compile(r"^(?:Mr\.|Ms\.|Mrs\.|Dr\.)?\s*[A-Z][a-z]+(?:\s[A-Z]\.)?\s[A-Z][a-z'’-]+\s(?:of|with|for|representing)\s")
+# A contract number written before the name: "FM24-002 Bandes Construction Company",
+# "No.FM24-021-Williamson Dacar Associates, Inc." (not "A-1 Florida Sod Inc.": two digits needed)
+CONTRACT_NO = re.compile(r"^(?:No\.?\s*)?[A-Z]{1,5}\d{2,}(?:-\d+)+[-–\s]+")
 NOT_COMPANY = re.compile(
     r"^(?:hills\.?|hillsborough|pasco|hernando|volusia|pinellas|polk|citrus|sumter|manatee)(?:\s+co\.?|\s+county)\b|"
     r"\bcounty(?: of)?$|^(?:city|town|state|county|school|board|department|florida department|united states)\b|"
@@ -114,6 +117,7 @@ def clean_name(raw: str) -> str:
         prev = n
         n = LEAD_WORDS.sub("", n).strip(" ,;:–-")
         n = re.sub(r"^(?:(?:inc|llc|corp|co)\.?,?\s+(?:and\s+)?|[a-z]\s+|&\s*|[\d,.]+\s+)", "", n, flags=re.I)
+        n = CONTRACT_NO.sub("", n)
         n = re.split(r"\s(?:[–-]|from|with|w/|to|by|between|and/or)\s(?=[A-Z])", n, flags=re.I)[-1]
     n = re.sub(r",?\s+a\s+(?:Florida|Delaware|foreign)\s.*$", "", n).strip(" ,")
     if len(n) < 5 or len(n) > 80 or NOT_COMPANY.search(n) or not re.search(SUFFIXES + r"$", n, re.I):
@@ -128,6 +132,8 @@ def key(name: str) -> str:
     k = name.lower().replace("&", " and ").replace("’", "'")
     k = re.sub(r"\bu\.?\s?s\.?\b", "us", k)
     k = re.sub(r"[.,'()]", " ", k)
+    k = re.sub(r"\b(?:svcs?|service)\b", "services", k)  # "G.A. Food Svcs", "… Service", "… Services"
+    k = re.sub(r"\b([a-z])\s+(?=[a-z]\b)", r"\1", k)  # initials: "g a food" (G.A.) is "ga food" (GA)
     k = re.sub(r"\b(?:inc|incorporated|llc|l l c|corp|corporation|company|co|lp|l p|llp|lllp|p a|pa|pllc|ltd|n a|the)\b", " ", k)
     return re.sub(r"\s+", " ", k).strip()
 

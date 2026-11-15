@@ -26,11 +26,20 @@ class Names(unittest.TestCase):
         self.assertEqual(c("Mark Keschl of Meridien Development, LLC"), "Meridien Development, LLC")
         self.assertEqual(c("As Needed Ford Motor Company"), "Ford Motor Company")
         self.assertEqual(c("Hills. Co."), "")
+        # contract numbers before the name (seen on companies.html, Nov 15, 2026)
+        self.assertEqual(c("FM24-002 Bandes Construction Company"), "Bandes Construction Company")
+        self.assertEqual(c("No.FM24-021-Williamson Dacar Associates, Inc."), "Williamson Dacar Associates, Inc.")
+        self.assertEqual(c("A-1 Florida Sod Inc."), "A-1 Florida Sod Inc.")
 
     def test_one_company_many_spellings(self):
         self.assertEqual(money.key("Lennar Homes, LLC"), money.key("Lennar Homes LLC"))
         self.assertEqual(money.key("U.S. Water Services Corporation"), money.key("US Water Services Corporation"))
         self.assertEqual(money.key("Bandes Construction Co."), money.key("Bandes Construction Company"))
+        # three spellings of one company on companies.html, Nov 15, 2026
+        self.assertEqual({money.key(n) for n in ("G.A. Food Svcs of Pinellas County Inc.",
+                                                 "G.A. Food Service of Pinellas County Inc.",
+                                                 "GA Food Services of Pinellas County Inc.")}, {"ga food services of pinellas county"})
+        self.assertEqual(money.key("A.J. Landscaping LLC"), money.key("AJ Landscaping, LLC"))
         names = [n for n, _, _ in money.payees("Award to Area Agency on Aging of Pasco-Pinellas, Inc. – $10.00")]
         self.assertEqual(names, ["Area Agency on Aging of Pasco-Pinellas, Inc."])
 
