@@ -319,7 +319,7 @@ _BEFORE_NAME = {"for", "with", "to", "through", "from", "by", "that", "via", "un
 def _cap(w: str) -> str:
     core = w.strip("(),.;:\"'")
     if (core.rstrip(".") in _KEEP_UPPER or (len(core) <= 4 and core.isalpha() and not re.search(r"[AEIOUY]", core))
-            or re.fullmatch(r"(?:[A-Z]\.){2,}|[A-Z]{1,2}&[A-Z]{1,2}", core)):
+            or re.fullmatch(r"(?:[A-Z]\.){1,}[A-Z]\.?|[A-Z]{1,2}&[A-Z]{1,2}", core)):
         return w  # LLC, USA, initials (HDR, CPH, U.S.A., H&R)
     if core.upper().rstrip(".") in {"INC", "CORP", "LTD"}:
         return w[:1] + w[1:].lower()
@@ -412,8 +412,17 @@ def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
     for k, c in companies.items():
         c["name"] = max(c["names"].items(), key=lambda kv: (kv[1], -len(kv[0])))[0]
         c["rows"].sort(key=lambda x: (x["date"], x["row"]["item"]["key"]), reverse=True)
+        # One matter recorded on several lines of one meeting (Deltona, Jul 21, 2025: file 15-9815 twice,
+        # both "approve") counts once.
+        seen = set()
+        for x in sorted(c["rows"], key=lambda x: x["row"]["item"]["key"]):
+            f = (x["row"]["item"].get("file_number") or "").strip()
+            if f and x["counted"] and x["direction"] == "out":
+                if (x["county"], x["date"], f) in seen:
+                    x["counted"], x["repeat"] = False, True
+                seen.add((x["county"], x["date"], f))
         paid = [x for x in c["rows"] if x["direction"] == "out"]
-        approved = [x for x in paid if x["row"]["facts"] and x["row"]["facts"].get("passed")]
+        approved = [x for x in paid if x["row"]["facts"] and x["row"]["facts"].get("passed") and not x.get("repeat")]
         c["paid"] = paid
         c["approved_total"] = sum(x["amount"] or 0 for x in approved if x["counted"])
         c["approved_n"] = len(approved)
@@ -457,6 +466,7 @@ def decision_html(x: dict, depth: int, show_company: str = "", company_href: str
                + (f' (from the staff report: “{_e(x["staff_label"])}”)' if x.get("staff_label") else "")
                + (" (this company's share, as the wording lists it)" if x["shared"] else "")
                + (" (a decrease to a contract: not added to the total, and not subtracted)" if x.get("decrease")
+                  else " (the same item recorded again at this meeting: counted once)" if x.get("repeat")
                   else " (a close-out: the contract's final total, not added to the total again)" if not x["counted"] else "")
                + "</p>")
     elif x["direction"] == "out":
@@ -543,7 +553,7 @@ def index_html(companies: dict[str, dict], slugs: dict[str, str]) -> str:
         for x in c["paid"]:
             g = by_gov.setdefault(x["county"], {"total": 0.0, "n": 0, "companies": defaultdict(float)})
             g["companies"][k] += 0
-            if x["row"]["facts"] and x["row"]["facts"].get("passed"):
+            if x["row"]["facts"] and x["row"]["facts"].get("passed") and not x.get("repeat"):
                 g["n"] += 1
                 if x["counted"]:
                     g["total"] += x["amount"] or 0

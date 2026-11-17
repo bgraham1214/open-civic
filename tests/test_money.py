@@ -222,6 +222,12 @@ class Pages(unittest.TestCase):
         self.assertEqual(len(cs), 1)  # the rezoning applicant isn't paid
         c = next(iter(cs.values()))
         self.assertEqual(c["approved_total"], 1_200_000)  # close-out not added again; the failed award not counted
+        # one matter on two lines of one meeting counts once
+        twice = {"pasco": {"2026-01-06": [row("Award of Bid – Sun Civil LLC – Traffic Signal – $1,000,000.00", key="a"),
+                                          row("Award of Bid – Sun Civil LLC – Traffic Signal – $1,000,000.00", key="b")]}}
+        for r in twice["pasco"]["2026-01-06"]:
+            r["item"]["file_number"] = "15-9815"
+        self.assertEqual(next(iter(money.collect(twice).values()))["approved_total"], 1_000_000)
         with tempfile.TemporaryDirectory() as d:
             out = Path(d)
             site.configure("https://example.github.io/open-civic/", "2026-11-12T20:00:00Z")
@@ -347,6 +353,7 @@ class AllCapitals(unittest.TestCase):
             ("CONTRACT BETWEEN TAYLOR COUNTY BOARD OF COUNTY COMMISSIONERS AND LAMPL HERBERT CONSULTANTS, INC. FOR $5",
              "Lampl Herbert Consultants, Inc."),
             ("AWARD TO H&R PAVING, INC. $5", "H&R Paving, Inc."),
+            ("TO APPROVE P.L.A. ELECTRIC, INC. TO PURCHASE AND INSTALL $5", "P.L.A. Electric, Inc."),
             ("AN AGREEMENT WITH MILLS+SCHONERING ARCHITECTS, LLC FOR DESIGN $5", "Mills+Schonering Architects, LLC"),
             ("TO AWARD AN AGREEMENT WITH LOUMINEL GENERAL CONTRACTOR, LLC., FOR FENCING REPAIR $5", "Louminel General Contractor, LLC."),
             ("AN AGREEMENT WITH ARCHITECTS DESIGN GROUP/ADG, LLC FOR DESIGN $5", "Architects Design Group/ADG, LLC"),
