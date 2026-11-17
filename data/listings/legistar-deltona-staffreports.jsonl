@@ -1,13 +1,13 @@
-{"amount": 250000.0, "found": true, "item_last_modified": "2025-07-22T19:57:15.58", "key": "legistar:deltona:item:116005", "label": "Cost", "matter_id": 12841, "text_id": 12970}
-{"amount": 109000.0, "found": true, "item_last_modified": "2025-08-06T21:01:08.01", "key": "legistar:deltona:item:116446", "label": "Cost", "matter_id": 12946, "text_id": 12988}
-{"amount": 100000.0, "found": true, "item_last_modified": "2025-07-22T19:57:15.587", "key": "legistar:deltona:item:116474", "label": "Cost", "matter_id": 12907, "text_id": 12948}
-{"amount": 100000.0, "found": true, "item_last_modified": "2025-07-22T19:57:15.587", "key": "legistar:deltona:item:116488", "label": "Cost", "matter_id": 12907, "text_id": 12948}
-{"amount": 91500.0, "found": true, "item_last_modified": "2025-08-19T19:53:59.85", "key": "legistar:deltona:item:116840", "label": "Cost", "matter_id": 13019, "text_id": 13061}
-{"amount": 715350.0, "found": true, "item_last_modified": "2025-12-18T15:35:56.227", "key": "legistar:deltona:item:119986", "label": "Cost", "matter_id": 13340, "text_id": 13385}
-{"found": true, "item_last_modified": "2026-07-02T16:01:19.293", "key": "legistar:deltona:item:124060", "matter_id": 13716, "text_id": 13760}
-{"found": true, "item_last_modified": "2026-07-06T13:31:06.663", "key": "legistar:deltona:item:124147", "matter_id": 13750, "text_id": 13794}
-{"found": true, "item_last_modified": "2026-07-06T13:34:05.183", "key": "legistar:deltona:item:124154", "matter_id": 13750, "text_id": 13794}
-{"found": true, "item_last_modified": "2026-07-21T19:05:53.91", "key": "legistar:deltona:item:124477", "matter_id": 13764, "text_id": 13808}
-{"found": true, "item_last_modified": "2026-07-21T19:05:53.91", "key": "legistar:deltona:item:124478", "matter_id": 13764, "text_id": 13808}
-{"amount": 133194.0, "found": true, "item_last_modified": "2026-08-27T20:19:42.617", "key": "legistar:deltona:item:124605", "label": "Cost", "matter_id": 13821, "text_id": 13865}
-{"found": true, "item_last_modified": "2026-10-20T18:43:07.52", "key": "legistar:deltona:item:126780", "matter_id": 13990, "text_id": 14035}
+{"added": false, "amount": 250000.0, "found": true, "item_last_modified": "2025-07-22T19:57:15.58", "key": "legistar:deltona:item:116005", "label": "Cost", "matter_id": 12841, "reader": 2, "text_id": 12970}
+{"added": false, "amount": 109000.0, "found": true, "item_last_modified": "2025-08-06T21:01:08.01", "key": "legistar:deltona:item:116446", "label": "Cost", "matter_id": 12946, "reader": 2, "text_id": 12988}
+{"added": false, "amount": 100000.0, "found": true, "item_last_modified": "2025-07-22T19:57:15.587", "key": "legistar:deltona:item:116474", "label": "Cost", "matter_id": 12907, "reader": 2, "text_id": 12948}
+{"added": false, "amount": 100000.0, "found": true, "item_last_modified": "2025-07-22T19:57:15.587", "key": "legistar:deltona:item:116488", "label": "Cost", "matter_id": 12907, "reader": 2, "text_id": 12948}
+{"added": false, "amount": 91500.0, "found": true, "item_last_modified": "2025-08-19T19:53:59.85", "key": "legistar:deltona:item:116840", "label": "Cost", "matter_id": 13019, "reader": 2, "text_id": 13061}
+{"added": false, "amount": 715350.0, "found": true, "item_last_modified": "2025-12-18T15:35:56.227", "key": "legistar:deltona:item:119986", "label": "Cost", "matter_id": 13340, "reader": 2, "text_id": 13385}
+{"found": true, "item_last_modified": "2026-07-02T16:01:19.293", "key": "legistar:deltona:item:124060", "matter_id": 13716, "reader": 2, "text_id": 13760}
+{"found": true, "item_last_modified": "2026-07-06T13:31:06.663", "key": "legistar:deltona:item:124147", "matter_id": 13750, "reader": 2, "text_id": 13794}
+{"found": true, "item_last_modified": "2026-07-06T13:34:05.183", "key": "legistar:deltona:item:124154", "matter_id": 13750, "reader": 2, "text_id": 13794}
+{"found": true, "item_last_modified": "2026-07-21T19:05:53.91", "key": "legistar:deltona:item:124477", "matter_id": 13764, "reader": 2, "text_id": 13808}
+{"found": true, "item_last_modified": "2026-07-21T19:05:53.91", "key": "legistar:deltona:item:124478", "matter_id": 13764, "reader": 2, "text_id": 13808}
+{"added": false, "amount": 133194.0, "found": true, "item_last_modified": "2026-08-27T20:19:42.617", "key": "legistar:deltona:item:124605", "label": "Cost", "matter_id": 13821, "reader": 2, "text_id": 13865}
+{"added": false, "amount": 1618770.0, "found": true, "item_last_modified": "2026-10-20T18:43:07.52", "key": "legistar:deltona:item:126780", "label": "Not to Exceed", "matter_id": 13990, "reader": 2, "text_id": 14035}
