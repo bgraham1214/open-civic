@@ -79,7 +79,8 @@ NOT_RESTRICT_RX = re.compile(
     r"special event|street closures?|"                     # a one-day parking or street closure
     r"exception to (?:the )?[\w ]{0,40}moratori|offenders of|"
     r"from the list of prohibited|permitted or prohibited|"
-    r"\b(?:re)?hiring of\b|adopting and enacting a new code",   # a personnel matter; a recodification
+    r"\b(?:re)?hiring of\b|adopting and enacting a new code|"   # a personnel matter; a recodification
+    r"\bvariance\b",                                            # one applicant's relief from the code
     re.I)
 UNDO_RX = re.compile(r"\b(?:repeal\w*|remov\w*|eliminat\w*|strik\w*|lift\w*|rescind\w*|end(?:s|ing)?|expir\w*|"
                      r"terminat\w*)\b(?: \w+){0,4} (?:the )?(?:moratori\w+|ban|prohibit\w*|restrictions?)", re.I)
@@ -98,12 +99,14 @@ FINAL_RX = re.compile(r"\b(?:second|2nd|final) (?:public )?hearing|\b(?:hold|con
 
 # --- breaks for companies ---------------------------------------------------------------------------
 TAX_RX = re.compile(r"ad valorem tax exemption|\btax abatement|qualified target industry|\bQTI\b|tax refund program", re.I)
-NOT_TAX_RX = re.compile(r"refunding (?:revenue )?bonds|refunding revenue|research to any other|school", re.I)
+NOT_TAX_RX = re.compile(r"refunding (?:revenue )?bonds|refunding revenue|research to any other|school|"
+                        r"\brevocation\b|\brevok\w+|\brescind\w*", re.I)  # a break taken back isn't a break given
 INCENTIVE_RX = re.compile(r"\b(?:economic|business|investment|job creation|jobs|redevelopment|film)\b[^.;–]{0,30}\bincentives?\b|"
                           r"\bincentives? (?:agreement|package|grant)|cooperative economic development agreement|"
                           r"economic development (?:agreement|grant)|(?:mobility|impact) fee buy-?down", re.I)
 NOT_INCENTIVE_RX = re.compile(r"septic|housing incentive|apartment incentive|inclusionary|regional incentive|"
-                              r"code compliance|surety bond|escrow agreement|performance guarantee|weatherization|terminat", re.I)
+                              r"code compliance|surety bond|escrow agreement|performance guarantee|weatherization|terminat|"
+                              r"\brevocation\b|\brevok\w+|\brescind\w*|county incentive grant program|\bCIGP\b", re.I)
 FORGIVE_RX = re.compile(r"\bforgiv\w+ (?:\w+ ){0,2}(?:fines?|liens?|penalt\w+)|\bwaiv\w* (?:the |all )?(?:\w+ ){0,2}"
                         r"(?:fees?|fines?|penalt\w+|liens?)\b|\blien (?:reduction|release|forgiveness)|\bfine reduction|"
                         r"\bimpact fee (?:waiver|deferral|credit|reduction)|\bwaiver of (?:the )?(?:civil )?penalt", re.I)
@@ -112,7 +115,7 @@ FORGIVE_RX = re.compile(r"\bforgiv\w+ (?:\w+ ){0,2}(?:fines?|liens?|penalt\w+)|\
 LAND_RX = re.compile(r"\bsurplus (?:real )?(?:property|land)|\bsale of (?:county|county-owned)\b|"
                      r"\b(?:aviation ground|corporate hangar|hangar) lease|\bground lease\b[^.]{0,120}\bairport|"
                      r"\btransferring hangar", re.I)
-NOT_LAND_RX = re.compile(r"tangible|vehicle|equipment|fixed asset|trailer|mineral rights|"
+NOT_LAND_RX = re.compile(r"tangible|vehicle|equipment|fixed asset|trailer|mineral rights|\bvan\b|\bdonat\w+|"
                          r"not-for-profit|nonprofit|non-profit|habitat for humanity|community services|food bank|chapel|"
                          r"church|ministr|housing authority|housing services|community development corporation|school|acquir|association|\bseller\b", re.I)
 NO_BID_RX = re.compile(r"\bsole[- ]source|\bsingle[- ]source|\bexempt\w* from (?:the )?competitive|"
@@ -260,14 +263,23 @@ def badges(item: dict, facts: dict | None, depth: int) -> str:
 def entries(by_meeting: dict[str, dict[str, list[dict]]]) -> list[dict]:
     """Every tagged decision or agenda item, newest first: {county, date, kind, label, row}."""
     out = []
+    seen: dict[tuple, bool] = {}
     for county, by_date in by_meeting.items():
         for d, rows in by_date.items():
             voted = any(r["votes"] for r in rows)
             for r in rows:
                 facts = r["facts"] if r["votes"] else None
                 for t in for_item(r["item"]):
-                    out.append({"county": county, "date": d, "kind": t["kind"], "tag": t, "label": label(t, facts),
-                                "row": r, "voted": bool(r["votes"]), "meeting_voted": voted})
+                    # some records list one ordinance several times in a meeting (each reading or roll call);
+                    # the spotlight lists it once per meeting, a voted row first
+                    same = (county, d, t["kind"], _norm(r["item"].get("title") or "")[:200])
+                    if same in seen and not (r["votes"] and not seen[same]):
+                        continue
+                    if same in seen:
+                        out[:] = [x for x in out if x.get("_same") != same]
+                    seen[same] = bool(r["votes"])
+                    out.append({"_same": same, "county": county, "date": d, "kind": t["kind"], "tag": t,
+                                "label": label(t, facts), "row": r, "voted": bool(r["votes"]), "meeting_voted": voted})
     out.sort(key=lambda x: (x["date"], x["county"]), reverse=True)
     return out
 

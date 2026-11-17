@@ -30,8 +30,8 @@ from .region import areas_in, load
 from .site import absolute, write_assets
 from . import site
 
-YES = {"yes", "aye", "in favor", "yea", "y"}
-NO = {"no", "nay", "opposed", "n"}
+YES = {"yes", "aye", "ayes", "in favor", "yea", "yeas", "y", "for", "affirmative"}        # Brevard: "Ayes"; Deltona: "For"
+NO = {"no", "nay", "nays", "noes", "opposed", "n", "against", "negative"}                 # Deltona: "Against"
 
 CATEGORY_WORDS = {  # the Clerk's categories, in plain words
     "Zoning": "Zoning (what can be built where)",

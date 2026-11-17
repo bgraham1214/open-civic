@@ -220,3 +220,36 @@ class Region(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OnePerson(unittest.TestCase):
+    """Names as the Seminole County, Marion County and Deltona records print them (Nov 16, 2026)."""
+
+    def test_titles_suffixes_and_short_first_names(self):
+        from opencivic.region import one_person
+        names = (["Chairman Andria Herr"] * 5 + ["Vice Chairman Andria Herr"] * 2 + ["Commissioner Bob Dallari"] * 7
+                 + ["Carl Zalak III"] * 9 + ["Carl Zalak"] + ["Matt McClain"] * 9 + ["Matthew McClain"]
+                 + ["Mayor Avila"] * 4 + ["Commissioner Avila-Vazquez"] * 3 + ["Vice Mayor Avila-Vazquez"]
+                 + ["Chris Scherer", "Chris Latvala", "Thomas F. Carney, Jr."])
+        m = one_person(names)
+        self.assertEqual(m["Chairman Andria Herr"], "Andria Herr")
+        self.assertEqual(m["Vice Chairman Andria Herr"], "Andria Herr")
+        self.assertEqual(m["Commissioner Bob Dallari"], "Bob Dallari")
+        self.assertEqual(m["Carl Zalak"], "Carl Zalak III")
+        self.assertEqual(m["Matthew McClain"], "Matt McClain")
+        self.assertEqual({m["Mayor Avila"], m["Vice Mayor Avila-Vazquez"], m["Commissioner Avila-Vazquez"]},
+                         {"Avila", "Avila-Vazquez"})
+        self.assertNotEqual(m["Chris Scherer"], m["Chris Latvala"])
+        self.assertEqual(m["Thomas F. Carney, Jr."], "Thomas F. Carney, Jr.")
+
+
+class PublicComment(unittest.TestCase):
+    def test_sections_that_hold_speakers(self):
+        from opencivic.region import PUBLIC_COMMENT_SECTION as rx
+        for sec in ("CITIZEN COMMENTS", "CITIZENS WHO HAVE REQUESTED TO BE ON THE AGENDA", "Public Comments",
+                    "PUBLIC INPUT", "7. Public Comment.", "Comments from the Public on Non-Agenda Items"):
+            self.assertTrue(rx.match(sec), sec)
+        for sec in ("CONSENT - (PUBLIC COMMENT TAKEN)", "RESOLUTIONS – PUBLIC COMMENTS", "PUBLIC HEARINGS (Public comment)",
+                    "Consent Agenda", "New Business"):
+            self.assertFalse(rx.match(sec), sec)
+

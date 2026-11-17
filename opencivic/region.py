@@ -141,6 +141,38 @@ def full_names(short: list[str], full: set[str]) -> dict[str, str]:
     return {s: r(s, "2000-01-01") for s in short}
 
 
+_TITLE_RX = re.compile(r"^(?:(?:vice[- ]|deputy |pro[- ]tem(?:pore)? )?(?:chair(?:man|woman|person)?|mayor|president)|"
+                       r"commissioner|council ?(?:man|woman|member|person|or)|alder(?:man|woman)|"
+                       r"(?:district|seat|group) \d+ (?:commissioner|council ?member))\s+", re.I)
+_SUFFIX_RX = re.compile(r",?\s+(?:jr|sr|ii|iii|iv)\.?$", re.I)
+
+
+def one_person(names: list[str]) -> dict[str, str]:
+    """Printed name -> one name per person, for a board whose record writes the same member several
+    ways: with a title that changes ("Chairman Andria Herr", later "Vice Chairman Andria Herr"), with and
+    without a suffix ("Carl Zalak", "Carl Zalak III"), or with a short first name ("Matt McClain",
+    "Matthew McClain"). The spelling used most often wins. Different first names stay different people."""
+    count: dict[str, int] = {}
+    for n in names:
+        count[n] = count.get(n, 0) + 1
+    bare = {n: re.sub(r"\s+", " ", _TITLE_RX.sub("", n.strip())).strip() or n.strip() for n in count}
+    totals: dict[str, int] = {}
+    for n, b in bare.items():
+        totals[b] = totals.get(b, 0) + count[n]
+
+    def parts(b: str) -> tuple[str, str]:
+        core = _SUFFIX_RX.sub("", b).split()
+        return (core[0].lower().rstrip(".") if len(core) > 1 else "", core[-1].lower() if core else "")
+    canon: dict[str, str] = {}
+    for b in sorted(totals, key=lambda b: (-totals[b], b)):
+        first, last = parts(b)
+        match = next((c for c in canon.values() if parts(c)[1] == last and first and parts(c)[0]
+                      and len(min(first, parts(c)[0], key=len)) >= 3
+                      and (first.startswith(parts(c)[0]) or parts(c)[0].startswith(first))), None)
+        canon[b] = match or b
+    return {n: canon[bare[n]] for n in count}
+
+
 def inline_report_url(url: str, page: int | None = None) -> str:
     """The Clerk's report URL that opens in the browser, at the page when known."""
     url = re.sub(r"[?&]download=true\b", "", url or "")
@@ -192,6 +224,15 @@ def _load_hillsclerk(lst: Path, out: dict) -> None:
                 "sort": 0})
 
 
+def narrative_line(i: dict) -> bool:
+    """A Legistar line with no agenda number, no file, no action and no recorded result."""
+    return ((i.get("number") or "").strip() in ("", "-") and not i.get("action") and not i.get("result")
+            and not (i.get("file_number") or "").strip())
+
+
+PUBLIC_COMMENT_SECTION = re.compile(
+    r"^(?:[IVX\d]+[.)]?\s*)?(?:citizens?\b|public (?:comments?|input|participation|forum)\b|comments? from the public|"
+    r"audience\b|open forum|non-agenda|general public)", re.I)
 _LOADED: dict[str, dict] = {}
 
 
@@ -219,6 +260,11 @@ def _load(data: Path) -> dict:
         # each item's own page, read from the meeting's web page by `legistar links`; matched by File #
         links = {r["event_id"]: r["links"] for r in _jsonl(lst / f"legistar-{client}-links.jsonl")}
         for i in _jsonl(lst / f"legistar-{client}-items.jsonl"):
+            # A line with no agenda number, no file and no action isn't an item: it's a notice, a heading,
+            # a page break, or the clerk's note of who spoke at public comment (Ocala writes each
+            # speaker's name and home address as such a line). Never kept for the registry's governments.
+            if JURISDICTIONS[slug].get("florida") and narrative_line(i):
+                continue
             # listings saved before Nov 9, 2026 carry LegislationDetail links built from API ids, which
             # Legistar rejects; only links read from the meeting page are used
             own = links.get(i.get("event_id"), {}).get((i.get("file_number") or "").strip(), "")
@@ -226,8 +272,17 @@ def _load(data: Path) -> dict:
                 out["items"].append({**i, "county": slug, "matter_url": "", "portal_url": "", "source_hidden": True})
                 continue
             out["items"].append({**i, "county": slug, "matter_url": own})
-        for v in _jsonl(lst / f"legistar-{client}-votes.jsonl"):
-            out["votes"].append({**v, "county": slug})
+        votes = [{**v, "county": slug} for v in _jsonl(lst / f"legistar-{client}-votes.jsonl")]
+        if JURISDICTIONS[slug].get("florida"):
+            # a roll call row with no value says nothing about how the member voted (Seminole County's
+            # record has 1,585 of them); it isn't a vote
+            votes = [v for v in votes if (v.get("vote") or "").strip()]
+            # someone the record only ever lists as non-voting (Ocala's mayor has no vote) isn't a voting member
+            voting = {v["person"] for v in votes if not re.fullmatch(r"(?:non|not)[- ]voting|monitoring", v["vote"].strip(), re.I)}
+            votes = [v for v in votes if v["person"] in voting]
+            same = one_person([v["person"] for v in votes])
+            votes = [{**v, "person": same[v["person"]]} for v in votes]
+        out["votes"] += votes
         if JURISDICTIONS[slug].get("outline") == "lettered":
             _legistar_outline(slug, out)
     viewers: dict[int, str] = {}
@@ -254,6 +309,10 @@ def _load(data: Path) -> dict:
                 "portal_url": m["portal_url"], "comment": ""})
         for i in _jsonl(lst / f"civicclerk-{tenant}-items.jsonl"):
             if i.get("is_section") or i.get("event_id") in private_events or is_private_body(i.get("category", "")):
+                continue
+            # Lines under a public-comment heading are often the residents who asked to speak, by name and
+            # sometimes address (Mary Esther, Zephyrhills). Nothing under such a heading is kept.
+            if JURISDICTIONS[slug].get("florida") and PUBLIC_COMMENT_SECTION.match((i.get("section") or "").strip()):
                 continue
             out["items"].append({
                 "county": slug, "key": i["key"], "date": i["date"],

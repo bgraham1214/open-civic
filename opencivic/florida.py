@@ -36,6 +36,7 @@ from pathlib import Path
 from . import civicclerk, legistar
 from .fetch import FetchError, HostDown, HttpFetcher
 from .jurisdictions import FLORIDA, JURISDICTIONS
+from .region import PUBLIC_COMMENT_SECTION, narrative_line
 
 REFRESH_DAYS = 21     # meetings this recent are re-read every night
 AHEAD_DAYS = 45       # agendas are read this far ahead; later dates are calendar placeholders
@@ -148,7 +149,11 @@ class LegistarGov:
         if not self.events:
             return
         live = {ev["event_id"] for ev in self.events}
-        items = [it for eid, its in self.items.items() if eid in live for it in its]
+        # lines that aren't agenda items (notices, page breaks, the clerk's notes of who spoke at public
+        # comment) are not stored: see region._load, which also leaves them out of every page
+        items = [it for eid, its in self.items.items() if eid in live for it in its if not narrative_line(it)]
+        for it in items:
+            it.pop("minutes_note", None)  # raw rich text of the discussion; never used
         keys = {it["key"] for it in items}
         votes = [v for k, vs in self.votes.items() if k in keys for v in vs]
         items.sort(key=lambda i: (i["date"], i["event_id"], i["sequence"], i["item_id"]))
@@ -219,7 +224,9 @@ class CivicClerkGov:
             return
         live = {m.event_id for m in self.meetings}
         _write([asdict(m) for m in self.meetings], self.paths["meetings"])
-        _write([it for eid, its in self.items.items() if eid in live for it in its], self.paths["items"])
+        _write([it for eid, its in self.items.items() if eid in live for it in its
+                if it.get("is_section") or not PUBLIC_COMMENT_SECTION.match((it.get("section") or "").strip())],
+               self.paths["items"])
         print(f"{self.tenant}: {len(self.meetings)} meetings, "
               f"{sum(len(v) for k, v in self.items.items() if k in live)} agenda rows; {json.dumps(self.stats)}",
               file=sys.stderr)

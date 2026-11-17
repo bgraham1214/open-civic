@@ -280,6 +280,13 @@ def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
                                                                     it.get("action_text") or "") if x))
                 aka: dict[str, list[str]] = {}
                 names = payees(text, aka)
+                if JURISDICTIONS[county].get("florida") and JURISDICTIONS[county].get("platform") == "legistar":
+                    # These records' action text is often the clerk's narrative of the discussion
+                    # (Brevard: "they were able to pass $117.5 billion budget" under a lobbying item
+                    # was read as a payment). Only the item's own wording is used.
+                    text = re.sub(r"\s+", " ", " ".join(x for x in (it["title"], it.get("motion") or "") if x))
+                    aka = {}
+                    names = payees(text, aka)
                 if JURISDICTIONS[county].get("platform") == "civicclerk":
                     # Here the extra wording is the staff memo, which also names losing bidders, past
                     # vendors and neighbors. Use the title when it names the company; otherwise the memo

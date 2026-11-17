@@ -469,6 +469,9 @@ show the dollar amount and the company named in the official wording.</p>
 def write(data: Path, out: Path) -> dict:
     from .people import all_votes
     have_people = set(all_votes(data))
+    for c, j in JURISDICTIONS.items():  # a Legistar record that lists no member votes at all is agenda-only
+        if j.get("florida") and j.get("platform") == "legistar":
+            j["votes"] = c in have_people
     (out / "learn").mkdir(parents=True, exist_ok=True)
     for name, html_ in learn_pages().items():
         (out / "learn" / f"{name}.html").write_text(html_, "utf-8")

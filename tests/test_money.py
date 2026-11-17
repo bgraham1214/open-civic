@@ -161,6 +161,14 @@ class StaffMemos(unittest.TestCase):
         self.assertEqual(self.names("Award to Paint King USA, LLC for $12,000", "Other bidder: Acme Painting Inc. at $15,000"),
                          ["Paint King USA, LLC"])
 
+    def test_narrative_minutes_are_not_read_for_money(self):
+        from opencivic.jurisdictions import JURISDICTIONS
+        JURISDICTIONS["memotown"].update(platform="legistar", florida=True)
+        r = row("Discussion, Re: State Lobbying Services", county="memotown")
+        r["item"]["action_text"] = ("Mr. X of Crisafulli Consulting Company said the Legislature was able to pass "
+                                    "$117.5 billion budget; the County ended up with $6.87 million.")
+        self.assertEqual(money.collect({"memotown": {"2026-08-04": [r]}}), {})
+
     def test_number_prefixes_and_sentence_ends(self):
         c = money.clean_name
         self.assertEqual(c("2026-53 APPROVING J. COLLINS ENGINEERING ASSOCIATES, LLC"), "J. COLLINS ENGINEERING ASSOCIATES, LLC")

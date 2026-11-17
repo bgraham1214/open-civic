@@ -15,6 +15,17 @@ from test_region import jl, make_data
 FX = Path(__file__).parent / "fixtures" / "hillsclerk" / "bocc-vote-comparison-2025-p1-2-69.txt"
 
 
+class VoteWords(unittest.TestCase):
+    def test_how_each_record_writes_yes_and_no(self):
+        # Brevard writes "Ayes", Deltona "For" and "Against"; before Nov 16, 2026 these read as "didn't vote"
+        for w in ("Yes", "Aye", "Ayes", "AYE", "Yea", "In Favor", "For", "Y"):
+            self.assertEqual(pp.kind(w), "yes", w)
+        for w in ("No", "Nay", "NAY", "Opposed", "Against", "N"):
+            self.assertEqual(pp.kind(w), "no", w)
+        for w in ("Absent", "Excused", "Abstain", "Not Present", "Recused", "X", ""):
+            self.assertEqual(pp.kind(w), "none", w)
+
+
 class People(unittest.TestCase):
     def test_vote_kinds(self):
         for v, k in (("Aye", "yes"), ("In Favor", "yes"), ("Yes", "yes"), ("Nay", "no"), ("Opposed", "no"),

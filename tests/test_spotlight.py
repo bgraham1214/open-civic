@@ -157,6 +157,18 @@ class RestOfFlorida(unittest.TestCase):
         ]:
             self.assertEqual(self.kinds(text), [], text)
 
+    def test_not_breaks_for_companies(self):
+        for text in [
+            "Ordinance No. 2026-15 - Revocation of Ad Valorem Tax Exemption Ordinance No. 2024-23 for Accel International Holdings, Inc.",
+            "Revocation of Economic Incentive Resolution No.18-132 and Job Growth Investment Grant 21-003 granted to "
+            "Accel International Holdings, Inc.",
+            "Temp. Reso. #R8460 approving the donation of surplus City of Miramar property, specifically one (1) Public "
+            "Safety Police passenger van, valued at or less than $5,000, to the Justice Project, Inc.",
+            "Application PVAR26-0001: Variance - 202 S. Daytona Avenue. Applicant is requesting a variance from the Land "
+            "Development Regulations, which prohibit drive-through lanes",
+        ]:
+            self.assertEqual(self.kinds(text), [], text)
+
     def test_still_tagged(self):
         self.assertEqual(self.kinds("Adopt Resolution and Approve a State of Local Emergency to Enact a Burn Ban"),
                          [("restriction", "ban", "act")])
