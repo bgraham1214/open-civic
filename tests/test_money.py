@@ -329,5 +329,35 @@ class TopCompanies(unittest.TestCase):
             self.assertEqual(res["top_lists"], len(list((out / "top-companies").glob("*.html"))) + 1)
 
 
+class AllCapitals(unittest.TestCase):
+    """Titles written in capitals (Coconut Creek, Delray Beach, Doral, Taylor County…), Nov 17, 2026."""
+
+    def names(self, t):
+        return [n for n, _, _ in money.payees(money.decap(t))]
+
+    def test_names_read(self):
+        for t, want in [
+            ("A RESOLUTION AUTHORIZING THE CITY MANAGER, OR DESIGNEE, TO APPROVE A CHANGE ORDER IN THE AMOUNT OF $153,875.00 "
+             "FOR MILLER LEGG & ASSOCIATES, INC. TO COMPLETE POST DESIGN SERVICES", "Miller Legg & Associates, Inc."),
+            ("WORK AUTHORIZATION WITH WGI, INC. IN AN AMOUNT NOT TO EXCEED $70,000", "WGI, Inc."),
+            ("RECOGNIZING THAT PHOENIX CONCRETE PLUS, INC. HAS COMPLETED", "Phoenix Concrete Plus, Inc."),
+            ("NEW 2025 FORD F150 WORK TRUCKS THROUGH BECK AUTO SALES, INC. FOR $90,000", "Beck Auto Sales, Inc."),
+            ("AGREEMENT WITH EARTH SURFACES OF AMERICA, INC. FOR $5", "Earth Surfaces of America, Inc."),
+            ("AN AGREEMENT WITH AREA AGENCY ON AGING OF PASCO-PINELLAS, INC. FOR $5", "Area Agency on Aging of Pasco-Pinellas, Inc."),
+            ("CONTRACT BETWEEN TAYLOR COUNTY BOARD OF COUNTY COMMISSIONERS AND LAMPL HERBERT CONSULTANTS, INC. FOR $5",
+             "Lampl Herbert Consultants, Inc."),
+            ("AWARD TO H&R PAVING, INC. $5", "H&R Paving, Inc."),
+            ("AN AGREEMENT WITH MILLS+SCHONERING ARCHITECTS, LLC FOR DESIGN $5", "Mills+Schonering Architects, LLC"),
+            ("TO AWARD AN AGREEMENT WITH LOUMINEL GENERAL CONTRACTOR, LLC., FOR FENCING REPAIR $5", "Louminel General Contractor, LLC."),
+            ("AN AGREEMENT WITH ARCHITECTS DESIGN GROUP/ADG, LLC FOR DESIGN $5", "Architects Design Group/ADG, LLC"),
+            ("BETWEEN THE CITY AND OUTFRONT MEDIA, LLC A DELAWARE LIMITED LIABILITY COMPANY, $5", "Outfront Media, LLC"),
+        ]:
+            self.assertEqual(self.names(t), [want], t)
+
+    def test_ordinary_case_unchanged(self):
+        t = "Award of Bid – Sun Civil LLC – Traffic Signal – $1,000,000.00"
+        self.assertEqual(money.decap(t), t)
+
+
 if __name__ == "__main__":
     unittest.main()

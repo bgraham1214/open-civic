@@ -39,8 +39,8 @@ from .jurisdictions import JURISDICTIONS
 # Like explain.COMPANY_RX, with more joining words, so "Area Agency on Aging of Pasco-Pinellas, Inc."
 # stays whole instead of becoming "Aging of Pasco-Pinellas, Inc.".
 PAYEE_RX = re.compile(
-    r"((?:(?:[A-Z][\w&.'’/-]*|[a-z][A-Z][\w&.'’/-]*|\d[\w&.'’/-]*|&|of|and|for|the|on|at|in|de|del|la)\s){0,10}?"
-    r"(?:[A-Z]|[a-z](?=[A-Z]))[\w&.'’-]*,?\s"
+    r"((?:(?:[A-Z][\w&.'’/+-]*|[a-z][A-Z][\w&.'’/+-]*|\d[\w&.'’/+-]*|&|of|and|for|the|on|at|in|de|del|la)\s){0,10}?"
+    r"(?:[A-Z]|[a-z](?=[A-Z]))[\w&.'’/+-]*,?\s"
     r"(?:Inc|Incorporated|LLC|L\.L\.C|Corp|Corporation|Company|Co|LP|L\.P|LLP|LLLP|P\.A|PA|PLLC|Ltd|N\.A)\.?)(?=\W|$)")
 SUFFIXES = r"(?:inc|incorporated|llc|l\.l\.c|corp|corporation|company|co|lp|l\.p|llp|lllp|p\.a|pa|pllc|ltd|n\.a)\.?"
 # Words that start a sentence or a clause, not a name.
@@ -104,6 +104,9 @@ RAISE_RX = re.compile(r"\bincreas\w+\b[^$]{0,80}?\bfrom \$\s?([\d,]+(?:\.\d+)?)\
 # "No.FM24-021-Williamson Dacar Associates, Inc." (not "A-1 Florida Sod Inc.": two digits needed)
 CONTRACT_NO = re.compile(r"^(?:No\.?\s*)?[A-Z]{1,5}\d{2,}(?:-\d+)+[-–\s]+")
 NOT_COMPANY = re.compile(
+    # what kind of company it is, not a name: "Outfront Media, LLC a Delaware Limited Liability Company"
+    r"^(?:an? )?(?:florida|delaware|foreign|georgia|texas|nevada|new york|california)\s+(?:limited liability company|"
+    r"(?:not[- ]for[- ]profit |nonprofit |for[- ]profit )?corporation|limited partnership)$|"
     r"^(?:hills\.?|hillsborough|pasco|hernando|volusia|pinellas|polk|citrus|sumter|manatee)(?:\s+co\.?|\s+county)\b|"
     r"\bcounty(?: of)?$|^(?:city|town|state|county|school|board|department|florida department|united states)\b|"
     r"^(?:the )?(?:[A-Z]\w*\s)?(?:co|inc|llc)\.?$", re.I)
@@ -294,6 +297,65 @@ def flags_for(item: dict, votes: list[dict], facts: dict | None, amount: float |
     return out
 
 
+_SMALL = {"of", "and", "for", "the", "to", "in", "on", "at", "with", "by", "from", "a", "an", "or", "as", "per", "into"}
+_KEEP_UPPER = {"LLC", "L.L.C", "LP", "L.P", "LLP", "LLLP", "PLLC", "P.A", "PA", "N.A", "USA", "US", "U.S", "FL", "FDOT",
+               "AECOM", "CDM", "HDR", "CPH", "JEA", "TECO", "FPL", "AT&T", "CSX", "IBM", "ESRI", "CGI"}
+
+
+_SUFFIX_WORDS = {"INC", "INCORPORATED", "LLC", "L.L.C", "CORP", "CORPORATION", "COMPANY", "CO", "LP", "L.P", "LLP",
+                 "LLLP", "PA", "P.A", "PLLC", "LTD", "N.A"}
+# words that end a name when read backwards from its suffix ("… THROUGH BECK AUTO SALES, INC.")
+_BEFORE_NAME = {"for", "with", "to", "through", "from", "by", "that", "via", "under", "utilize", "utilizing",
+                "recognizing", "request", "proposal", "contract", "authorization", "agreement", "award", "awarding",
+                "awarded", "approve", "approving", "purchase", "purchasing", "the", "between", "into", "against",
+                "is", "are", "was", "were", "be", "in", "amount", "trucks", "vehicles", "renewal",
+                "amendment", "order", "a", "an", "rfp", "rfq", "itb", "bid", "solicitation", "ccna", "firm", "bocc",
+                "beach", "county", "city", "village", "town", "commission", "hfa", "involving", "both", "regarding",
+                "including", "requesting", "authorized", "authorizing", "approved", "commissioners", "board",
+                "council", "dealer", "distributor", "vendor"}  # not contractor/consultant/supplier: "Louminel General Contractor, LLC"
+# (not "on" or "at": "Area Agency on Aging of Pasco-Pinellas, Inc.", "Falls at Bonaventure, LLC")
+
+
+def _cap(w: str) -> str:
+    core = w.strip("(),.;:\"'")
+    if (core.rstrip(".") in _KEEP_UPPER or (len(core) <= 4 and core.isalpha() and not re.search(r"[AEIOUY]", core))
+            or re.fullmatch(r"(?:[A-Z]\.){2,}|[A-Z]{1,2}&[A-Z]{1,2}", core)):
+        return w  # LLC, USA, initials (HDR, CPH, U.S.A., H&R)
+    if core.upper().rstrip(".") in {"INC", "CORP", "LTD"}:
+        return w[:1] + w[1:].lower()
+    # each part of "MILLS+SCHONERING", "GROUP/ADG", "KIMLEY-HORN"; a short part after a joiner is initials (ADG)
+    parts = re.split(r"([-/+])", w)
+    return "".join(p if p in "-/+" or (i and len(p.strip(".,")) <= 3 and p.isupper()) else p[:1].upper() + p[1:].lower()
+                   for i, p in enumerate(parts))
+
+
+def decap(text: str) -> str:
+    """An all-capital title in ordinary case, so company names can be read: lower case, except the words of a
+    name just before its suffix ("… CHANGE ORDER IN THE AMOUNT OF $153,875.00 FOR MILLER LEGG & ASSOCIATES,
+    INC. TO …" -> "… for Miller Legg & Associates, Inc. to …"). A firm's initials before the suffix keep their
+    capitals ("WGI, Inc."). Text that isn't mostly capitals is returned unchanged. Seen Nov 17, 2026: Delray
+    Beach, Hallandale Beach, Dania Beach, Doral, Coconut Creek, Margate and others write every title in capitals."""
+    letters = [c for c in text if c.isalpha()]
+    if not letters or sum(c.isupper() for c in letters) / len(letters) < 0.8:
+        return text
+    words = text.split(" ")
+    out = [w.lower() for w in words]
+    for i, w in enumerate(words):
+        if w.strip("(),.;:").upper() not in _SUFFIX_WORDS:
+            continue
+        out[i] = _cap(w)
+        j, n = i - 1, 0
+        while j >= 0 and n < 8:
+            core = words[j].strip("(),.;:\"'").lower()
+            if not core or core in _BEFORE_NAME or "$" in words[j] or words[j].endswith((";", ":")) \
+                    or (words[j].endswith(",") and j != i - 1):
+                break
+            short = len(core) <= 3 and core.isalpha() and j == i - 1 and words[j].endswith(",")
+            out[j] = words[j] if short else (core if core in ("of", "and", "&", "on", "at", "de", "la") else _cap(words[j]))
+            j, n = j - 1, n + 1
+    return " ".join(out)
+
+
 def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
     """key -> {name, names: {spelling: n}, rows: [...]} from meetings.decisions_by_meeting."""
     companies: dict[str, dict] = {}
@@ -301,6 +363,7 @@ def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
         for d, rows in by_date.items():
             for r in rows:
                 it = r["item"]
+                it = {**it, "title": decap(it["title"]), "motion": decap(it.get("motion") or "")}
                 text = re.sub(r"\s+", " ", " ".join(x for x in (it["title"], it.get("motion") or "",
                                                                     it.get("action_text") or "") if x))
                 aka: dict[str, list[str]] = {}
