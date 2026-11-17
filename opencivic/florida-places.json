@@ -1,0 +1,3359 @@
+[
+{
+"name": "Alachua",
+"kind": "county",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Baker",
+"kind": "county",
+"counties": [
+"Baker"
+]
+},
+{
+"name": "Bay",
+"kind": "county",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Bradford",
+"kind": "county",
+"counties": [
+"Bradford"
+]
+},
+{
+"name": "Brevard",
+"kind": "county",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Broward",
+"kind": "county",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Calhoun",
+"kind": "county",
+"counties": [
+"Calhoun"
+]
+},
+{
+"name": "Charlotte",
+"kind": "county",
+"counties": [
+"Charlotte"
+]
+},
+{
+"name": "Citrus",
+"kind": "county",
+"counties": [
+"Citrus"
+]
+},
+{
+"name": "Clay",
+"kind": "county",
+"counties": [
+"Clay"
+]
+},
+{
+"name": "Collier",
+"kind": "county",
+"counties": [
+"Collier"
+]
+},
+{
+"name": "Columbia",
+"kind": "county",
+"counties": [
+"Columbia"
+]
+},
+{
+"name": "DeSoto",
+"kind": "county",
+"counties": [
+"DeSoto"
+]
+},
+{
+"name": "Dixie",
+"kind": "county",
+"counties": [
+"Dixie"
+]
+},
+{
+"name": "Duval",
+"kind": "county",
+"counties": [
+"Duval"
+]
+},
+{
+"name": "Escambia",
+"kind": "county",
+"counties": [
+"Escambia"
+]
+},
+{
+"name": "Flagler",
+"kind": "county",
+"counties": [
+"Flagler"
+]
+},
+{
+"name": "Franklin",
+"kind": "county",
+"counties": [
+"Franklin"
+]
+},
+{
+"name": "Gadsden",
+"kind": "county",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Gilchrist",
+"kind": "county",
+"counties": [
+"Gilchrist"
+]
+},
+{
+"name": "Glades",
+"kind": "county",
+"counties": [
+"Glades"
+]
+},
+{
+"name": "Gulf",
+"kind": "county",
+"counties": [
+"Gulf"
+]
+},
+{
+"name": "Hamilton",
+"kind": "county",
+"counties": [
+"Hamilton"
+]
+},
+{
+"name": "Hardee",
+"kind": "county",
+"counties": [
+"Hardee"
+]
+},
+{
+"name": "Hendry",
+"kind": "county",
+"counties": [
+"Hendry"
+]
+},
+{
+"name": "Hernando",
+"kind": "county",
+"counties": [
+"Hernando"
+]
+},
+{
+"name": "Highlands",
+"kind": "county",
+"counties": [
+"Highlands"
+]
+},
+{
+"name": "Hillsborough",
+"kind": "county",
+"counties": [
+"Hillsborough"
+]
+},
+{
+"name": "Holmes",
+"kind": "county",
+"counties": [
+"Holmes"
+]
+},
+{
+"name": "Indian River",
+"kind": "county",
+"counties": [
+"Indian River"
+]
+},
+{
+"name": "Jackson",
+"kind": "county",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Jefferson",
+"kind": "county",
+"counties": [
+"Jefferson"
+]
+},
+{
+"name": "Lafayette",
+"kind": "county",
+"counties": [
+"Lafayette"
+]
+},
+{
+"name": "Lake",
+"kind": "county",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Lee",
+"kind": "county",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Leon",
+"kind": "county",
+"counties": [
+"Leon"
+]
+},
+{
+"name": "Levy",
+"kind": "county",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Liberty",
+"kind": "county",
+"counties": [
+"Liberty"
+]
+},
+{
+"name": "Madison",
+"kind": "county",
+"counties": [
+"Madison"
+]
+},
+{
+"name": "Manatee",
+"kind": "county",
+"counties": [
+"Manatee"
+]
+},
+{
+"name": "Marion",
+"kind": "county",
+"counties": [
+"Marion"
+]
+},
+{
+"name": "Martin",
+"kind": "county",
+"counties": [
+"Martin"
+]
+},
+{
+"name": "Miami-Dade",
+"kind": "county",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Monroe",
+"kind": "county",
+"counties": [
+"Monroe"
+]
+},
+{
+"name": "Nassau",
+"kind": "county",
+"counties": [
+"Nassau"
+]
+},
+{
+"name": "Okaloosa",
+"kind": "county",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Okeechobee",
+"kind": "county",
+"counties": [
+"Okeechobee"
+]
+},
+{
+"name": "Orange",
+"kind": "county",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Osceola",
+"kind": "county",
+"counties": [
+"Osceola"
+]
+},
+{
+"name": "Palm Beach",
+"kind": "county",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Pasco",
+"kind": "county",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "Pinellas",
+"kind": "county",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Polk",
+"kind": "county",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Putnam",
+"kind": "county",
+"counties": [
+"Putnam"
+]
+},
+{
+"name": "St. Johns",
+"kind": "county",
+"counties": [
+"St. Johns"
+]
+},
+{
+"name": "St. Lucie",
+"kind": "county",
+"counties": [
+"St. Lucie"
+]
+},
+{
+"name": "Santa Rosa",
+"kind": "county",
+"counties": [
+"Santa Rosa"
+]
+},
+{
+"name": "Sarasota",
+"kind": "county",
+"counties": [
+"Sarasota"
+]
+},
+{
+"name": "Seminole",
+"kind": "county",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Sumter",
+"kind": "county",
+"counties": [
+"Sumter"
+]
+},
+{
+"name": "Suwannee",
+"kind": "county",
+"counties": [
+"Suwannee"
+]
+},
+{
+"name": "Taylor",
+"kind": "county",
+"counties": [
+"Taylor"
+]
+},
+{
+"name": "Union",
+"kind": "county",
+"counties": [
+"Union"
+]
+},
+{
+"name": "Volusia",
+"kind": "county",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Wakulla",
+"kind": "county",
+"counties": [
+"Wakulla"
+]
+},
+{
+"name": "Walton",
+"kind": "county",
+"counties": [
+"Walton"
+]
+},
+{
+"name": "Washington",
+"kind": "county",
+"counties": [
+"Washington"
+]
+},
+{
+"name": "Alachua",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Alford",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Altamonte Springs",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Altha",
+"kind": "town",
+"counties": [
+"Calhoun"
+]
+},
+{
+"name": "Anna Maria",
+"kind": "city",
+"counties": [
+"Manatee"
+]
+},
+{
+"name": "Apalachicola",
+"kind": "city",
+"counties": [
+"Franklin"
+]
+},
+{
+"name": "Apopka",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Arcadia",
+"kind": "city",
+"counties": [
+"DeSoto"
+]
+},
+{
+"name": "Archer",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Astatula",
+"kind": "town",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Atlantic Beach",
+"kind": "city",
+"counties": [
+"Duval"
+]
+},
+{
+"name": "Atlantis",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Auburndale",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Aventura",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Avon Park",
+"kind": "city",
+"counties": [
+"Highlands"
+]
+},
+{
+"name": "Bal Harbour",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Baldwin",
+"kind": "town",
+"counties": [
+"Duval"
+]
+},
+{
+"name": "Bartow",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Bascom",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Bay Harbor Islands",
+"kind": "town",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Bay Lake",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Bell",
+"kind": "town",
+"counties": [
+"Gilchrist"
+]
+},
+{
+"name": "Belle Glade",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Belle Isle",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Belleair",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Belleair Beach",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Belleair Bluffs",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Belleair Shore",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Belleview",
+"kind": "city",
+"counties": [
+"Marion"
+]
+},
+{
+"name": "Beverly Beach",
+"kind": "town",
+"counties": [
+"Flagler"
+]
+},
+{
+"name": "Biscayne Park",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Blountstown",
+"kind": "city",
+"counties": [
+"Calhoun"
+]
+},
+{
+"name": "Boca Raton",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Bonifay",
+"kind": "city",
+"counties": [
+"Holmes"
+]
+},
+{
+"name": "Bonita Springs",
+"kind": "city",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Bowling Green",
+"kind": "city",
+"counties": [
+"Hardee"
+]
+},
+{
+"name": "Boynton Beach",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Bradenton",
+"kind": "city",
+"counties": [
+"Manatee"
+]
+},
+{
+"name": "Bradenton Beach",
+"kind": "city",
+"counties": [
+"Manatee"
+]
+},
+{
+"name": "Branford",
+"kind": "town",
+"counties": [
+"Suwannee"
+]
+},
+{
+"name": "Briny Breezes",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Bristol",
+"kind": "city",
+"counties": [
+"Liberty"
+]
+},
+{
+"name": "Bronson",
+"kind": "town",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Brooker",
+"kind": "town",
+"counties": [
+"Bradford"
+]
+},
+{
+"name": "Brooksville",
+"kind": "city",
+"counties": [
+"Hernando"
+]
+},
+{
+"name": "Bunnell",
+"kind": "city",
+"counties": [
+"Flagler"
+]
+},
+{
+"name": "Bushnell",
+"kind": "city",
+"counties": [
+"Sumter"
+]
+},
+{
+"name": "Callahan",
+"kind": "town",
+"counties": [
+"Nassau"
+]
+},
+{
+"name": "Callaway",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Campbellton",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Cape Canaveral",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Cape Coral",
+"kind": "city",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Carrabelle",
+"kind": "city",
+"counties": [
+"Franklin"
+]
+},
+{
+"name": "Caryville",
+"kind": "town",
+"counties": [
+"Washington"
+]
+},
+{
+"name": "Casselberry",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Cedar Key",
+"kind": "city",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Center Hill",
+"kind": "city",
+"counties": [
+"Sumter"
+]
+},
+{
+"name": "Century",
+"kind": "town",
+"counties": [
+"Escambia"
+]
+},
+{
+"name": "Chattahoochee",
+"kind": "city",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Chiefland",
+"kind": "city",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Chipley",
+"kind": "city",
+"counties": [
+"Washington"
+]
+},
+{
+"name": "Cinco Bayou",
+"kind": "town",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Clearwater",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Clermont",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Clewiston",
+"kind": "city",
+"counties": [
+"Hendry"
+]
+},
+{
+"name": "Cloud Lake",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Cocoa",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Cocoa Beach",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Coconut Creek",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Coleman",
+"kind": "city",
+"counties": [
+"Sumter"
+]
+},
+{
+"name": "Cooper City",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Coral Gables",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Coral Springs",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Cottondale",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Crescent City",
+"kind": "city",
+"counties": [
+"Putnam"
+]
+},
+{
+"name": "Crestview",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Cross City",
+"kind": "town",
+"counties": [
+"Dixie"
+]
+},
+{
+"name": "Crystal River",
+"kind": "city",
+"counties": [
+"Citrus"
+]
+},
+{
+"name": "Cutler Bay",
+"kind": "town",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Dade City",
+"kind": "city",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "Dania Beach",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Davenport",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Davie",
+"kind": "town",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Daytona Beach",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Daytona Beach Shores",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "DeBary",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "DeFuniak Springs",
+"kind": "city",
+"counties": [
+"Walton"
+]
+},
+{
+"name": "DeLand",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Deerfield Beach",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Delray Beach",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Deltona",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Destin",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Doral",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Dundee",
+"kind": "town",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Dunedin",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Dunnellon",
+"kind": "city",
+"counties": [
+"Marion"
+]
+},
+{
+"name": "Eagle Lake",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Eatonville",
+"kind": "town",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Ebro",
+"kind": "town",
+"counties": [
+"Washington"
+]
+},
+{
+"name": "Edgewater",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Edgewood",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "El Portal",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Estero",
+"kind": "village",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Esto",
+"kind": "town",
+"counties": [
+"Holmes"
+]
+},
+{
+"name": "Eustis",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Everglades",
+"kind": "city",
+"counties": [
+"Collier"
+]
+},
+{
+"name": "Fanning Springs",
+"kind": "city",
+"counties": [
+"Gilchrist",
+"Levy"
+]
+},
+{
+"name": "Fellsmere",
+"kind": "city",
+"counties": [
+"Indian River"
+]
+},
+{
+"name": "Fernandina Beach",
+"kind": "city",
+"counties": [
+"Nassau"
+]
+},
+{
+"name": "Flagler Beach",
+"kind": "city",
+"counties": [
+"Flagler",
+"Volusia"
+]
+},
+{
+"name": "Florida City",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Fort Lauderdale",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Fort Meade",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Fort Myers",
+"kind": "city",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Fort Myers Beach",
+"kind": "town",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Fort Pierce",
+"kind": "city",
+"counties": [
+"St. Lucie"
+]
+},
+{
+"name": "Fort Walton Beach",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Fort White",
+"kind": "town",
+"counties": [
+"Columbia"
+]
+},
+{
+"name": "Freeport",
+"kind": "city",
+"counties": [
+"Walton"
+]
+},
+{
+"name": "Frostproof",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Fruitland Park",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Gainesville",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Glen Ridge",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Glen St. Mary",
+"kind": "town",
+"counties": [
+"Baker"
+]
+},
+{
+"name": "Golden Beach",
+"kind": "town",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Golf",
+"kind": "village",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Graceville",
+"kind": "city",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Grand Ridge",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Grant-Valkaria",
+"kind": "town",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Green Cove Springs",
+"kind": "city",
+"counties": [
+"Clay"
+]
+},
+{
+"name": "Greenacres",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Greensboro",
+"kind": "town",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Greenville",
+"kind": "town",
+"counties": [
+"Madison"
+]
+},
+{
+"name": "Greenwood",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Gretna",
+"kind": "city",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Groveland",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Gulf Breeze",
+"kind": "city",
+"counties": [
+"Santa Rosa"
+]
+},
+{
+"name": "Gulf Stream",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Gulfport",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Haines City",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Hallandale Beach",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Hampton",
+"kind": "city",
+"counties": [
+"Bradford"
+]
+},
+{
+"name": "Havana",
+"kind": "town",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Haverhill",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Hawthorne",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Hialeah",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Hialeah Gardens",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "High Springs",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Highland Beach",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Highland Park",
+"kind": "village",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Hillcrest Heights",
+"kind": "town",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Hilliard",
+"kind": "town",
+"counties": [
+"Nassau"
+]
+},
+{
+"name": "Hillsboro Beach",
+"kind": "town",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Holly Hill",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Hollywood",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Holmes Beach",
+"kind": "city",
+"counties": [
+"Manatee"
+]
+},
+{
+"name": "Homestead",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Horseshoe Beach",
+"kind": "town",
+"counties": [
+"Dixie"
+]
+},
+{
+"name": "Howey-in-the-Hills",
+"kind": "town",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Hypoluxo",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Indialantic",
+"kind": "town",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Indian Creek",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Indian Harbour Beach",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Indian River Shores",
+"kind": "town",
+"counties": [
+"Indian River"
+]
+},
+{
+"name": "Indian Rocks Beach",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Indian Shores",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Indiantown",
+"kind": "village",
+"counties": [
+"Martin"
+]
+},
+{
+"name": "Inglis",
+"kind": "town",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Interlachen",
+"kind": "town",
+"counties": [
+"Putnam"
+]
+},
+{
+"name": "Inverness",
+"kind": "city",
+"counties": [
+"Citrus"
+]
+},
+{
+"name": "Islamorada, Village of Islands",
+"kind": "village",
+"counties": [
+"Monroe"
+]
+},
+{
+"name": "Jacksonville",
+"kind": "city",
+"counties": [
+"Duval"
+]
+},
+{
+"name": "Jacksonville Beach",
+"kind": "city",
+"counties": [
+"Duval"
+]
+},
+{
+"name": "Jacob City",
+"kind": "city",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Jasper",
+"kind": "city",
+"counties": [
+"Hamilton"
+]
+},
+{
+"name": "Jay",
+"kind": "town",
+"counties": [
+"Santa Rosa"
+]
+},
+{
+"name": "Jennings",
+"kind": "town",
+"counties": [
+"Hamilton"
+]
+},
+{
+"name": "Juno Beach",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Jupiter",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Jupiter Inlet Colony",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Jupiter Island",
+"kind": "town",
+"counties": [
+"Martin"
+]
+},
+{
+"name": "Kenneth City",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Key Biscayne",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Key Colony Beach",
+"kind": "city",
+"counties": [
+"Monroe"
+]
+},
+{
+"name": "Key West",
+"kind": "city",
+"counties": [
+"Monroe"
+]
+},
+{
+"name": "Keystone Heights",
+"kind": "city",
+"counties": [
+"Clay"
+]
+},
+{
+"name": "Kissimmee",
+"kind": "city",
+"counties": [
+"Osceola"
+]
+},
+{
+"name": "La Crosse",
+"kind": "town",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "LaBelle",
+"kind": "city",
+"counties": [
+"Hendry"
+]
+},
+{
+"name": "Lady Lake",
+"kind": "town",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Lake Alfred",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Lake Buena Vista",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Lake Butler",
+"kind": "city",
+"counties": [
+"Union"
+]
+},
+{
+"name": "Lake City",
+"kind": "city",
+"counties": [
+"Columbia"
+]
+},
+{
+"name": "Lake Clarke Shores",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Lake Hamilton",
+"kind": "town",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Lake Helen",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Lake Mary",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Lake Park",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Lake Placid",
+"kind": "town",
+"counties": [
+"Highlands"
+]
+},
+{
+"name": "Lake Wales",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Lake Worth Beach",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Lakeland",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Lantana",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Largo",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Lauderdale Lakes",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Lauderdale-by-the-Sea",
+"kind": "town",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Lauderhill",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Laurel Hill",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Lawtey",
+"kind": "city",
+"counties": [
+"Bradford"
+]
+},
+{
+"name": "Layton",
+"kind": "city",
+"counties": [
+"Monroe"
+]
+},
+{
+"name": "Lazy Lake",
+"kind": "village",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Lee",
+"kind": "town",
+"counties": [
+"Madison"
+]
+},
+{
+"name": "Leesburg",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Lighthouse Point",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Live Oak",
+"kind": "city",
+"counties": [
+"Suwannee"
+]
+},
+{
+"name": "Longboat Key",
+"kind": "town",
+"counties": [
+"Manatee",
+"Sarasota"
+]
+},
+{
+"name": "Longwood",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Loxahatchee Groves",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Lynn Haven",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Macclenny",
+"kind": "city",
+"counties": [
+"Baker"
+]
+},
+{
+"name": "Madeira Beach",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Madison",
+"kind": "city",
+"counties": [
+"Madison"
+]
+},
+{
+"name": "Maitland",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Malabar",
+"kind": "town",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Malone",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Manalapan",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Mangonia Park",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Marathon",
+"kind": "city",
+"counties": [
+"Monroe"
+]
+},
+{
+"name": "Marco Island",
+"kind": "city",
+"counties": [
+"Collier"
+]
+},
+{
+"name": "Margate",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Marianna",
+"kind": "city",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Marineland",
+"kind": "town",
+"counties": [
+"Flagler",
+"St. Johns"
+]
+},
+{
+"name": "Mary Esther",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Mascotte",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Mayo",
+"kind": "town",
+"counties": [
+"Lafayette"
+]
+},
+{
+"name": "McIntosh",
+"kind": "town",
+"counties": [
+"Marion"
+]
+},
+{
+"name": "Medley",
+"kind": "town",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Melbourne",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Melbourne Beach",
+"kind": "town",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Melbourne Village",
+"kind": "town",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Mexico Beach",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Miami",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Miami Beach",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Miami Gardens",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Miami Lakes",
+"kind": "town",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Miami Shores",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Miami Springs",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Micanopy",
+"kind": "town",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Midway",
+"kind": "city",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Milton",
+"kind": "city",
+"counties": [
+"Santa Rosa"
+]
+},
+{
+"name": "Minneola",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Miramar",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Monticello",
+"kind": "city",
+"counties": [
+"Jefferson"
+]
+},
+{
+"name": "Montverde",
+"kind": "town",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Moore Haven",
+"kind": "city",
+"counties": [
+"Glades"
+]
+},
+{
+"name": "Mount Dora",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Mulberry",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Naples",
+"kind": "city",
+"counties": [
+"Collier"
+]
+},
+{
+"name": "Neptune Beach",
+"kind": "city",
+"counties": [
+"Duval"
+]
+},
+{
+"name": "New Port Richey",
+"kind": "city",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "New Smyrna Beach",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Newberry",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Niceville",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Noma",
+"kind": "town",
+"counties": [
+"Holmes"
+]
+},
+{
+"name": "North Bay Village",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "North Lauderdale",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "North Miami",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "North Miami Beach",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "North Palm Beach",
+"kind": "village",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "North Port",
+"kind": "city",
+"counties": [
+"Sarasota"
+]
+},
+{
+"name": "North Redington Beach",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Oak Hill",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Oakland",
+"kind": "town",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Oakland Park",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Ocala",
+"kind": "city",
+"counties": [
+"Marion"
+]
+},
+{
+"name": "Ocean Breeze",
+"kind": "town",
+"counties": [
+"Martin"
+]
+},
+{
+"name": "Ocean Ridge",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Ocoee",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Okeechobee",
+"kind": "city",
+"counties": [
+"Okeechobee"
+]
+},
+{
+"name": "Oldsmar",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Opa-locka",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Orange City",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Orange Park",
+"kind": "town",
+"counties": [
+"Clay"
+]
+},
+{
+"name": "Orchid",
+"kind": "town",
+"counties": [
+"Indian River"
+]
+},
+{
+"name": "Orlando",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Ormond Beach",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Otter Creek",
+"kind": "town",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Oviedo",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Pahokee",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Palatka",
+"kind": "city",
+"counties": [
+"Putnam"
+]
+},
+{
+"name": "Palm Bay",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Palm Beach",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Palm Beach Gardens",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Palm Beach Shores",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Palm Coast",
+"kind": "city",
+"counties": [
+"Flagler"
+]
+},
+{
+"name": "Palm Shores",
+"kind": "town",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Palm Springs",
+"kind": "village",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Palmetto",
+"kind": "city",
+"counties": [
+"Manatee"
+]
+},
+{
+"name": "Palmetto Bay",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Panama City",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Panama City Beach",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Parker",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "Parkland",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Paxton",
+"kind": "town",
+"counties": [
+"Walton"
+]
+},
+{
+"name": "Pembroke Park",
+"kind": "town",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Pembroke Pines",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Penney Farms",
+"kind": "town",
+"counties": [
+"Clay"
+]
+},
+{
+"name": "Pensacola",
+"kind": "city",
+"counties": [
+"Escambia"
+]
+},
+{
+"name": "Perry",
+"kind": "city",
+"counties": [
+"Taylor"
+]
+},
+{
+"name": "Pierson",
+"kind": "town",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Pinecrest",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Pinellas Park",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Plant City",
+"kind": "city",
+"counties": [
+"Hillsborough"
+]
+},
+{
+"name": "Plantation",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Polk City",
+"kind": "town",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Pomona Park",
+"kind": "town",
+"counties": [
+"Putnam"
+]
+},
+{
+"name": "Pompano Beach",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Ponce Inlet",
+"kind": "town",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Ponce de Leon",
+"kind": "town",
+"counties": [
+"Holmes"
+]
+},
+{
+"name": "Port Orange",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "Port Richey",
+"kind": "city",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "Port St. Joe",
+"kind": "city",
+"counties": [
+"Gulf"
+]
+},
+{
+"name": "Port St. Lucie",
+"kind": "city",
+"counties": [
+"St. Lucie"
+]
+},
+{
+"name": "Punta Gorda",
+"kind": "city",
+"counties": [
+"Charlotte"
+]
+},
+{
+"name": "Quincy",
+"kind": "city",
+"counties": [
+"Gadsden"
+]
+},
+{
+"name": "Raiford",
+"kind": "town",
+"counties": [
+"Union"
+]
+},
+{
+"name": "Reddick",
+"kind": "town",
+"counties": [
+"Marion"
+]
+},
+{
+"name": "Redington Beach",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Redington Shores",
+"kind": "town",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Riviera Beach",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Rockledge",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Royal Palm Beach",
+"kind": "village",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Safety Harbor",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "San Antonio",
+"kind": "city",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "Sanford",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Sanibel",
+"kind": "city",
+"counties": [
+"Lee"
+]
+},
+{
+"name": "Sarasota",
+"kind": "city",
+"counties": [
+"Sarasota"
+]
+},
+{
+"name": "Satellite Beach",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Sea Ranch Lakes",
+"kind": "village",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Sebastian",
+"kind": "city",
+"counties": [
+"Indian River"
+]
+},
+{
+"name": "Sebring",
+"kind": "city",
+"counties": [
+"Highlands"
+]
+},
+{
+"name": "Seminole",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Sewall's Point",
+"kind": "town",
+"counties": [
+"Martin"
+]
+},
+{
+"name": "Shalimar",
+"kind": "town",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Sneads",
+"kind": "town",
+"counties": [
+"Jackson"
+]
+},
+{
+"name": "Sopchoppy",
+"kind": "city",
+"counties": [
+"Wakulla"
+]
+},
+{
+"name": "South Bay",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "South Daytona",
+"kind": "city",
+"counties": [
+"Volusia"
+]
+},
+{
+"name": "South Miami",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "South Palm Beach",
+"kind": "town",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "South Pasadena",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Southwest Ranches",
+"kind": "town",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Springfield",
+"kind": "city",
+"counties": [
+"Bay"
+]
+},
+{
+"name": "St. Augustine",
+"kind": "city",
+"counties": [
+"St. Johns"
+]
+},
+{
+"name": "St. Augustine Beach",
+"kind": "city",
+"counties": [
+"St. Johns"
+]
+},
+{
+"name": "St. Cloud",
+"kind": "city",
+"counties": [
+"Osceola"
+]
+},
+{
+"name": "St. Leo",
+"kind": "town",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "St. Lucie Village",
+"kind": "town",
+"counties": [
+"St. Lucie"
+]
+},
+{
+"name": "St. Marks",
+"kind": "city",
+"counties": [
+"Wakulla"
+]
+},
+{
+"name": "St. Pete Beach",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "St. Petersburg",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Starke",
+"kind": "city",
+"counties": [
+"Bradford"
+]
+},
+{
+"name": "Stuart",
+"kind": "city",
+"counties": [
+"Martin"
+]
+},
+{
+"name": "Sunny Isles Beach",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Sunrise",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Surfside",
+"kind": "town",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Sweetwater",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Tallahassee",
+"kind": "city",
+"counties": [
+"Leon"
+]
+},
+{
+"name": "Tamarac",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Tampa",
+"kind": "city",
+"counties": [
+"Hillsborough"
+]
+},
+{
+"name": "Tarpon Springs",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Tavares",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Temple Terrace",
+"kind": "city",
+"counties": [
+"Hillsborough"
+]
+},
+{
+"name": "Tequesta",
+"kind": "village",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Titusville",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "Treasure Island",
+"kind": "city",
+"counties": [
+"Pinellas"
+]
+},
+{
+"name": "Trenton",
+"kind": "city",
+"counties": [
+"Gilchrist"
+]
+},
+{
+"name": "Umatilla",
+"kind": "city",
+"counties": [
+"Lake"
+]
+},
+{
+"name": "Valparaiso",
+"kind": "city",
+"counties": [
+"Okaloosa"
+]
+},
+{
+"name": "Venice",
+"kind": "city",
+"counties": [
+"Sarasota"
+]
+},
+{
+"name": "Vernon",
+"kind": "city",
+"counties": [
+"Washington"
+]
+},
+{
+"name": "Vero Beach",
+"kind": "city",
+"counties": [
+"Indian River"
+]
+},
+{
+"name": "Virginia Gardens",
+"kind": "village",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "Waldo",
+"kind": "city",
+"counties": [
+"Alachua"
+]
+},
+{
+"name": "Wauchula",
+"kind": "city",
+"counties": [
+"Hardee"
+]
+},
+{
+"name": "Wausau",
+"kind": "town",
+"counties": [
+"Washington"
+]
+},
+{
+"name": "Webster",
+"kind": "city",
+"counties": [
+"Sumter"
+]
+},
+{
+"name": "Weeki Wachee",
+"kind": "city",
+"counties": [
+"Hernando"
+]
+},
+{
+"name": "Welaka",
+"kind": "town",
+"counties": [
+"Putnam"
+]
+},
+{
+"name": "Wellington",
+"kind": "village",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "West Melbourne",
+"kind": "city",
+"counties": [
+"Brevard"
+]
+},
+{
+"name": "West Miami",
+"kind": "city",
+"counties": [
+"Miami-Dade"
+]
+},
+{
+"name": "West Palm Beach",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "West Park",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Westlake",
+"kind": "city",
+"counties": [
+"Palm Beach"
+]
+},
+{
+"name": "Weston",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Westville",
+"kind": "town",
+"counties": [
+"Holmes"
+]
+},
+{
+"name": "Wewahitchka",
+"kind": "city",
+"counties": [
+"Gulf"
+]
+},
+{
+"name": "White Springs",
+"kind": "town",
+"counties": [
+"Hamilton"
+]
+},
+{
+"name": "Wildwood",
+"kind": "city",
+"counties": [
+"Sumter"
+]
+},
+{
+"name": "Williston",
+"kind": "city",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Wilton Manors",
+"kind": "city",
+"counties": [
+"Broward"
+]
+},
+{
+"name": "Windermere",
+"kind": "town",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Winter Garden",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Winter Haven",
+"kind": "city",
+"counties": [
+"Polk"
+]
+},
+{
+"name": "Winter Park",
+"kind": "city",
+"counties": [
+"Orange"
+]
+},
+{
+"name": "Winter Springs",
+"kind": "city",
+"counties": [
+"Seminole"
+]
+},
+{
+"name": "Worthington Springs",
+"kind": "town",
+"counties": [
+"Union"
+]
+},
+{
+"name": "Yankeetown",
+"kind": "town",
+"counties": [
+"Levy"
+]
+},
+{
+"name": "Zephyrhills",
+"kind": "city",
+"counties": [
+"Pasco"
+]
+},
+{
+"name": "Zolfo Springs",
+"kind": "town",
+"counties": [
+"Hardee"
+]
+}
+]

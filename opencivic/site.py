@@ -248,6 +248,15 @@ summary{cursor:pointer;font-weight:700;padding:.5rem 0}
 .subject{font-size:1rem;color:var(--quiet);margin:0 0 .3rem}
 .facts{margin:.2rem 0 .5rem;padding-left:1.2rem}
 .facts li{margin:.1rem 0}
+.cols{columns:18rem;column-gap:2rem}
+.cols li{break-inside:avoid}
+.scroll{overflow-x:auto;margin:.5rem 0 1rem}
+.scroll:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+table.data{border-collapse:collapse;width:100%;font-size:.95rem}
+table.data caption{text-align:left;font-weight:700;padding:.3rem 0}
+table.data th,table.data td{text-align:left;padding:.4rem .6rem .4rem 0;border-bottom:1px solid #D5DBE3;vertical-align:top}
+table.data thead th{border-bottom:2px solid var(--ink)}
+select{font:inherit;padding:.5rem;border:2px solid var(--ink);border-radius:6px;background:#fff;color:var(--ink);max-width:100%}
 .means{font-size:1rem;margin:.3rem 0}
 .means summary,.official summary{font-weight:400;padding:.2rem 0;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 .means p,.official p{margin:.3rem 0 .6rem;padding-left:.9rem;border-left:3px solid var(--line)}
@@ -389,16 +398,19 @@ def home(out: Path, today: str, tt: dict, latest: dict[str, str] | None = None) 
                    f'{n} {"document" if n == 1 else "documents"} we archived. Our copies are still here, unchanged. '
                    f'<a href="templeterrace.html#removed">See what was removed</a>.</p>')
     body = f"""<h1>What your local government decided, in plain words</h1>
-<p class="lede">Free, nonpartisan records of local government meetings around Tampa Bay and in southeast
-Volusia County: what was decided, who voted which way, and the official papers, collected every night.</p>
+<p class="lede">Free, nonpartisan records of local government meetings in Florida: what was decided, who voted
+which way, and the official papers, collected every night. It began around Tampa Bay and in southeast Volusia
+County, and now follows {len([j for j in JURISDICTIONS.values() if not j.get("blocked")])} city and county governments
+across the state.</p>
 <p class="fair">Everything here comes from official government websites and links back to them. We explain
 what a decision was. We never say whether it was right.</p>
 <h2 id="areas">Where do you live?</h2>
 <p>If you live outside a city, your county commission is your local government. It decides zoning, roads
 and county taxes for your neighborhood.</p>
 <ul class="areas">{''.join(cards)}</ul>
-<p class="small">More places are planned. Search <a href="counties.html">all three counties' records</a> or
+<p class="small">Search <a href="counties.html">all three counties' records</a> or
 <a href="volusia.html">southeast Volusia city records</a>.</p>
+{rest_of_florida(out)}
 <h2>Spotlight</h2>
 <p>New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases for
 companies, across every government we follow. Each is tagged by fixed rules from the official wording.
@@ -430,6 +442,126 @@ NetNewsWire) checks for you. Email and text alerts are planned.</p>
                    for a, j in AREAS if JURISDICTIONS[j]["govt"] == "county"]
                 + [(f"{JURISDICTIONS[j]['name']}: new records", f"feeds/{j}.xml") for a, j in AREAS
                    if j != "templeterrace" and JURISDICTIONS[j]["govt"] == "city" and not JURISDICTIONS[j].get("blocked")])
+
+
+# --- The rest of Florida ---------------------------------------------------------------------
+
+LEGACY_PLACES = {("county", "Hillsborough"): "hillsborough", ("county", "Pasco"): "pasco",
+                 ("county", "Hernando"): "hernando", ("city", "Temple Terrace"): "templeterrace",
+                 ("city", "Edgewater"): "edgewater", ("city", "Oak Hill"): "oakhill",
+                 ("city", "New Smyrna Beach"): "newsmyrnabeach"}
+
+
+def florida_places() -> list[dict]:
+    """Every Florida county and incorporated city, town and village (Census Bureau, 2020 place-by-county
+    file), each with the slug of the government we collect, if we do."""
+    from .jurisdictions import FLORIDA
+    path = Path(__file__).parent / "florida-places.json"
+    rows = json.loads(path.read_text("utf-8")) if path.exists() else []
+    ours = {("county" if f["kind"] == "county" else "place", f["place"]): f["slug"] for f in FLORIDA}
+    out = []
+    for r in rows:
+        k = ("county" if r["kind"] == "county" else "place", r["name"])
+        slug = ours.get(k) or LEGACY_PLACES.get((r["kind"] if r["kind"] == "county" else "city", r["name"]))
+        out.append({**r, "slug": slug})
+    return out
+
+
+def _gov_links(out: Path, slug: str) -> tuple[str, str]:
+    """(status words, links) for a government we collect."""
+    jur = JURISDICTIONS[slug]
+    if jur.get("blocked"):
+        return "Not collected: its records site asks automated tools to stay out", (
+            f'<a href="{e(jur["official_records"])}">the city\'s own agendas and minutes</a>')
+    links = []
+    if (out / "meetings" / f"{slug}.html").exists():
+        links.append(f'<a href="meetings/{slug}.html">meetings</a>')
+    people = (out / jur["people_dir"] / f"{slug}.html").exists()
+    if people:
+        links.append(f'<a href="{jur["people_dir"]}/{slug}.html">how each {jur["member"]} voted</a>')
+    hub = jur.get("hub")
+    if hub:
+        links.append(f'<a href="{hub[1]}{"#" + slug if slug != "templeterrace" else ""}">search its records</a>')
+    status = ("Meetings and each member's votes" if people else
+              "Meetings and agendas (votes aren't in this source)" if links and not jur.get("votes", True) else
+              "Meetings and agendas (no votes read yet)" if links else "Being collected; pages appear after the first nightly run")
+    return status, " · ".join(links)
+
+
+def rest_of_florida(out: Path) -> str:
+    """Front-door section: one link per Florida county where we follow at least one government."""
+    from .jurisdictions import FLORIDA, REGIONS
+    if not FLORIDA:
+        return ""
+    items = []
+    for r in sorted((r for r in REGIONS.values() if r.get("county")), key=lambda r: r["county"]):
+        if not (out / r["page"]).exists():
+            continue
+        names = [JURISDICTIONS[m]["short"] + (" County" if JURISDICTIONS[m]["govt"] == "county" else "")
+                 for m in r["members"]]
+        items.append(f'<li><a href="{r["page"]}">{e(r["county"])} County</a>: {e(", ".join(names))}</li>')
+    if not items:
+        return ""
+    places = florida_places()
+    n = sum(1 for p in places if p["slug"] and not JURISDICTIONS[p["slug"]].get("blocked"))
+    return f"""<h2 id="florida">The rest of Florida</h2>
+<p>We follow {n} of Florida's {len(places)} county and city governments so far: the ones whose meeting records are
+on a system our software can read. Pick a county, or <a href="florida.html">find your city or county</a>.</p>
+<ul class="links cols">{''.join(items)}</ul>"""
+
+
+def florida_page(out: Path) -> str:
+    from .jurisdictions import county_slug
+    places = florida_places()
+    counties = [p for p in places if p["kind"] == "county"]
+    sections = []
+    n_ours = 0
+    for c in sorted(counties, key=lambda p: p["name"]):
+        inside = sorted((p for p in places if p["kind"] != "county" and c["name"] in p["counties"]), key=lambda p: p["name"])
+        rows, missing = [], []
+        for p in [c] + inside:
+            label = f"{p['name']} County government" if p["kind"] == "county" else f"{p['name']} ({p['kind']})"
+            if p["slug"]:
+                status, links = _gov_links(out, p["slug"])
+                n_ours += 0 if JURISDICTIONS[p["slug"]].get("blocked") or (p["kind"] != "county" and p["counties"][0] != c["name"]) else 1
+                rows.append(f'<li data-name="{e(p["name"].lower())}"><strong>{e(label)}</strong>: {e(status)}'
+                            f'{". " + links if links else ""}</li>')
+            else:
+                missing.append(f'<span data-name="{e(p["name"].lower())}">{e(p["name"] + (" County government" if p["kind"] == "county" else ""))}</span>')
+        cid = f"{county_slug(c['name'])}-county"
+        sections.append(
+            f'<section id="{cid}" aria-labelledby="h-{cid}" data-county="{e(c["name"].lower())}">'
+            f'<h2 id="h-{cid}">{e(c["name"])} County</h2>'
+            + (f'<ul class="links">{"".join(rows)}</ul>' if rows else "")
+            + (f'<p class="small">Not collected yet: {", ".join(missing)}.</p>' if missing else "") + "</section>")
+    body = f"""<h1>What we cover in Florida</h1>
+<p class="lede">Florida has 67 counties and {len(places) - 67} cities, towns and villages, each with its own
+elected board. We collect <mark>{n_ours} of those {len(places)} governments</mark> so far.</p>
+<p class="fair">A government is here when its meeting records are on a system our software can already read
+(Legistar or CivicClerk; a few have their own reader) and that system doesn't ask automated tools to stay out.
+The others publish on systems we haven't built a reader for yet, or only as documents on their own websites.
+"Not collected yet" says nothing about how open a government is.</p>
+<form class="search" role="search" onsubmit="return false"><label for="fq">Find your city or county</label>
+<div class="row"><input type="search" id="fq" autocomplete="off" placeholder="for example: Ocala"></div></form>
+<p class="small" id="fcount" role="status"></p>
+<p class="small">If you live outside city limits, your county government is your local government. The list of
+governments is the U.S. Census Bureau's (2020).</p>
+{''.join(sections)}
+<script>
+document.getElementById('fq').addEventListener('input', function () {{
+  var q = this.value.trim().toLowerCase(), shown = 0;
+  document.querySelectorAll('section[data-county]').forEach(function (s) {{
+    var hit = !q || s.getAttribute('data-county').indexOf(q) >= 0;
+    if (!hit) s.querySelectorAll('[data-name]').forEach(function (x) {{ if (x.getAttribute('data-name').indexOf(q) >= 0) hit = true; }});
+    s.hidden = !hit;
+    if (hit) shown++;
+  }});
+  document.getElementById('fcount').textContent = q ? shown + (shown === 1 ? ' county' : ' counties') + ' shown' : '';
+}});
+</script>"""
+    return page("What we cover in Florida", body, 0, path="florida.html",
+                description=(f"Which of Florida's 67 counties and {len(places) - 67} cities, towns and villages have "
+                             "plain-language meeting records and votes on Open Civic Web, county by county."))
 
 
 # --- The glossary ----------------------------------------------------------------------------
@@ -505,6 +637,24 @@ def data_page(out: Path, lite: dict[str, str]) -> str:
                          "Each city and board, each council member and their membership, each meeting and archived document.")
     if not (out / "volusia.ftm.jsonl").exists():
         v_ftm, v_ftm_ld = "", None
+    from .jurisdictions import REGIONS
+    more, more_ld = [], []
+    for r in sorted((r for r in REGIONS.values() if r.get("county")), key=lambda r: r["county"]):
+        if not (out / f"{r['db']}.db").exists():
+            continue
+        names = ", ".join(JURISDICTIONS[m]["name"] for m in r["members"])
+        h, ld_ = dl(f"{r['db']}.db", f"{r['county']} County governments database", "SQLite",
+                    f"Meetings, agenda items and recorded votes for {e(names)}, from 2025.", lite.get(f"{r['db']}.db", ""))
+        more.append(h)
+        more_ld.append({"@type": "Dataset", "name": f"{r['county']} County, Florida local government records",
+                        "description": f"Meetings, agenda items and per-member votes for {names}, from 2025.",
+                        "spatialCoverage": f"{r['county']} County, Florida", "temporalCoverage": "2025-01/..",
+                        "distribution": [ld_]})
+    more_db = "".join(more)
+    money_csv, _ = dl("companies.csv", "Public money to companies", "CSV",
+                      "Every decision that names a company or organization and a dollar amount: the company, the "
+                      "government, the date, the amount approved, whether it counts toward the company's total, the "
+                      "outcome and the official wording.") if (out / "companies.csv").exists() else ("", None)
     feeds = sorted(p.name for p in (out / "feeds").glob("*.xml")) if (out / "feeds").is_dir() else []
     feed_items = ['<li><a href="feed.xml">Temple Terrace: everything new</a></li>'] + [
         f'<li><a href="feeds/{e(f)}">{e(_feed_label(f))}</a></li>' for f in feeds]
@@ -514,9 +664,10 @@ official source it came from.</p>
 <p class="fair">These are public records, read by software. Votes, amounts and names can be misread: check the
 official record before relying on a detail, and <a href="{REPO}/issues">tell us</a> if something is wrong.</p>
 <h2>Databases</h2>
-<ul class="records">{tt_db}{c_db}{v_db}</ul>
+<ul class="records">{tt_db}{c_db}{v_db}{more_db}</ul>
 <p class="small">Tables are described inside each database (Datasette shows the descriptions).
 SQLite opens in <a href="https://datasette.io">Datasette</a>, DB Browser for SQLite, Python, R and most data tools.</p>
+{f'<h2>Money</h2><ul class="records">{money_csv}</ul>' if money_csv else ""}
 <h2>People, organisations and meetings</h2>
 <ul class="records">{tt_ftm}{c_ftm}{v_ftm}</ul>
 <p class="small"><a href="https://followthemoney.tech">FollowTheMoney</a> is the open data model used by
@@ -547,7 +698,7 @@ People, terms as DefinedTerms). Please identify your tool and keep request rates
          "description": "Meetings, agenda items and per-member roll-call votes of the Edgewater, Florida City Council, and the archived agendas and minutes of the Oak Hill, Florida City Commission, from 2025.",
          "spatialCoverage": ["Edgewater, Florida", "Oak Hill, Florida"],
          "temporalCoverage": "2025-01/..", "distribution": [x for x in (v_db_ld, v_ftm_ld) if x], **common},
-    ]
+    ] + [{**d_, **common} for d_ in more_ld]
     return page("Data and downloads", body, 0, path="data.html",
                 description="Free downloads of Temple Terrace, Tampa Bay county commission and southeast Volusia city records: SQLite databases, FollowTheMoney entities, RSS feeds and raw files.",
                 jsonld=[{"@type": "DataCatalog", "name": f"{NAME} data", "url": absolute("data.html") or None,
@@ -587,6 +738,11 @@ def llms_txt(out: Path) -> str:
             lines.append(f"- [{jur['board']} members]({u(jur['people_dir'] + '/' + j + '.html')}): each member's recorded votes")
     counties = "\n".join(lines)
     people = ""
+    from .jurisdictions import REGIONS
+    regions = "\n".join(
+        f"- [{r['county']} County governments]({u(r['page'])}): " + ", ".join(JURISDICTIONS[m]["name"] for m in r["members"])
+        for r in sorted((r for r in REGIONS.values() if r.get("county")), key=lambda r: r["county"])
+        if (out / r["page"]).exists())
     return f"""# {NAME}
 
 > Free, nonpartisan, plain-language public records of local government in Florida: around Tampa Bay, the
@@ -598,7 +754,8 @@ def llms_txt(out: Path) -> str:
 Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
 come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace votes are read from the Clerk's minutes;
 Hernando and Edgewater votes come from their Legistar records. New Smyrna Beach isn't collected: its records site asks
-automated tools not to.
+automated tools not to. Other Florida governments (see "What we cover in Florida") come from their Legistar records
+(meetings, agenda items and each member's vote) or their CivicClerk portals (meetings and agenda items only).
 
 ## Start here
 
@@ -606,6 +763,8 @@ automated tools not to.
 - [Temple Terrace City Council records]({u('templeterrace.html')})
 - [County commission records and search]({u('counties.html')})
 - [Southeast Volusia city records and search]({u('volusia.html')}): Edgewater, Oak Hill, New Smyrna Beach
+- [What we cover in Florida]({u('florida.html')}): every Florida county and city, with what is collected for each
+{regions}
 - [Public money to companies]({u('companies.html')}): companies and organizations the governments agreed to pay (contracts, purchases, change orders, grants), decision by decision, with approved amounts (not payments) and factual flags (no competitive bidding, money added to a contract, approved over a no vote, $1 million or more on consent, conflict-of-interest abstentions)
 - [Spotlight]({u('spotlight.html')}): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
 {counties}
@@ -620,6 +779,7 @@ automated tools not to.
 ## Data
 
 - [Data and downloads]({u('data.html')}): SQLite databases, FollowTheMoney entities, RSS feeds
+- [Public money to companies, as CSV]({u('companies.csv')}): one row per company per decision
 - [Sitemap]({u('sitemap.xml')})
 - [Source code and raw data]({REPO})
 
@@ -638,6 +798,8 @@ def write_common(out: Path, *, today: str, tt: dict, lite: dict[str, str] | None
     (out / "learn").mkdir(parents=True, exist_ok=True)
     (out / "learn" / "index.html").write_text(glossary(), "utf-8")
     (out / "data.html").write_text(data_page(out, lite or {}), "utf-8")
+    if florida_places():
+        (out / "florida.html").write_text(florida_page(out), "utf-8")
     (out / "index.html").write_text(home(out, today, tt, latest), "utf-8")
     (out / "llms.txt").write_text(llms_txt(out), "utf-8")
     sm = sitemap(out)

@@ -125,7 +125,9 @@ ZONE_NAMES = {
     "CG": "general commercial", "CI": "intensive commercial", "M": "manufacturing", "PD": "planned development",
 }
 
-MONEY_RX = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?:\s?(million|billion))?", re.I)
+# "$4 million", "$1.2 mill", and the Clerk's shorthand "$4M", "$3.5M" (capital letter, right after the number)
+MONEY_RX = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?"
+                      r"(?:\s?(million|billion|mill?\.?(?![a-z]))|(?-i:(MM|M|B)(?![A-Za-z])))?", re.I)
 ACRES_RX = re.compile(r"(?:±|\+/-|approximately|about)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*(?:±\s*)?(?:\+/-\s*)?acres?\b", re.I)
 HOMES_RX = re.compile(r"(up to )?(\d{1,3}(?:,\d{3})*|\d+)\s+(?:single[- ]family\s+|multi[- ]family\s+|residential\s+|townhome\s+|townhouse\s+|dwelling\s+)+(?:dwelling\s+)?(?:units|homes|lots)\b", re.I)
 SQFT_RX = re.compile(r"(\d{1,3}(?:,\d{3})+|\d+)\s*(?:square feet|sq\.?\s?ft\.?|sf)\s+(?:of\s+)?([a-z/ -]{3,40}?)(?:\s+uses?)?(?=[,.;)]|\s+(?:and|on|in|at|with)\b)", re.I)
@@ -143,8 +145,9 @@ def money(text: str) -> list[float]:
     out = []
     for m in MONEY_RX.finditer(text or ""):
         v = float(m.group(1).replace(",", "")) + (float("0." + m.group(2)) if m.group(2) else 0)
-        if m.group(3):
-            v *= 1e6 if m.group(3).lower() == "million" else 1e9
+        unit = (m.group(3) or m.group(4) or "").lower()
+        if unit:
+            v *= 1e9 if unit in ("billion", "b") else 1e6
         if v >= 1:
             out.append(v)
     return out

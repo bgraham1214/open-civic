@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
   workflow_dispatch:     # "Run workflow" button
+    inputs:
+      florida_minutes:
+        description: "Minutes to spend collecting the governments in florida.json (default 150)"
+        required: false
   schedule:
     - cron: "17 8 * * *" # nightly, 3:17 AM Eastern (standard time)
 
@@ -114,6 +118,18 @@ jobs:
           python -m opencivic.weblinks list --account oakhillfl -o out/weblinks-oakhillfl.jsonl 2>&1 \
             | tee out/weblinks-log.txt
 
+      # Every other Florida government we can read (opencivic/florida.json), newest meetings first. A
+      # government's first collection takes thousands of requests, so this works inside a time budget
+      # and picks up where it left off the next night.
+      - name: The rest of Florida (Legistar and CivicClerk governments in florida.json)
+        continue-on-error: true
+        env:
+          FLORIDA_MINUTES: ${{ inputs.florida_minutes }}
+        run: |
+          set -o pipefail
+          python -m opencivic.florida collect --data-dir data --minutes "${FLORIDA_MINUTES:-150}" 2>&1 \
+            | tee out/florida-log.txt
+
       - name: Hillsborough Clerk BOCC voting record (list the yearly reports, 2014 on)
         continue-on-error: true
         run: python -m opencivic.hillsclerk list --since 2014 -o out/hillsclerk-listing.jsonl
@@ -197,10 +213,8 @@ jobs:
           from followthemoney import model
           bad = 0
           import os
-          for path in ("data/entities/templeterrace.ftm.jsonl", "data/entities/counties.ftm.jsonl",
-                       "data/entities/volusia.ftm.jsonl"):
-              if not os.path.exists(path):
-                  continue
+          import glob
+          for path in sorted(glob.glob("data/entities/*.ftm.jsonl")):
               for line in open(path):
                   d = json.loads(line)
                   try:
@@ -232,8 +246,11 @@ jobs:
           csize=$(stat -c %s site/counties.db 2>/dev/null || echo 0); echo "counties database: $csize bytes"
           if [ "$csize" -gt 95000000 ]; then echo "::error::counties.db over GitHub's 100 MB file limit"; exit 1; fi
           if [ "$csize" -gt 50000000 ]; then echo "::warning::counties.db is $csize bytes; Datasette Lite loads it whole, which is slow on phones"; fi
-          vsize=$(stat -c %s site/volusia.db 2>/dev/null || echo 0); echo "volusia database: $vsize bytes"
-          if [ "$vsize" -gt 95000000 ]; then echo "::error::volusia.db over GitHub's 100 MB file limit"; exit 1; fi
+          for db in site/*.db; do
+            s=$(stat -c %s "$db")
+            if [ "$s" -gt 95000000 ]; then echo "::error::$db over GitHub's 100 MB file limit"; exit 1; fi
+          done
+          du -sh site; find site -name '*.html' | wc -l
       - name: Fingerprints of the pages last sent to search engines
         continue-on-error: true
         run: |

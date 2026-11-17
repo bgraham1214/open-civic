@@ -67,6 +67,76 @@ class Amounts(unittest.TestCase):
         self.assertEqual(set(self.amounts(t).values()), {4_000_000})
 
 
+class Nov16(unittest.TestCase):
+    """Wording that was misread on companies.html, Nov 16, 2026."""
+
+    def one(self, text):
+        aka = {}
+        ns = money.payees(text, aka)
+        return [(n, money.amount_for(text, ns, i)) for i, (n, _, _) in enumerate(ns)], aka
+
+    def test_names_kept_whole(self):
+        for text, name in [
+            ("Second Amendment to Agreement for Additional Purchase Authority – Schaer Development of Central Florida "
+             "Inc. – As Needed Miscellaneous Pipeline Construction – $6,500,000.00", "Schaer Development of Central Florida Inc."),
+            ("Exempt Purchase – Westcare Gulfcoast - Florida, Inc. – Adult Outpatient Treatment Services - $1,086,000.00",
+             "Westcare Gulfcoast - Florida, Inc."),
+            ("Approve an Agreement between Hillsborough County and Enterprising Latinas, Inc., in the not-to-exceed "
+             "total amount of $250,000", "Enterprising Latinas, Inc."),
+            ("commercial solid waste container collection svcs to Republic Svcs of Florida LP in the amount of "
+             "$1,756,676.16", "Republic Svcs of Florida LP"),
+            ("Task Order No. PDE25-TO-002 - W.E. Oliver, P.E., LLC - 2025 Mobility Fee Update Study - $193,898.40",
+             "W.E. Oliver, P.E., LLC"),
+            ("Agreement for Sale and Purchase of Property and Budget Amendment – Square 1 Properties, LLC – Lot 6 – "
+             "$155,000.00", "Square 1 Properties, LLC"),
+            ("Additional Purchasing Authority - GSA Purchase - sCube, Inc. - Software Support Services - $268,800.00",
+             "sCube, Inc."),
+        ]:
+            self.assertEqual([n for n, _ in self.one(text)[0]], [name], text)
+        # a person introduced before the company is still dropped
+        self.assertEqual(money.clean_name("Mark Keschl of Meridien Development, LLC"), "Meridien Development, LLC")
+        # a name cut down to one generic word isn't used
+        self.assertEqual(self.one("Opioid Funding Agreement – Steps to Recovery, Inc. – $437,000.00")[0], [])
+
+    def test_whose_contract_is_used(self):
+        got, _ = self.one("Piggyback of contract between Gainesville Regional Utilities and Atlantic Pipe Services, LLC. "
+                          "for pipe lining in the amount of $300,000")
+        self.assertEqual(got, [("Atlantic Pipe Services, LLC.", 300000)])
+
+    def test_doing_business_as_is_one_company(self):
+        got, aka = self.one("Utilization of Hillsborough County Contract With Shamrock Environmental Company d/b/a Aqua "
+                            "Clean Environmental Co., LLC, for Leachate Hauling (Contract No. 25-P0200/FH; Amount: $450,000.00)")
+        self.assertEqual(got, [("Shamrock Environmental Company", 450000)])
+        self.assertEqual(aka, {"Shamrock Environmental Company": ["Aqua Clean Environmental Co."]})
+        got, _ = self.one("Task Order No. FM25-011 - Site Improvements - CPH Consulting, LLC, fka CPH, LLC fka CPH, Inc. "
+                          "- $99,992.89")
+        self.assertEqual(got, [("CPH Consulting, LLC", 99992.89)])
+
+    def test_shorthand_millions(self):
+        got, _ = self.one("Approve a change order to the pavement treatment program contract w/ Hubbard Construction Co. "
+                          "increasing the total contract capacity by $3.5M, from $5,071,168.40 to $8,571,168.40")
+        self.assertEqual(got, [("Hubbard Construction Co.", 3500000)])
+        self.assertEqual(money.money("to R.M. Halts & Associates, $3 mill, Kenyon & Partners Inc, $2.5 mill"), [3e6, 2.5e6])
+        self.assertEqual(money.money("a $500 minimum and $4 Main Street"), [500, 4])
+
+    def test_raise_from_to_counts_the_difference(self):
+        got, _ = self.one("Approve first modification to agreement w/ Tampa Hillsborough Homeless Initiative Inc., "
+                          "increasing funding from $237,500 to $475,000")
+        self.assertEqual(got[0][1], 237500)
+        got, _ = self.one("Approve first modification w/ Acme Paving Inc., increasing funding from $100,000 to $475,000")
+        self.assertEqual(got[0][1], 375000)
+
+    def test_decreases_are_not_added(self):
+        rows = [row("FAC26-1040 – Change Order No. 1 (Final) to Agreement for East Pasco Senior Center Construction - "
+                    "Ryman Construction of Florida, Inc. – ($52,110.59) January 12, 2026")]
+        c = list(money.collect({"pasco": {"2026-02-17": rows}}).values())[0]
+        self.assertEqual((c["approved_total"], c["rows"][0]["decrease"]), (0, True))
+        # an amount in brackets after a place isn't a decrease
+        rows = [row("Award and execute agreements with Stage Door II Inc. for the South Service Area ($7,995,635.75)")]
+        c = list(money.collect({"pasco": {"2026-02-17": rows}}).values())[0]
+        self.assertEqual(c["approved_total"], 7995635.75)
+
+
 class Direction(unittest.TestCase):
     def test_who_pays(self):
         d = money.direction

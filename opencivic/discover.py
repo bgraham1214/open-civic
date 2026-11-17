@@ -251,9 +251,113 @@ def run_probe(places: list[dict], out_path: str, platforms: tuple[str, ...] = ("
     return 0
 
 
+# --- From survey to registry ---------------------------------------------------------------------
+# Decisions a person made reading the survey (Nov 16, 2026). Evidence is each account's board names
+# and meeting places in the survey output.
+
+# Accounts that answered but belong to a namesake outside Florida, or are dead.
+NOT_FLORIDA = {
+    "jacksonco": "Jackson County, Missouri (Kansas City)", "madison": "Madison, Wisconsin",
+    "oakland": "Oakland, California", "alachua": "no meetings since 2023", "miamidade": "no meetings since 2018",
+    "lakecounty": "answers, but lists no meetings",
+}
+# Accounts the survey tried under a county's name that are a city's: (kind, place name) they belong to.
+REASSIGN = {"alachuafl": ("city", "Alachua"), "palmbeachfl": ("town", "Palm Beach"),
+            "seminolefl": ("city", "Seminole"), "okeechobeefl": ("city", "Okeechobee")}
+# Legistar accounts without "fl" in the name, confirmed as the Florida government by their meeting places.
+CONFIRMED: dict[str, str] = {
+    "broward": "Broward County Governmental Center", "martin": "Hobe Sound, Port Salerno and Rio committees",
+    "pinellas": "333 Chestnut Street, Clearwater",
+}
+ALREADY = {"hernandocountyfl", "hillsboroughcounty", "cityofedgewater", "pascocofl", "templeterracefl"}
+
+_BOARD = re.compile(r"\b(council|commission|commision|comission|commissioners|bocc)\b|"
+                    r"^regular (commission )?meeting\s*$|^special commission\b|^workshop commission\b", re.I)
+_NOT_BOARD = re.compile(
+    r"planning|zoning|histor|charter|youth|advisory|architect|civil service|ethics|housing|tourist|code |code$|"
+    r"redevelop|\bCRA\b|landmark|preserv|adjust|school|water authority|utilit|pension|audit|canvass|magistrate|"
+    r"review|election|appeal|\bart\b|\barts\b|beautif|library|tree|recreation|parks|economic|police|fire|airport|"
+    r"port authority|human|educat|sustain|resilien|nuisance|contractor|licens|investment|insurance|retire|TDC|"
+    r"value adjustment|districts|erosion|mosquito|executive session|closed|attorney|shade|joint|interlocal|MPO|"
+    r"metropolitan|TPO|committee|briefing|conference|lobby|nominat|selection|evaluation|\bbid\b|RFP|"
+    r"hearing officer|hearing examiner|affordable|citizen|development board|veterans|senior|disab|cultur|marine|"
+    r"waterway|harbor|beach protection|golf|cemetery|animal|health|oversight|public safety|status of women|"
+    r"land development regulation|nature|building commissioners|environmental|food policy|legislature", re.I)
+
+
+def governing_boards(names: dict[str, int]) -> list[str]:
+    """The meeting-body names that are the governing board's own meetings (regular, special, workshop)."""
+    def is_board(n: str) -> bool:
+        # the county commission sitting as its own zoning hearing is still the commission
+        if re.match(r"^(?:[\w.]+ (?:County )?)?Board of County Commissioners\b", n.strip()):
+            return not re.search(r",|interlocal|joint|addendum|school board|city council|legislative delegation", n, re.I)
+        return bool(_BOARD.search(n)) and not _NOT_BOARD.search(n)
+    return [n for n in names if n and n.strip() and is_board(n)]
+
+
+def registry(rows: list[dict], places: list[dict]) -> tuple[list[dict], list[str]]:
+    """florida.json rows from survey rows, plus a line for each account left out and why."""
+    by_name = {(p["kind"] == "county", p["name"]): p for p in places}
+    out: dict[str, dict] = {}
+    notes: list[str] = []
+    for r in rows:
+        acct = r.get("client") or r.get("tenant")
+        kind, name = r["kind"], r["place"]
+        if acct in REASSIGN:
+            kind, name = REASSIGN[acct]
+        place = by_name.get((kind == "county", name))
+        tag = f"{r['platform']}:{acct} ({name})"
+        if acct in ALREADY:
+            continue
+        if r.get("closed"):
+            notes.append(f"{tag}: account exists but its API is closed ({r['closed']})")
+            continue
+        if acct in NOT_FLORIDA:
+            notes.append(f"{tag}: {NOT_FLORIDA[acct]}")
+            continue
+        if place is None:
+            notes.append(f"{tag}: no such place")
+            continue
+        if r["platform"] == "legistar":
+            if not (acct.endswith(("fl", "florida")) or acct in CONFIRMED):
+                notes.append(f"{tag}: not confirmed as the Florida government")
+                continue
+            names = r.get("bodies_since_2025") or {}
+        else:
+            names = r.get("categories") or {}
+            if (r.get("with_files") or 0) < 10:
+                notes.append(f"{tag}: portal exists but has fewer than 10 meetings with files")
+                continue
+        boards = governing_boards(names)
+        if sum(names[b] for b in boards) < 5:
+            notes.append(f"{tag}: can't tell its governing board's meetings apart "
+                         f"(names: {', '.join(list(names)[:4])})")
+            continue
+        county = place["counties"][0]
+        slug = (re.sub(r"[^a-z]", "", name.lower()) + "county") if kind == "county" else re.sub(r"[^a-z]", "", name.lower())
+        first = boards[0].lower()
+        if kind == "county":
+            body, full = "Board of County Commissioners", f"{name} County"
+        else:
+            body = f"{kind.capitalize()} {'Council' if 'council' in first else 'Commission'}"
+            full = f"{kind.capitalize()} of {name}"
+        row = {"slug": slug, "name": full, "short": name, "place": name, "kind": kind, "county": county,
+               "platform": r["platform"], "account": acct, "body": body, "boards": sorted(b.strip() for b in boards)}
+        prev = out.get(slug)
+        # a government on both platforms: Legistar carries the votes
+        if prev is None or (prev["platform"] == "civicclerk" and r["platform"] == "legistar"):
+            if prev:
+                notes.append(f"civicclerk:{prev['account']} ({name}): also on Legistar, which has votes; Legistar used")
+            out[slug] = row
+        else:
+            notes.append(f"{tag}: {name} already listed from {prev['platform']}:{prev['account']}")
+    return sorted(out.values(), key=lambda x: (x["county"], x["kind"] != "county", x["short"])), notes
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m opencivic.discover")
-    ap.add_argument("what", choices=["places", "probe"])
+    ap.add_argument("what", choices=["places", "probe", "registry"])
+    ap.add_argument("--survey", nargs="*", help="registry: survey output files")
     ap.add_argument("--places")
     ap.add_argument("--only", help="comma-separated place names (for a quick check)")
     ap.add_argument("--platform", choices=["legistar", "civicclerk"], help="survey one platform only")
@@ -282,6 +386,16 @@ def main(argv: list[str] | None = None) -> int:
             for r in rows:
                 fh.write(json.dumps(r) + "\n")
         return 0 if places else 1
+    if a.what == "registry":
+        from pathlib import Path
+        places = json.loads((Path(__file__).parent / "florida-places.json").read_text("utf-8"))
+        rows = [json.loads(ln) for f in a.survey for ln in open(f, encoding="utf-8") if ln.strip()]
+        reg, notes = registry(rows, places)
+        with open(a.output, "w", encoding="utf-8") as fh:
+            fh.write("[\n" + ",\n".join(json.dumps(r, ensure_ascii=False) for r in reg) + "\n]\n")
+        print("\n".join(sorted(notes)), file=sys.stderr)
+        print(f"{len(reg)} governments", file=sys.stderr)
+        return 0
     places = [json.loads(ln) for ln in open(a.places, encoding="utf-8") if ln.strip()]
     if a.only:
         want = {n.strip().lower() for n in a.only.split(",")}

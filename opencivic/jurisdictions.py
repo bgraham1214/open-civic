@@ -17,6 +17,10 @@ in volusia.db.
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
+
 JURISDICTIONS: dict[str, dict] = {
     "templeterrace": {
         "name": "City of Temple Terrace", "short": "Temple Terrace", "body": "City Council",
@@ -56,6 +60,7 @@ JURISDICTIONS: dict[str, dict] = {
         "website": "https://www.cityofedgewater.org",
         # the council's own meetings; the Executive Session is closed (attorney-client)
         "board_rx": r"^City Council( - (Special Meeting|Workshop))?$",
+        "outline": "lettered",  # sub-items "a.", "b." under numbered sections, consent voted once (region._legistar_outline)
         "coverage": ("City Council meetings (regular, special and workshops) and the city's boards, from Edgewater's "
                      "Legistar, with agenda items, actions and each council member's vote, from 2025. Code "
                      "Enforcement/Special Magistrate hearings (private residents' cases) are left out. Agendas "
@@ -87,6 +92,42 @@ JURISDICTIONS: dict[str, dict] = {
 
 COUNTIES = [k for k, j in JURISDICTIONS.items() if j.get("govt", "county") == "county"]
 
+# --- The rest of Florida (added Nov 16, 2026) ---------------------------------------------------
+# florida.json lists every county and city found on a platform our adapters read (Legistar or
+# CivicClerk) by `python -m opencivic.discover`, each confirmed by a person as the Florida government
+# and not a namesake. One row per government: slug, name, kind (county, city, town, village),
+# county, platform, account, body (what its governing board is called) and boards (the exact
+# meeting-body names that are that board's own meetings).
+FLORIDA: list[dict] = json.loads((Path(__file__).parent / "florida.json").read_text("utf-8"))
+
+
+def _board_rx(names: list[str], platform: str = "legistar") -> str:
+    alt = "(?:" + "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True)) + ")"
+    # CivicClerk meetings are listed as "Meeting name (Category)"; the category says whose meeting it is
+    return rf"^.*\({alt}\s*\)$" if platform == "civicclerk" else f"^{alt}$"
+
+
+def _coverage(f: dict) -> str:
+    the = "" if f["kind"] == "county" else "the "
+    if f["platform"] == "legistar":
+        return (f"{f['body']} meetings and other public boards, from {the}{f['name']}'s Legistar records, with "
+                "agenda items, actions and each member's vote where the record gives one, from 2025. Hearings "
+                "about private residents' own cases (code enforcement, special magistrates, value adjustment "
+                "boards) are left out. Agendas and minutes are linked on the government's own site.")
+    return (f"{f['body']} meetings and other public boards, from {the}{f['name']}'s CivicClerk portal: meeting "
+            "dates and agenda items, from 2025, linked to the official agenda. Votes aren't on this portal; they "
+            "are in the minutes, which we don't read for this government yet.")
+
+
+for _f in FLORIDA:
+    JURISDICTIONS[_f["slug"]] = {
+        "name": _f["name"], "short": _f["short"], "body": _f["body"], "county": _f["county"], "areas": [],
+        "groups": [f"{_f['platform']}:{_f['account']}"], "since": "2025-01-01",
+        "govt": "county" if _f["kind"] == "county" else "city", "kind": _f["kind"],
+        "board_rx": _board_rx(_f["boards"], _f["platform"]), "coverage": _coverage(_f), "florida": True,
+        "platform": _f["platform"], "votes": _f["platform"] == "legistar",
+    }
+
 # Regions built by region.py: one search database, hub page and set of feeds each.
 REGIONS: dict[str, dict] = {
     "counties": {"title": "County commission records", "short": "County records", "db": "counties",
@@ -96,6 +137,21 @@ REGIONS: dict[str, dict] = {
                 "page": "volusia.html", "members": ["edgewater", "oakhill", "newsmyrnabeach"],
                 "place": "Southeast Volusia city records"},
 }
+
+
+def county_slug(county: str) -> str:
+    return re.sub(r"[^a-z]", "", county.lower())
+
+
+# One region per Florida county for the governments in florida.json: the county government (if we
+# have it) first, then its cities by name.
+for _f in sorted(FLORIDA, key=lambda f: (f["county"], f["kind"] != "county", f["short"])):
+    _k = f"{county_slug(_f['county'])}-county"
+    _r = REGIONS.setdefault(_k, {
+        "title": f"{_f['county']} County: local government records", "short": f"{_f['county']} County",
+        "db": _k, "page": f"{_k}.html", "members": [], "place": f"{_f['county']} County local government records",
+        "county": _f["county"]})
+    _r["members"].append(_f["slug"])
 REGIONAL = [s for r in REGIONS.values() for s in r["members"]]
 
 
@@ -112,13 +168,18 @@ for _slug, _j in JURISDICTIONS.items():
                   body_short="Council", member="council member", members="council members",
                   member_title="Council Member", people_dir="council", hub=("Temple Terrace", "templeterrace.html"))
     elif _j["govt"] == "city":
-        council = _j["body"] == "City Council"
+        council = "Council" in _j["body"]
+        _kind = _j.get("kind", "city").capitalize()
         _j.update(board=f"{_j['short']} {_j['body']}", board_formal=f"{_j['short']} {_j['body']}",
                   body_short="Council" if council else "Commission",
                   member="council member" if council else "commissioner",
                   members="council members" if council else "commissioners",
-                  member_title="Council Member" if council else "City Commissioner",
+                  member_title="Council Member" if council else f"{_kind} Commissioner",
                   people_dir="council" if council else "commissioners", hub=_hub)
+    elif "Council" in _j["body"]:  # a county governed by a council (Volusia-style charters)
+        _j.update(board=f"{_j['name']} Council", board_formal=f"{_j['name']} {_j['body']}",
+                  body_short="Council", member="council member", members="council members",
+                  member_title="County Council Member", people_dir="council", hub=_hub)
     else:
         _j.update(board=f"{_j['name']} Commission", board_formal=f"{_j['name']} Board of County Commissioners",
                   body_short="Commission", member="commissioner", members="commissioners",

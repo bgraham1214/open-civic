@@ -184,8 +184,20 @@ def _load_hillsclerk(lst: Path, out: dict) -> None:
                 "sort": 0})
 
 
+_LOADED: dict[str, dict] = {}
+
+
 def load(data: Path) -> dict:
-    """Everything county-level from data/listings and data/state.json."""
+    """Everything county-level from data/listings and data/state.json. Read once per build: callers get
+    the same lists and must not change them (with dozens of governments, re-reading for every feed and
+    page took minutes)."""
+    k = str(Path(data).resolve())
+    if k not in _LOADED:
+        _LOADED[k] = _load(Path(data))
+    return _LOADED[k]
+
+
+def _load(data: Path) -> dict:
     lst = data / "listings"
     out = {"meetings": [], "items": [], "votes": [], "docs": [], "changes": []}
     for client, slug in legistar_clients().items():
@@ -208,7 +220,7 @@ def load(data: Path) -> dict:
             out["items"].append({**i, "county": slug, "matter_url": own})
         for v in _jsonl(lst / f"legistar-{client}-votes.jsonl"):
             out["votes"].append({**v, "county": slug})
-        if JURISDICTIONS[slug]["govt"] == "city":
+        if JURISDICTIONS[slug].get("outline") == "lettered":
             _legistar_outline(slug, out)
     viewers: dict[int, str] = {}
     for tenant, slug in civicclerk_tenants().items():
@@ -685,16 +697,29 @@ decisions are made by their county commission, so we follow those commissions.</
                 f'<a href="{lite(site_url, "", db)}">Full database</a> · <a href="{db}.db">download</a>.</p>')
     else:
         names = [JURISDICTIONS[x]["short"] for x in r["members"]]
+        cities = [JURISDICTIONS[x]["short"] for x in r["members"] if JURISDICTIONS[x]["govt"] == "city"]
+        has_county = any(JURISDICTIONS[x]["govt"] == "county" for x in r["members"])
+        listed = cities[0] if len(cities) == 1 else ", ".join(cities[:-1]) + " and " + cities[-1] if cities else ""
+        lede = ""
+        if has_county:
+            lede += (f"The {e(r.get('county', ''))} County government decides zoning, roads and county taxes outside "
+                     "city limits, and county-wide services everywhere. ")
+        if cities:
+            lede += (f"{e(listed)} {'has its' if len(cities) == 1 else 'each have their'} own city government. City "
+                     "councils and commissions decide zoning, city services and city taxes inside city limits.")
+        if r.get("county"):
+            lede += (f' Other governments in {e(r["county"])} County aren\'t here yet: see '
+                     f'<a href="florida.html#{e(r["db"])}">what we cover in Florida</a>.')
         top = f"""<h1>{e(r['title'])}</h1>
-<p class="role">{" · ".join(e(n) for n in names)} (Volusia County)</p>
-<p class="lede">{e(", ".join(names[:-1]) + " and " + names[-1])} each have their own city government. City
-councils and commissions decide zoning, city services and city taxes inside city limits.</p>
+<p class="role">{" · ".join(e(n) for n in names)}{f" ({e(r.get('county', 'Volusia'))} County)" if not has_county else ""}</p>
+<p class="lede">{lede}</p>
 <p class="learn">New to this? <a href="learn/land.html">How building and land decisions work</a> ·
 <a href="learn/money.html">How public money works</a> · <a href="learn/index.html">Words you'll see</a></p>"""
-        search_label, who = "Search these cities' records", "each city"
-        description = (f"Meetings, agenda items, votes and archived agendas and minutes for {', '.join(names[:-1])} and "
-                       f"{names[-1]}, Florida.")
-        note = (f"<p>Public records from {' and '.join(JURISDICTIONS[x]['name'] for x in collected)}, collected nightly. "
+        search_label, who = "Search these governments' records", "each government"
+        description = ("Meetings, agenda items and votes for "
+                       + (names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}") + ", Florida.")
+        cn = [JURISDICTIONS[x]["name"] for x in collected]
+        note = (f"<p>Public records from {cn[0] if len(cn) == 1 else ', '.join(cn[:-1]) + ' and ' + cn[-1]}, collected nightly. "
                 f'<a href="{lite(site_url, "", db)}">Full database</a> · <a href="{db}.db">download</a>.</p>')
     body = f"""{top}
 <form class="search" id="f" role="search"><label for="q">{search_label}</label>
@@ -731,6 +756,9 @@ def write(data: Path, out: Path, site_url: str, built: str, rss) -> dict:
     result = {}
     for region, r in REGIONS.items():
         counts = build_db(data, out / f"{r['db']}.db", r["members"])
+        if r.get("county") and not counts["meetings"]:  # nothing collected yet: no empty page or database
+            (out / f"{r['db']}.db").unlink()
+            continue
         ftm = data / "entities" / f"{r['db']}.ftm.jsonl"
         if ftm.exists():
             (out / f"{r['db']}.ftm.jsonl").write_bytes(ftm.read_bytes())

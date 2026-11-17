@@ -1,0 +1,51 @@
+name: Florida backfill
+
+# Collect the governments in opencivic/florida.json and commit the listings, without rebuilding the
+# site. The nightly Collect run does the same step; this is for filling in older meetings sooner.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Minutes to spend"
+        required: false
+        default: "120"
+      only:
+        description: "Optional: comma-separated slugs"
+        required: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency: live-collection
+    permissions:
+      contents: write
+    env:
+      OCW_CONTACT: https://github.com/${{ github.repository }}
+      MINUTES: ${{ inputs.minutes }}
+      ONLY: ${{ inputs.only }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Collect
+        run: |
+          set -o pipefail
+          mkdir -p out
+          if [ -n "$ONLY" ]; then
+            python -m opencivic.florida collect --data-dir data --minutes "${MINUTES:-120}" --only "$ONLY" 2>&1 | tee out/florida-log.txt
+          else
+            python -m opencivic.florida collect --data-dir data --minutes "${MINUTES:-120}" 2>&1 | tee out/florida-log.txt
+          fi
+      - name: Commit data/
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "no data changes"; exit 0; fi
+          git commit -q -m "Florida listings $(date -u +%Y-%m-%d): $(tail -n 1 out/florida-log.txt | cut -c1-120)"
+          git pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push -q origin "HEAD:${GITHUB_REF_NAME}"

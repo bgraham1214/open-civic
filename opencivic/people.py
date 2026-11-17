@@ -469,6 +469,14 @@ FOOTERS = {
 }
 
 
+def _default_footer(county: str) -> str:
+    j = JURISDICTIONS[county]
+    the = "" if j["govt"] == "county" else "the "
+    return (f"Votes from {the}{j['name']}'s Legistar meeting records, {j['body']} meetings from 2025 on. A decision "
+            "appears here only when the record lists each member's vote; items approved together in one consent "
+            "vote may not carry a vote of their own.")
+
+
 def all_votes(data: Path) -> dict[str, dict]:
     """Every jurisdiction's decisions and votes: the county commissions, and the Temple Terrace City Council."""
     from .council import SLUG, council_votes
@@ -522,7 +530,7 @@ def write(data: Path, out: Path, site_url: str = "") -> dict:
             roles = city_roles(data, county)
             for p in ppl.values():
                 p["roles"] = roles.get(p["name"], [])
-        footer = f'<p>{_e(FOOTERS.get(county, ""))}</p>'
+        footer = f'<p>{_e(FOOTERS.get(county) or _default_footer(county))}</p>'
         newest = max(p["last"] for p in ppl.values())
         for p in ppl.values():
             p["current"] = p["last"] >= _minus_days(newest, 120)
