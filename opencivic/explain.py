@@ -311,7 +311,7 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
                    r"qualified target industry|job creation (?:and|grant|incentive)|(?:mobility|impact) fee buy-?down", low) \
             and not re.search(r"septic|weatherization|housing incentive|\baudit\b|\breport\b", low):
         topic, headline, terms = "money", "Incentive or tax break for a business", ["incentive"]
-    elif re.search(r"\bgrant\b", low):
+    elif re.search(r"\b(?:sub-?)?grants?\b(?! (?:management|manager|dept|department|office|administrat\w+|coordinator|writer|specialist))", low) and not re.search(r"\bgrants? (?:of |an? )?(?:easement|permission|authority|access)\b|\bgrants? (?:the|to the) (?:county|city|town|village) (?:an?|the) (?:easement|right)", low):
         topic, headline, terms = "money", "Grant", ["grant"]
     elif re.search(r"\b(award|contract|agreement|task order|purchase|bid|itb|rfp|rsq|sole source|change order|lease)\b", low) and money(what):
         topic, headline, terms = "money", "Contract or purchase", ["contract"]

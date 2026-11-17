@@ -34,6 +34,18 @@ class Explain(unittest.TestCase):
         self.assertEqual(ex("Rezoning Petition Submitted by Lisa L. Tabbert as Trustee, for Property Located on "
                             "Pineda Avenue (H2546)")["topic"], "land")
 
+    def test_grants_and_things_that_only_say_grant(self):
+        # seen on Apopka's and the older Hillsborough and Pasco pages, Nov 16, 2026
+        self.assertEqual(ex("Authorize the Chief of Police to accept and execute the Florida Department of Transportation "
+                            "(FDOT) Subgrant for Highway Traffic Safety Funds Agreement in the amount of $12,000")["headline"],
+                         "Grant: $12,000")
+        self.assertEqual(ex("PRF Grant Approvals for 2015-2016")["headline"], "Grant")
+        self.assertNotEqual(ex("Grant Easement to City of New Port Richey – Fire Station #19")["headline"], "Grant")
+        self.assertEqual(ex("Cooperative Purchase – Carahsoft Technology Corp. – eCivis Grants Management System "
+                            "Software - $154,308.42")["headline"], "Contract or purchase: $154,308")
+        self.assertEqual(ex("Approve change order w/ Hubbard Construction Co. increasing contract by $3.5M")["headline"],
+                         "Contract or purchase: $3.5 million")
+
     def test_money(self):
         e = ex("Award & execute the agreement for Bid ITB-C-0029-0-2014/DV, traffic pavement marking term contract to "
                "AKCA Inc. in the amount of $1,118,176 for Public Works. Moved approval.")
