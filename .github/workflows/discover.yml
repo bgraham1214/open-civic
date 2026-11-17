@@ -1,0 +1,47 @@
+name: Discover
+
+# Survey which Florida counties and cities publish meetings on a platform our adapters read
+# (Legistar, CivicClerk). Manual only. Results go to the "discover" branch for a person to review.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Optional: comma-separated place names for a quick check"
+        required: false
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    permissions:
+      contents: write
+    env:
+      OCW_CONTACT: https://github.com/${{ github.repository }}
+      ONLY: ${{ inputs.only }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: List Florida's counties and incorporated places
+        continue-on-error: true
+        run: |
+          mkdir -p out
+          python -m opencivic.discover places -o out/florida-places.jsonl
+      - name: Try each government's likely account names
+        run: |
+          wc -l out/florida-places.jsonl
+          if [ -n "$ONLY" ]; then
+            python -m opencivic.discover probe --places out/florida-places.jsonl --only "$ONLY" -o out/discover.jsonl
+          else
+            python -m opencivic.discover probe --places out/florida-places.jsonl -o out/discover.jsonl
+          fi
+      - name: Save to discover branch
+        if: always()
+        run: |
+          cd out
+          git init -q -b discover
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -q -m "Discover ${{ github.run_id }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" discover
