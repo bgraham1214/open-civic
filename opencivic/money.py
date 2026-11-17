@@ -190,7 +190,7 @@ def clean_name(raw: str) -> str:
         n = re.sub(r"^\d[\d.,-]*\d[.,-]*\s*(?:(?:for|to|with)\s+)?(?=[A-Z])|^\d[.)]\s*(?=[A-Z])", "", n)
         n = CONTRACT_NO.sub("", n)
         n = GOV_AND.sub("", n)
-        parts = re.split(r"\s([–-]|from|with|w/|to|by|between|and/or)\s(?=[A-Z])", n, flags=re.I)
+        parts = re.split(r"\s([–-]|from|with|w/|to|by|between|and/or|against|on behalf of)\s(?=[A-Z])", n, flags=re.I)
         # "Westcare Gulfcoast - Florida, Inc.": what follows the dash only says where, so it's one name
         n = " ".join(parts[-3:]) if len(parts) >= 3 and parts[-2] in "–-" and _place_only(parts[-1]) else parts[-1]
     n = re.sub(r",?\s+a\s+(?:Florida|Delaware|foreign)\s.*$", "", n).strip(" ,")
@@ -275,8 +275,18 @@ def amount_for(text: str, names: list[tuple[str, int, int]], i: int) -> float | 
     return None
 
 
+# Money that isn't a payment to the company named (Nov 17, 2026): local match sent to the state for a
+# hospital's low-income pool ("letter of agreement with Florida AHCA for participation in low-income pool (LIP)
+# intergovernmental transfer … on behalf of Florida General Sciences Center Inc."), and lawsuits the government
+# files to recover money ("file a lawsuit … against On Time Utility Services, Inc. … for $87,096").
+NOT_PAID_RX = re.compile(r"\blow[- ]income pool\b|\bintergovernmental transfer|"
+                         r"\b(?:file|initiate|commence|bring) (?:a |an )?(?:lawsuit|suit|complaint|action|litigation)\b", re.I)
+
+
 def direction(text: str) -> str:
     """'out' (government pays), 'in' (company pays, or an applicant), or ''."""
+    if NOT_PAID_RX.search(text):
+        return ""
     if IN_RX.search(text) and not re.search(r"\b(?:award|task order|change order|purchase order|services agreement)\b", text, re.I):
         return "in"
     return "out" if OUT_RX.search(text) else ""
@@ -323,10 +333,11 @@ def _cap(w: str) -> str:
         return w  # LLC, USA, initials (HDR, CPH, U.S.A., H&R)
     if core.upper().rstrip(".") in {"INC", "CORP", "LTD"}:
         return w[:1] + w[1:].lower()
-    # each part of "MILLS+SCHONERING", "GROUP/ADG", "KIMLEY-HORN"; a short part after a joiner is initials (ADG)
+    # each part of "MILLS+SCHONERING", "GROUP/ADG", "KIMLEY-HORN"; a short part after "/" or "+" is initials
+    # (ADG), not after a hyphen ("MAN-CON")
     parts = re.split(r"([-/+])", w)
-    return "".join(p if p in "-/+" or (i and len(p.strip(".,")) <= 3 and p.isupper()) else p[:1].upper() + p[1:].lower()
-                   for i, p in enumerate(parts))
+    return "".join(p if p in "-/+" or (i and parts[i - 1] in "/+" and len(p.strip(".,")) <= 3 and p.isupper())
+                   else p[:1].upper() + p[1:].lower() for i, p in enumerate(parts))
 
 
 def decap(text: str) -> str:
@@ -347,6 +358,10 @@ def decap(text: str) -> str:
         j, n = i - 1, 0
         while j >= 0 and n < 8:
             core = words[j].strip("(),.;:\"'").lower()
+            # "THE CITY OF DORAL AND METRO EXPRESS, INC.": the city isn't part of the name
+            if core == "and" and j >= 3 and words[j - 2].lower() == "of" and words[j - 3].strip(",").lower() in (
+                    "city", "town", "village", "county"):
+                break
             if not core or core in _BEFORE_NAME or "$" in words[j] or words[j].endswith((";", ":")) \
                     or (words[j].endswith(",") and j != i - 1):
                 break

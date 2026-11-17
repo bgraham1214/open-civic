@@ -137,6 +137,20 @@ class Nov16(unittest.TestCase):
         self.assertEqual(c["approved_total"], 7995635.75)
 
 
+class NotPaid(unittest.TestCase):
+    def test_transfers_and_lawsuits(self):
+        for t in ["Approve a letter of agreement with Florida AHCA for participation in low-income pool (LIP) intergovernmental "
+                  "transfer (IGT), for a total amount of $27,450,667 on behalf of Florida General Sciences Center Inc.",
+                  "Agreement – State of Florida, Agency for Healthcare Administration – Premier Community Healthcare, Inc. – "
+                  "Local Match Funding for Low Income Pool – $150,000.00",
+                  "Recommendation to authorize the County Attorney to file a lawsuit on behalf of Collier County Board of County "
+                  "Commissioners against On Time Utility Services, Inc., and any other responsible parties for $87,096"]:
+            self.assertEqual(money.direction(t), "", t)
+        self.assertEqual([n for n, _, _ in money.payees("Resolution No. 2025-97 - Approving Certain Incentives on Behalf of "
+                                                        "Costco Wholesale Corporation for their Expansion")],
+                         ["Costco Wholesale Corporation"])
+
+
 class StaffMemos(unittest.TestCase):
     """CivicClerk agenda items carry the staff memo; it names more companies than the one being paid."""
 
@@ -354,6 +368,8 @@ class AllCapitals(unittest.TestCase):
              "Lampl Herbert Consultants, Inc."),
             ("AWARD TO H&R PAVING, INC. $5", "H&R Paving, Inc."),
             ("TO APPROVE P.L.A. ELECTRIC, INC. TO PURCHASE AND INSTALL $5", "P.L.A. Electric, Inc."),
+            ("AGREEMENT WITH MAN-CON, INC. FOR $5", "Man-Con, Inc."),
+            ("A CONSTRUCTION AGREEMENT BETWEEN THE CITY OF DORAL AND METRO EXPRESS, INC. FOR $5", "Metro Express, Inc."),
             ("AN AGREEMENT WITH MILLS+SCHONERING ARCHITECTS, LLC FOR DESIGN $5", "Mills+Schonering Architects, LLC"),
             ("TO AWARD AN AGREEMENT WITH LOUMINEL GENERAL CONTRACTOR, LLC., FOR FENCING REPAIR $5", "Louminel General Contractor, LLC."),
             ("AN AGREEMENT WITH ARCHITECTS DESIGN GROUP/ADG, LLC FOR DESIGN $5", "Architects Design Group/ADG, LLC"),
