@@ -27,6 +27,7 @@ import json
 import re
 import sys
 import threading
+import time
 from urllib.parse import quote
 
 from .fetch import FetchError, HttpFetcher
@@ -196,23 +197,35 @@ def robots_note(url: str) -> str:
     return " / ".join(lines[:8])[:300]
 
 
-def run_probe(places: list[dict], out_path: str) -> int:
+def run_probe(places: list[dict], out_path: str, platforms: tuple[str, ...] = ("legistar", "civicclerk"),
+              interval: float = 0.4) -> int:
     lock = threading.Lock()
     hits: list[dict] = []
 
     def work(platform: str) -> None:
-        f = HttpFetcher(retries=0, min_interval=0.4, timeout=20, check_robots=False)
+        f = HttpFetcher(retries=0, min_interval=interval, timeout=20, check_robots=False)
         tried: set[str] = set()
         for p in places:
             for acct in candidates(p)[platform]:
                 if acct in tried:
                     continue
                 tried.add(acct)
-                try:
-                    hit = (probe_legistar if platform == "legistar" else probe_civicclerk)(acct, f)
-                except Exception as e:  # one odd answer mustn't stop the survey
-                    print(f"{platform}:{acct}: {e}", file=sys.stderr)
-                    hit = None
+                hit = None
+                for attempt in (1, 2, 3):
+                    try:
+                        hit = (probe_legistar if platform == "legistar" else probe_civicclerk)(acct, f)
+                    except Exception as e:  # one odd answer mustn't stop the survey
+                        print(f"{platform}:{acct}: {e}", file=sys.stderr)
+                        hit = None
+                    # a dropped connection is the server asking us to slow down, not an answer:
+                    # wait, forget the "host is down" mark, and ask again
+                    if hit and hit.get("closed") and not hit["closed"].startswith("HTTP"):
+                        print(f"{platform}:{acct}: {hit['closed']}; waiting", file=sys.stderr)
+                        hit = None
+                        f._down.clear()
+                        time.sleep(60 * attempt)
+                        continue
+                    break
                 if hit:
                     if platform == "legistar":
                         hit["robots_site"] = robots_note(f"https://{acct}.legistar.com/robots.txt")
@@ -225,7 +238,7 @@ def run_probe(places: list[dict], out_path: str) -> int:
                         print(json.dumps(row)[:300], flush=True)
         print(f"{platform}: tried {len(tried)} names", file=sys.stderr)
 
-    threads = [threading.Thread(target=work, args=(pf,)) for pf in ("legistar", "civicclerk")]
+    threads = [threading.Thread(target=work, args=(pf,)) for pf in platforms]
     for t in threads:
         t.start()
     for t in threads:
@@ -243,6 +256,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("what", choices=["places", "probe"])
     ap.add_argument("--places")
     ap.add_argument("--only", help="comma-separated place names (for a quick check)")
+    ap.add_argument("--platform", choices=["legistar", "civicclerk"], help="survey one platform only")
+    ap.add_argument("--after", help="cities only, starting after this name (to resume a survey)")
+    ap.add_argument("--interval", type=float, default=0.4, help="seconds between requests")
     ap.add_argument("-o", "--output", required=True)
     a = ap.parse_args(argv)
     if a.what == "places":
@@ -270,7 +286,9 @@ def main(argv: list[str] | None = None) -> int:
     if a.only:
         want = {n.strip().lower() for n in a.only.split(",")}
         places = [p for p in places if p["name"].lower() in want]
-    return run_probe(places, a.output)
+    if a.after:
+        places = [p for p in places if p["kind"] != "county" and p["name"] >= a.after]
+    return run_probe(places, a.output, (a.platform,) if a.platform else ("legistar", "civicclerk"), a.interval)
 
 
 if __name__ == "__main__":

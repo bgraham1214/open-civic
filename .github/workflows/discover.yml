@@ -9,6 +9,9 @@ on:
       only:
         description: "Optional: comma-separated place names for a quick check"
         required: false
+      extra:
+        description: "Optional: extra arguments, e.g. --platform legistar --after Century --interval 0.8"
+        required: false
 
 jobs:
   survey:
@@ -19,6 +22,7 @@ jobs:
     env:
       OCW_CONTACT: https://github.com/${{ github.repository }}
       ONLY: ${{ inputs.only }}
+      EXTRA: ${{ inputs.extra }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -35,7 +39,7 @@ jobs:
           if [ -n "$ONLY" ]; then
             python -m opencivic.discover probe --places out/florida-places.jsonl --only "$ONLY" -o out/discover.jsonl
           else
-            python -m opencivic.discover probe --places out/florida-places.jsonl -o out/discover.jsonl
+            python -m opencivic.discover probe --places out/florida-places.jsonl -o out/discover.jsonl $EXTRA
           fi
       - name: Save to discover branch
         if: always()
