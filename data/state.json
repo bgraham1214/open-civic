@@ -2830,6 +2830,25 @@
   "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/4dc1ce3da14cbe669f643d071607c8f297e97108ecbf356105ed0045aaf24da9.pdf",
   "first_seen": "2026-11-14T15:23:14Z"
  },
+ "civicclerk:pascocofl:12102": {
+  "key": "civicclerk:pascocofl:12102",
+  "source": "civicclerk",
+  "url": "https://pascocofl.api.civicclerk.com/v1/Meetings/GetMeetingFileStream(fileId=12102,plainText=false)",
+  "title": "11/18/26 VOPH Agenda",
+  "kind": "Agenda",
+  "date": "2026-11-18",
+  "body": "Villages of Pasadena Hills Planning and Policy Committee (Village of Pasadena Hills Planning and Policy)",
+  "page": "https://pascocofl.portal.civicclerk.com/event/1928/files",
+  "listed": true,
+  "last_checked": "2026-11-17T05:16:05Z",
+  "sha256": "fe58626a01071a72c3e1a4dac728fc734f3a6db35ada887838c2306e94622fc3",
+  "bytes": 160982,
+  "content_type": "application/pdf",
+  "ext": "pdf",
+  "last_changed": "2026-11-17T05:16:05Z",
+  "copy_url": "https://github.com/bgraham1214/open-civic/releases/download/files/fe58626a01071a72c3e1a4dac728fc734f3a6db35ada887838c2306e94622fc3.pdf",
+  "first_seen": "2026-11-17T05:16:05Z"
+ },
  "civicclerk:pascocofl:8243": {
   "key": "civicclerk:pascocofl:8243",
   "source": "civicclerk",
