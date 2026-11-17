@@ -333,6 +333,7 @@ def _load(data: Path) -> dict:
         unname_item(i)
         if i["key"] in staff:
             i["staff_amount"], i["staff_label"] = staff[i["key"]]["amount"], staff[i["key"]]["label"]
+            i["staff_added"] = staff[i["key"]].get("added", False)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
                    if jurisdiction_of(k) in REGIONAL and e.get("sha256") and not is_private_body(e.get("body", ""))]

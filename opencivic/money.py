@@ -296,7 +296,7 @@ def flags_for(item: dict, votes: list[dict], facts: dict | None, amount: float |
     out = []
     if NO_BID_RX.search(text) and not UTILITY_SERVICE_RX.search(text):
         out.append("no-bid")
-    if ADDED_RX.search(text):
+    if ADDED_RX.search(text) or item.get("staff_added"):  # an amendment's own line in its staff report
         out.append("added")
     if facts and facts.get("passed") and facts.get("no"):
         out.append("split")
@@ -513,7 +513,10 @@ total, and doesn't always say which. Where it says "from $A to $B" we count the 
 the figure as written, so a company's total can include part of one contract twice. Read the decisions.</li>
 <li>When the agenda's wording names the company but not the amount, and the government's staff report gives
 the amount in a labeled field ("Total contract not to exceed", "Expenditures", "Cost"), that amount is used and
-the decision says so. Only Pinellas County, Coconut Creek and Deltona write their reports that way.</li>
+the decision says so. For an amendment or change order, only that amendment's own line is used ("Third
+Amendment $670,000"), never the revised total, and it counts as money added to an existing contract. No
+amount is taken when the title names several companies, or for a termination. Only Pinellas County, Coconut
+Creek and Deltona write their reports this way.</li>
 <li>"Doing business as" and "formerly known as" names are joined to the company's legal name.</li>
 <li>Spellings are joined ("Lennar Homes, LLC" and "Lennar Homes LLC" are one company). Different companies
 with similar names stay separate. A company's own name is all we match on, so a company that changed its name

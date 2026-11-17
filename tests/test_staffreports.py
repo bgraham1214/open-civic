@@ -21,8 +21,16 @@ class Fields(unittest.TestCase):
              "to exceed: $1,800,000.00 Funding for this is derived from", ("Total estimated expenditure not to exceed", 9000000.0)),
             ("FISCAL IMPACT: REVENUES: $0 EXPENDITURES: $1,653,503.00 BUDGETED? Yes", ("Expenditures", 1653503.0)),
             ("LOCATION: Citywide COST: $100,000.00 SOURCE OF FUNDS: Enterprise Fund", ("Cost", 100000.0)),
+            ("Fiscal Impact: Contract expenditure not-to-exceed: $454,860.00. Funding for this agreement is available "
+             "under the FY26-FY31 Capital Improvement Plan, funded by the STAR Center Fund in the amount of $527,250.00.",
+             ("Contract expenditure not-to-exceed", 454860.0)),
+            ("Fiscal Impact: Total not to exceed amount of $522,183.40 This request is budgeted for in the FY26 Budget",
+             ("Total not to exceed amount of", 522183.4)),
+            ("Fiscal Impact: Thirty-Six (36) month agreement not-to-exceed: $2,389,975.00 Funding is derived from",
+             ("Thirty-Six (36) month agreement not-to-exceed", 2389975.0)),
         ]:
-            self.assertEqual(amount(text), want)
+            got = amount(text)
+            self.assertEqual((got["label"], got["amount"]), want)
 
     def test_no_amount(self):
         for text in [
@@ -34,6 +42,45 @@ class Fields(unittest.TestCase):
             "COST: $100,000.00 … COST: $250,000.00",  # two figures that disagree
         ]:
             self.assertIsNone(amount(text), text)
+
+
+class Amendments(unittest.TestCase):
+    """Pinellas, Nov 17, 2026: an amendment's report tabulates the contract's history."""
+
+    def test_own_line_only(self):
+        for title, text, want in [
+            ("Third Amendment with Coastal Waste & Recycling of Central Florida, LLC for Lealman residential waste",
+             "Fiscal Impact: Original Award $ 6,500,000.00 First Amendment $ 8,000,000.00 Second Amendment No Fiscal "
+             "Impact Third Amendment $ 670,000.00 Revised Total Contract Amount $ 15,170,000.00", 670000.0),
+            ("Third Amendment with Tyler Technologies Inc for Odyssey maintenance",
+             "Fiscal Impact: Current approved expenditure: $4,665,558.00 Third Amendment increase: $1,800,000.00 Revised "
+             "total expenditure not to exceed: $6,465,558.92", 1800000.0),
+            ("Change Order No. 2 to the agreement with Cathcart Construction Company Florida, LLC",
+             "Fiscal Impact: Original Agreement Amount: $11,221,188.65 Change Order No. 1 increase: $ 1,500,000.00 Change "
+             "Order No. 2 increase: $ 475,581.27 Revised Agreement Amount: $13,196,769.92", 475581.27),
+            ("First Amendment to the contract with Van Scoyoc Associates, Inc. for Federal Government Relations Services.",
+             "Fiscal Impact: Estimated twenty-four (24) expenditure not to exceed: $190,000.00 Estimated annual "
+             "expenditure not to exceed: $95,000.00 Funding is derived from the General Fund", 190000.0),
+        ]:
+            got = amount(text, title)
+            self.assertEqual((got["amount"], got["added"]), (want, True), title)
+
+    def test_nothing(self):
+        for title, text in [
+            ("Second Amendment Term Extension with Unite USA, Inc. d/b/a Unite US",
+             "Fiscal Impact: Contract not-to-exceed amount: $9,158,372.76 The Initial Estimated Five (5) Year Expenditure "
+             "Not-to-Exceed: $9,158,372.76. This amendment has no fiscal impact."),
+            ("Termination for convenience of agreement with New Era Electric, Inc.",
+             "Fiscal Impact: Termination for convenience has no fiscal impact. Original award amount: $2,633,824.00"),
+            ("Agreements with Average Joe Landscape, Duval Landscape Maintenance, and Rotolo Consultants, Inc. for mowing",
+             "Fiscal Impact: Total expenditure not-to-exceed amount: $2,200,000.00"),
+            ("Purchase authorization with ADB Safegate Americas, LLC and Allen Enterprises for runway lighting",
+             "Fiscal Impact: Not to exceed amount: $800,000.00"),
+        ]:
+            self.assertIsNone(amount(text, title), title)
+        # "Terminal" isn't a termination
+        self.assertIsNotNone(amount("Fiscal Impact: Total contract not to exceed: $1,600,000.00",
+                                    "Award of bid to Caladesi Construction and Development, Inc. for the Terminal Mitigation"))
 
 
 class InTheTracker(unittest.TestCase):
