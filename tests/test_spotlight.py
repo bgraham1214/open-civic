@@ -124,3 +124,48 @@ class BusinessBreaks(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RestOfFlorida(unittest.TestCase):
+    """Wording from the governments added Nov 16, 2026, read tag by tag."""
+
+    def kinds(self, text):
+        return [(t["kind"], t["reason"], t["stage"]) for t in spot(text)]
+
+    def test_not_new_restrictions(self):
+        for text in [
+            "A RESOLUTION OF THE TOWN COUNCIL OF THE TOWN OF FORT MYERS BEACH, FLORIDA, EXTENDING THE DECLARATION OF STATE "
+            "OF LOCAL EMERGENCY DUE TO HURRICANE MILTON, PROVIDING THE TOWN WITH POWERS, INCLUDING, BUT NOT LIMITED TO "
+            "THOSE PURSUANT TO SECTION 252.38; PROVIDING PENALTIES FOR VIOLATIONS",
+            "Ratify 18th Ext. & Adopt 19th Ext. Burn Ban Resolutions Extending State of Local Emergency",
+            "An Ordinance of the City of Leesburg, Florida, requesting a major modification on Ordinance 21-29, Banning "
+            "Ranch Phases 1 & 2, PUD Rezoning",
+            "Code Enforcement - Consideration of reduction of a lien for Code Enforcement Case Number 20-7631, in the "
+            "amount of $41,550 for property located at 218 Skyline Drive. Violations: prohibited parking",
+            "Resolution of the City Commission of the City of Leesburg, Florida, expressing the City Commission's "
+            "Opposition to proposed State Legislation that seeks to prohibit a Municipal Corporation's ability to collect revenue",
+            "Consideration and approval of an Ordinance on Second Reading Amending Section 23-5 of the Town Code for the "
+            "B-1 Business District to remove automobile showrooms from the list of prohibited uses, thereby allowing them",
+            "APPROVAL TO PROHIBIT PARKING ALONG OLD SAN CARLOS BOULEVARD FROM 12:00AM TO 5:00PM ON FRIDAY, MARCH 6, 2026, "
+            "AND THE TOWN'S SPECIAL EVENT PERMIT",
+            "Request for Exception to Livery Vessel Moratorium for 35 Foot Captained Pontoon Due to Substantial Hardship",
+            "A RESOLUTION OF THE CITY COMMISSION OF THE CITY OF OPA-LOCKA, FLORIDA, PROHIBITING THE REHIRING OF FORMER "
+            "CITY MANAGER; PROVIDING FOR AN EFFECTIVE DATE",
+            "AN ORDINANCE OF THE CITY COMMISSION OF THE CITY OF OPA-LOCKA, FLORIDA, PERTAINING TO ACCESSORY DWELLING UNITS; "
+            "AMENDING ARTICLE V TO PERMIT ACCESSORY DWELLING UNITS; PROVIDING FOR PENALTIES FOR VIOLATION; PROVIDING FOR "
+            "SEVERABILITY",
+        ]:
+            self.assertEqual(self.kinds(text), [], text)
+
+    def test_still_tagged(self):
+        self.assertEqual(self.kinds("Adopt Resolution and Approve a State of Local Emergency to Enact a Burn Ban"),
+                         [("restriction", "ban", "act")])
+        self.assertEqual(self.kinds("Second Reading of Ordinance Number 2026-35: Prohibit Smoking and Vaping in City-Owned Parks"),
+                         [("restriction", "ban", "act")])
+        self.assertEqual(self.kinds("Ordinance No. 2026-032 Intro Data Centers Moratorium"),
+                         [("restriction", "moratorium", "works")])
+        self.assertEqual(self.kinds("Ordinance No. 2026-032 Final Data Centers Moratorium"),
+                         [("restriction", "moratorium", "act")])
+        self.assertEqual(self.kinds("Approval of Resolution Establishing Fines for Micromobility Violations."),
+                         [("restriction", "fines", "act")])
+

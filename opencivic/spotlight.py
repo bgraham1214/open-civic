@@ -48,7 +48,8 @@ PROCEDURAL_RX = re.compile(r"^\W*(?:oral vote[.,]?\s*)?(?:so )?(?:moved|motion(?
 AMEND_RX = re.compile(r"\bamendment made by\b|\bmoved (?:an|the) amendment\b|\bamended the motion\b|\bmoved to amend\b", re.I)
 ADVOCACY_RX = re.compile(r"\b(?:letter (?:of support|to)|support(?:ing)? (?:the )?(?:passage|bill|legislation|proposal|"
                          r"additional|offshore)|oppos\w+ (?:any )?(?:bill|legislation)|house bill|senate bill|"
-                         r"legislative (?:delegation|program|priorit)|senator|state of florida|on the ballot)", re.I)
+                         r"legislative (?:delegation|program|priorit)|senator|state of florida|on the ballot|"
+                         r"opposition to (?:proposed )?(?:state )?legislation|(?:proposed )?state legislation)", re.I)
 
 # --- restrictions ---------------------------------------------------------------------------------
 RESTRICT_RX = re.compile(
@@ -59,6 +60,9 @@ RESTRICT_RX = re.compile(
     r"\bsynthetic drugs?\b|\bkratom\b|\b7-?oh\b|hydroxymitragynine", re.I)
 PENALTY_RX = re.compile(r"\b(?:uniform )?fine schedule|\bcivil penalt(?:y|ies)\b|\bfines? (?:to be imposed|for violations?)|"
                         r"\bestablish\w* (?:the )?(?:non-criminal )?fines?\b|\bpenalt(?:y|ies) (?:for|on)\b", re.I)
+# The closing clauses of a formal ordinance caption ("... PROVIDING FOR PENALTIES; PROVIDING FOR SEVERABILITY ...")
+# appear on ordinances about anything, so they don't make one a penalty ordinance.
+BOILERPLATE_RX = re.compile(r"\bproviding (?:for )?(?:a |the )?penalt(?:y|ies)[^;.]*", re.I)
 NOT_RESTRICT_RX = re.compile(
     r"land use restriction|deed restriction|restrictive covenant|covenants and restrictions|fine arts|"
     r"misdemeanor probation|fines (?:&|and) fees justice|penalty rider|performance (?:bond|guarantee)|"
@@ -67,7 +71,15 @@ NOT_RESTRICT_RX = re.compile(
     r"with (?:the )?(?:\w+ )?restrictions|restrict\w* use ag\w*|alternative standards?|use of (?:the )?funds|"
     r"board polic\w+|prohibiting commissioners|commissioners? (?:shall|from)|public officers?|letterhead|"
     r"county applications|lame duck|county roadway|in county road|"
-    r"\bamend\w* (?:the|an?|its) [^.;:]{0,80}\bmoratori",   # changing an existing moratorium may loosen it
+    r"\bamend\w* (?:the|an?|its) [^.;:]{0,80}\bmoratori|"   # changing an existing moratorium may loosen it
+    # Seen when the rest of Florida was added (Nov 16, 2026):
+    r"\bext(?:\.|en\w+)[^.]{0,60}\bstate of (?:local )?emergency|declaration of (?:a )?state of (?:local )?emergency|"
+    r"(?-i:\bBanning [A-Z])|"                              # "Banning Ranch" is a place
+    r"code (?:enforcement|compliance) (?:case|lien|fine)|reduction of (?:a |the )?lien|lien reduction|"  # one owner's case
+    r"special event|street closures?|"                     # a one-day parking or street closure
+    r"exception to (?:the )?[\w ]{0,40}moratori|offenders of|"
+    r"from the list of prohibited|permitted or prohibited|"
+    r"\b(?:re)?hiring of\b|adopting and enacting a new code",   # a personnel matter; a recodification
     re.I)
 UNDO_RX = re.compile(r"\b(?:repeal\w*|remov\w*|eliminat\w*|strik\w*|lift\w*|rescind\w*|end(?:s|ing)?|expir\w*|"
                      r"terminat\w*)\b(?: \w+){0,4} (?:the )?(?:moratori\w+|ban|prohibit\w*|restrictions?)", re.I)
@@ -78,7 +90,7 @@ WORKS_RX = re.compile(r"\b(?:direct\w*|request\w*|ask\w*)\b[^.]{0,80}\b(?:draft|
                       r"evaluate|look into|work with|consult)\b|\bto draft\b|\bdraft (?:an |a )?(?:proposed )?"
                       r"(?:ordinance|amendments?|policy)|\b(?:first|1st) (?:public )?(?:hearing|reading)|\btransmi(?:t|ttal)\b|"
                       r"\b(?:advertise|schedule\w*|set)\b[^.]{0,40}\b(?:public hearings?|PH)\b|\bzoning in progress\b(?![^.]*moratorium)|"
-                      r"\bcould do\b|\bpossible\b", re.I)
+                      r"\bcould do\b|\bpossible\b|\bintro(?:duction)?\b(?! of public)", re.I)
 ADOPT_RX = re.compile(r"\b(?:adopt\w*|enact\w*|ordinance|resolution|declar\w+|second (?:public )?hearing|final "
                       r"(?:public )?hearing|public hearing)\b", re.I)
 
@@ -136,7 +148,7 @@ def spot(text: str, motion: str = "", action: str = "") -> list[dict]:
         if reason == "moratorium" and re.search(r"\bpermanent moratori", full, re.I):
             tag["permanent"] = True  # Edgewater's data-center moratorium (2026-O-21) has no end date
         tags.append(tag)
-    elif PENALTY_RX.search(full) and not NOT_RESTRICT_RX.search(full):
+    elif PENALTY_RX.search(BOILERPLATE_RX.sub(" ", full)) and not NOT_RESTRICT_RX.search(full):
         tags.append({"kind": "restriction", "reason": "fines", "stage": _stage(full, motion, action)})
 
     company = _has_company(full)

@@ -137,6 +137,39 @@ class Nov16(unittest.TestCase):
         self.assertEqual(c["approved_total"], 7995635.75)
 
 
+class StaffMemos(unittest.TestCase):
+    """CivicClerk agenda items carry the staff memo; it names more companies than the one being paid."""
+
+    def setUp(self):
+        from opencivic.jurisdictions import JURISDICTIONS
+        JURISDICTIONS["memotown"] = {"platform": "civicclerk", "short": "Memo Town", "board": "Memo Town Council"}
+        self.addCleanup(JURISDICTIONS.pop, "memotown")
+
+    def names(self, title, memo):
+        r = row(title, county="memotown")
+        r["item"]["action_text"] = memo
+        return sorted(c["name"] for c in money.collect({"memotown": {"2026-01-06": [r]}}).values())
+
+    def test_title_wins_and_memo_needs_exactly_one_company(self):
+        self.assertEqual(self.names("Bid Award\nConstruction of Fire Station 2",
+                                    "Staff recommends award to Mulligan Constructors, Inc in the amount of $2,975,290."),
+                         ["Mulligan Constructors, Inc"])
+        self.assertEqual(self.names("On-Call Facility Construction Services",
+                                    "Ranked firms: Adaptive Project Strategies, LLC; Boulevard Contractors Corp. Budget $500,000."), [])
+        self.assertEqual(self.names("FY19-10 - Advanced Compatible Solutions, Inc. - Fire Alarm System & Monitoring",
+                                    "The prior vendor, Mitratech Trakstar, Inc., was paid $40,960."), [])
+        self.assertEqual(self.names("Award to Paint King USA, LLC for $12,000", "Other bidder: Acme Painting Inc. at $15,000"),
+                         ["Paint King USA, LLC"])
+
+    def test_number_prefixes_and_sentence_ends(self):
+        c = money.clean_name
+        self.assertEqual(c("2026-53 APPROVING J. COLLINS ENGINEERING ASSOCIATES, LLC"), "J. COLLINS ENGINEERING ASSOCIATES, LLC")
+        self.assertEqual(c("85.002Kalos Services, Inc."), "Kalos Services, Inc.")
+        self.assertEqual(c("PROVIDING FOR AN EFFECTIVE DATE. The Diocese of Venice, Inc."), "Diocese of Venice, Inc.")
+        self.assertEqual(c("Vogel Bros. Building Co."), "Vogel Bros. Building Co.")
+        self.assertEqual(c("Int., LLC"), "")
+
+
 class Direction(unittest.TestCase):
     def test_who_pays(self):
         d = money.direction

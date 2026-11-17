@@ -260,6 +260,10 @@ NOT_FLORIDA = {
     "jacksonco": "Jackson County, Missouri (Kansas City)", "madison": "Madison, Wisconsin",
     "oakland": "Oakland, California", "alachua": "no meetings since 2023", "miamidade": "no meetings since 2018",
     "lakecounty": "answers, but lists no meetings",
+    "hampton": "Hampton, Virginia (City Council Legislative Session)",
+    "parkland": "not Parkland, Florida, which has a City Commission (boards: Council, Governance and Priorities Committee)",
+    "greensboro": "no meetings since 2021", "sanantonio": "no meetings since 2021", "palmsprings": "lists no meetings",
+    "pinellaspark": "meetings stop in September 2026; the city now posts on CivicClerk (pinellasparkfl), used instead",
 }
 # Accounts the survey tried under a county's name that are a city's: (kind, place name) they belong to.
 REASSIGN = {"alachuafl": ("city", "Alachua"), "palmbeachfl": ("town", "Palm Beach"),
@@ -268,6 +272,16 @@ REASSIGN = {"alachuafl": ("city", "Alachua"), "palmbeachfl": ("town", "Palm Beac
 CONFIRMED: dict[str, str] = {
     "broward": "Broward County Governmental Center", "martin": "Hobe Sound, Port Salerno and Rio committees",
     "pinellas": "333 Chestnut Street, Clearwater",
+    "clearwater": "Downtown Development Board; Clearwater's own Legistar site",
+    "coconutcreek": "Coconut Creek Government Center; Broward County Government Center West",
+    "coralgables": "427 Biltmore Way", "delraybeach": "the only Delray Beach", "deltona": "Deltona Commission Chambers",
+    "doral": "the only city of Doral", "fortlauderdale": "Fort Lauderdale Police Department community room",
+    "hallandalebeach": "the only Hallandale Beach", "marcoisland": "the only Marco Island",
+    "miramar": "City Commission with a fire protection assessment hearing (a Florida charge)",
+    "cityofnorthport": "Road and Drainage District Governing Body (North Port, Florida)",
+    "ocala": "Ocala City Hall, 110 SE Watula Avenue", "pinecrest": "Pinecrest Municipal Center, Village Council",
+    "plantcity": "the only Plant City", "venice": "Venice Community Center, 326 Nokomis Avenue",
+    "wellington": "Village Council at Village Hall (Wellington, Florida is a village)",
 }
 ALREADY = {"hernandocountyfl", "hillsboroughcounty", "cityofedgewater", "pascocofl", "templeterracefl"}
 
@@ -282,7 +296,8 @@ _NOT_BOARD = re.compile(
     r"metropolitan|TPO|committee|briefing|conference|lobby|nominat|selection|evaluation|\bbid\b|RFP|"
     r"hearing officer|hearing examiner|affordable|citizen|development board|veterans|senior|disab|cultur|marine|"
     r"waterway|harbor|beach protection|golf|cemetery|animal|health|oversight|public safety|status of women|"
-    r"land development regulation|nature|building commissioners|environmental|food policy|legislature", re.I)
+    r"land development regulation|nature|building commissioners|environmental|food policy|legislature|"
+    r"elected officials|coordinating", re.I)
 
 
 def governing_boards(names: dict[str, int]) -> list[str]:

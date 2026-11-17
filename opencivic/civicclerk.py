@@ -202,7 +202,7 @@ def iter_event_pages(fetcher: Fetcher, first_url: str, max_pages: int | None = N
         url = nxt
 
 
-def events_url(tenant: str, since: str | None = None) -> str:
+def events_url(tenant: str, since: str | None = None, top: int | None = None) -> str:
     """First Events page; with `since` (YYYY-MM-DD), only events starting that day or later.
 
     The OData filter form was checked live against pascocofl on Nov 8, 2026; its
@@ -211,14 +211,15 @@ def events_url(tenant: str, since: str | None = None) -> str:
     if not since:
         return api_base(tenant) + "Events"
     return (api_base(tenant) + f"Events?$filter=startDateTime%20ge%20{since}T00:00:00Z"
-            "&$orderby=startDateTime")
+            "&$orderby=startDateTime" + (f"&$top={top}" if top else ""))
 
 
-def crawl_events(tenant: str, fetcher: Fetcher, max_pages: int | None = None, since: str | None = None) -> Crawl:
+def crawl_events(tenant: str, fetcher: Fetcher, max_pages: int | None = None, since: str | None = None,
+                 top: int | None = None) -> Crawl:
     by_id: dict[int, Meeting] = {}
     pages = 0
     nxt = None
-    for page, nxt in iter_event_pages(fetcher, events_url(tenant, since), max_pages):
+    for page, nxt in iter_event_pages(fetcher, events_url(tenant, since, top), max_pages):
         pages += 1
         for raw in page.get("value", []):
             mtg = parse_event(tenant, raw)

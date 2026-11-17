@@ -63,7 +63,7 @@ ORG_WORDS = re.compile(
     r"church|center|centre|clubs?|way|league|council|alliance|coalition|ministries|foundation|association|institute|"
     r"university|college|hospital|health|care|company|products|supply|equipment|paving|electric|roofing|plumbing|"
     r"utilities|waste|water|svcs?|inds?|bros|sons|title|realty|properties|holdings|investments|capital|communities|housing|habitat|"
-    r"recovery|goodwill|united|american|national|florida|community|family|children|youth|senior|boys|girls|friends|"
+    r"recovery|the|diocese|archdiocese|parish|temple|chabad|goodwill|united|american|national|florida|community|family|children|youth|senior|boys|girls|friends|"
     r"city|county|town|village|bay|coast|gulf|central|south|north|east|west|tampa|pasco|hernando|pinellas|"
     r"school|schools|academy|museum|library|chamber|arts|theatre|theater|ymca|legal|medical|dental|animal|"
     r"environmental|landscaping|landscape|lawn|tree|pest|security|fire|rescue|emergency|truck|auto|motors?|"
@@ -152,6 +152,8 @@ def clean_name(raw: str) -> str:
     """'Award to Comanco Environmental Corporation' -> 'Comanco Environmental Corporation';
     'Mark Keschl of Meridien Development, LLC' -> 'Meridien Development, LLC'. '' when it isn't a company."""
     n = re.sub(r"\s+", " ", raw).strip(" ,;:–-")
+    # a name never runs across a sentence end ("… PROVIDING FOR AN EFFECTIVE DATE. The Diocese of Venice, Inc.")
+    n = re.split(r"(?<=\b[A-Z]{4})\.\s+(?=[A-Z])|(?<=[a-z]{5})\.\s+(?=[A-Z])", n)[-1]
     m = PERSON_OF.match(n)
     if m and not (ORG_WORDS.match(m.group(1)) or ORG_WORDS.match(m.group(2)) or _place_only(n[m.end():])):
         n = n[m.end():]
@@ -160,6 +162,7 @@ def clean_name(raw: str) -> str:
         prev = n
         n = LEAD_WORDS.sub("", n).strip(" ,;:–-")
         n = re.sub(r"^(?:(?:inc|llc|corp|co)\.?,?\s+(?:and\s+)?|[a-z]\s+|&\s*|[\d,.]+\s+)", "", n, flags=re.I)
+        n = re.sub(r"^\d[\d.,-]*\d[.,-]*\s*(?=[A-Z])|^\d[.)]\s*(?=[A-Z])", "", n)  # "2026-53 APPROVING …", "85.002Kalos …"
         n = CONTRACT_NO.sub("", n)
         n = GOV_AND.sub("", n)
         parts = re.split(r"\s([–-]|from|with|w/|to|by|between|and/or)\s(?=[A-Z])", n, flags=re.I)
@@ -169,6 +172,8 @@ def clean_name(raw: str) -> str:
     if len(n) < 5 or len(n) > 80 or NOT_COMPANY.search(n) or not re.search(SUFFIXES + r"$", n, re.I):
         return ""
     if len(re.sub(SUFFIXES + "$", "", n, flags=re.I).strip(" ,").split()) < 1:
+        return ""
+    if re.fullmatch(r"[A-Z][A-Za-z]{1,3}\.", " ".join(_core(n))):  # "HASSELL CO. INT., LLC" cut to "Int., LLC"
         return ""
     return n
 
@@ -275,6 +280,22 @@ def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
                                                                     it.get("action_text") or "") if x))
                 aka: dict[str, list[str]] = {}
                 names = payees(text, aka)
+                if JURISDICTIONS[county].get("platform") == "civicclerk":
+                    # Here the extra wording is the staff memo, which also names losing bidders, past
+                    # vendors and neighbors. Use the title when it names the company; otherwise the memo
+                    # only when it names exactly one company.
+                    head = re.sub(r"\s+", " ", it["title"])
+                    aka = {}
+                    in_title = payees(head, aka)
+                    if in_title:
+                        text, names = (head, in_title) if money(head) else (text, payees(text, aka)[:0] or in_title)
+                        if text is not head:  # company in the title, amount only in the memo
+                            wanted = {key(n) for n, _, _ in in_title}
+                            names = payees(text, aka)
+                            if len(names) != 1 or key(names[0][0]) not in wanted:
+                                continue
+                    elif len(names) != 1:
+                        continue
                 if not names or not money(text):
                     continue
                 way = direction(text)
@@ -549,8 +570,8 @@ def company_html(c: dict, s: str) -> str:
 <p class="lede">{lede}</p>
 <p class="fair">Amounts are what a board approved, usually a contract's ceiling, not money paid.
 {f"{n_flags} {'item is' if n_flags == 1 else 'items are'} marked worth a second look; none means anything improper happened. " if n_flags else ""}<a href="../companies.html#how">How this works</a>.</p>
-{f'<p class="small">Also written as: {_e("; ".join(spellings[1:]))}.</p>' if len(spellings) > 1 else ""}
-{f'<p class="small">The record also calls it (doing business as, or formerly): {_e("; ".join(sorted(c["aka"])))}.</p>' if c.get("aka") else ""}
+{f'<p class="small">Also written as: {_e("; ".join(spellings[1:]).rstrip("."))}.</p>' if len(spellings) > 1 else ""}
+{f'<p class="small">The record also calls it (doing business as, or formerly): {_e("; ".join(sorted(c["aka"])).rstrip("."))}.</p>' if c.get("aka") else ""}
 {_breakdown(c)}
 <h2>Decisions to pay {_e(c["name"])}</h2>
 <ol class="decisions">{''.join(decision_html(x, 1) for x in paid)}</ol>

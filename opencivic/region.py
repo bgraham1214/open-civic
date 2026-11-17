@@ -70,6 +70,14 @@ def areas_in(text: str, rx: dict[str, re.Pattern] | None = None) -> list[str]:
     return [a for a, r in rx.items() if r.search(text or "")]
 
 
+def _areas_near(slug: str) -> set[str]:
+    """Areas an item from this government can be about: those of the governments in its own region
+    (Lutz straddles the Hillsborough-Pasco line). Elsewhere in Florida "Brandon" is somebody's name."""
+    from .jurisdictions import region_of
+    r = region_of(slug)
+    return {a for m in (REGIONS[r]["members"] if r else [slug]) for a in JURISDICTIONS[m]["areas"]}
+
+
 def _vote_summary(votes: list[dict]) -> tuple[str, str]:
     """('7 in favor, 1 opposed', 'Name') from a list of per-person votes."""
     if not votes:
@@ -229,7 +237,8 @@ def _load(data: Path) -> dict:
         private_events = set()
         cc_meetings = _jsonl(lst / f"civicclerk-{tenant}-meetings.jsonl")
         by_file, agenda_at = viewer_links(cc_meetings)
-        viewers.update(by_file)
+        if slug == "pasco":  # file ids are per tenant: another government's must never stand in for Pasco's
+            viewers.update(by_file)
         for m in cc_meetings:
             if is_private_body(m.get("category", "")) or is_private_body(m.get("name", "")):
                 private_events.add(m["event_id"])
@@ -247,7 +256,9 @@ def _load(data: Path) -> dict:
             if i.get("is_section") or i.get("event_id") in private_events or is_private_body(i.get("category", "")):
                 continue
             out["items"].append({
-                "county": slug, "key": i["key"], "date": i["date"], "body": i["meeting"],
+                "county": slug, "key": i["key"], "date": i["date"],
+                # the registry's governments tell their boards apart by category, as their meetings do
+                "body": f"{i['meeting']} ({i.get('category', '')})" if JURISDICTIONS[slug].get("florida") else i["meeting"],
                 "number": i["outline"], "title": i["title"], "file_number": i.get("item_number", ""),
                 "matter_type": i.get("section", ""), "action": "", "result": "", "mover": "", "seconder": "",
                 "action_text": i.get("description", ""), "consent": "consent" in (i.get("section", "").lower()),
@@ -466,7 +477,9 @@ def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dic
         rows.append((i["county"], i["date"], i["body"], i.get("number", ""), i["title"], i.get("file_number", ""),
                      i.get("matter_type", ""), i.get("action", ""), i.get("result", ""), i.get("mover", ""),
                      i.get("seconder", ""), summary, nays, i.get("action_text", ""), int(bool(i.get("consent"))),
-                     "; ".join(i.get("attachments", [])), "; ".join(areas_in(f"{i['title']} {i.get('action_text', '')}", rx)),
+                     "; ".join(i.get("attachments", [])),
+                     "; ".join(a for a in areas_in(f"{i['title']} {i.get('action_text', '')}", rx)
+                               if a in _areas_near(i["county"])),
                      i.get("matter_url", "") or i.get("portal_url", ""), i.get("portal_url", ""), i["key"]))
     con.executemany("INSERT OR REPLACE INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     # Slim on purpose: 70,000+ rows, and Datasette Lite downloads the whole file to the browser.
@@ -500,7 +513,8 @@ def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dic
             con.execute("INSERT INTO pages (county,date,kind,title,page,method,text,areas,link,document_key) "
                         "VALUES (?,?,?,?,?,?,?,?,?,?)",
                         (e["county"], e["date"], e["kind"], e["title"], p["n"], p["method"], t,
-                         "; ".join(areas_in(t, rx)), f"{base}#page={p['n']}", e["key"]))
+                         "; ".join(a for a in areas_in(t, rx) if a in _areas_near(e["county"])),
+                         f"{base}#page={p['n']}", e["key"]))
             n_pages += 1
     con.executemany("INSERT INTO changes (county,at,event,document_key,date,kind,title,sha256,previous_sha256,bytes,"
                     "county_url,our_copy) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [
@@ -599,7 +613,8 @@ def feed_entries(data: Path, county: str | None = None, area: str | None = None)
         if county and i["county"] != county:
             continue
         text = f"{i['title']} {i.get('action_text', '')}"
-        if area and area not in areas_in(text, rx):
+        # an area's feed holds its own county's items ("Corporal Brandon Rivera" in Kissimmee isn't Brandon)
+        if area and (area not in _areas_near(i["county"]) or area not in areas_in(text, rx)):
             continue
         name = JURISDICTIONS[i["county"]]["short"]
         out.append({"title": f"{name} · {i['date']} · {i['body']}: {i['title'][:200]}",
@@ -635,13 +650,19 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
 <li><a href="{e(j['website'])}">The city's website</a></li></ul></section>""")
             continue
         c = counts["by_county"][slug]
+        if j.get("florida") and not c["meetings"]:
+            continue  # in the registry, not collected yet: florida.html says so
         areas = " and ".join(j["areas"])
 
         def meeting(m: dict) -> str:
-            ours = out is not None and (out / "meetings" / slug / f"{m['date']}.html").exists()
+            from .meetings import _main_board
+            # the plain-language page is the governing board's; another board meeting that day isn't on it
+            ours = (out is not None and (out / "meetings" / slug / f"{m['date']}.html").exists()
+                    and (not j.get("florida") or _main_board(slug, m.get("body") or "")))
             copy = lambda k: f' (<a href="{e(m[k])}">our copy</a>, downloads)' if m.get(k) else ""
             links = [x for x in (
-                f'<a href="meetings/{slug}/{m["date"]}.html">What happened, in plain words</a>' if ours else "",
+                f'<a href="meetings/{slug}/{m["date"]}.html">'
+                f'{"What was on the agenda" if j.get("votes") is False else "What happened"}, in plain words</a>' if ours else "",
                 f'<a href="{e(m["agenda_url"])}">Agenda</a>{copy("agenda_copy_url")}' if m.get("agenda_url") else "",
                 f'<a href="{e(m["minutes_url"])}">Minutes</a>{copy("minutes_copy_url")}' if m.get("minutes_url") else "",
                 f'<a href="{e(m["portal_url"])}">Official meeting page</a>' if m.get("portal_url") else "") if x]
@@ -650,7 +671,8 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
         w = f"county%3D%27{slug}%27"
         plain_links = []
         if out is None or (out / "meetings" / f"{slug}.html").exists():
-            plain_links.append(f'<li><a href="meetings/{slug}.html">What happened at each meeting</a></li>')
+            plain_links.append(f'<li><a href="meetings/{slug}.html">'
+                               f'{"What was on each agenda" if j.get("votes") is False else "What happened at each meeting"}</a></li>')
         if out is not None and (out / j["people_dir"] / f"{slug}.html").exists():
             plain_links.append(f'<li><a href="{j["people_dir"]}/{slug}.html">How each {e(j["member"])} voted</a></li>')
         deep = ([
@@ -669,6 +691,8 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
         counted = [n(c["meetings"], "meeting", "meetings")] + (
             [n(c["agenda_items"], "agenda item", "agenda items"), n(c["votes"], "recorded vote", "recorded votes")]
             if county_hub or c["agenda_items"] else []) + [n(c["documents"], "archived document", "archived documents")]
+        if j.get("florida"):  # say what there is; "0 recorded votes" reads as if nobody voted
+            counted = [x for x in counted if not x.startswith("0 ")]
         span = f" · {e(long_date(c['first']))} to {e(long_date(c['last']))}" if c.get('first') and c.get('last') else ''
         sections.append(f"""
 <section id="{slug}" aria-labelledby="h-{slug}"><h2 id="h-{slug}">{e(j['name'])}{f' <span class="topic-count">({e(areas)})</span>' if areas else ''}</h2>
@@ -681,7 +705,8 @@ def page_html(counts: dict, site_url: str, built: str, recent: dict[str, list[di
 <p class="small">Searchable tables (they open in Datasette Lite): {" · ".join(deep)}.</p>
 <p class="small">RSS feeds: {" · ".join(feeds)}.</p></section>""")
     size = site._size(out / f"{db}.db") if out is not None else ""
-    collected = [s_ for s_ in r["members"] if not JURISDICTIONS[s_].get("blocked")]
+    collected = [s_ for s_ in r["members"] if not JURISDICTIONS[s_].get("blocked")
+                 and (not JURISDICTIONS[s_].get("florida") or counts["by_county"][s_]["meetings"])]
     if county_hub:
         top = """<h1>County commission records</h1>
 <p class="role">Brandon and Lutz (Hillsborough) · Wesley Chapel (Pasco) · Spring Hill (Hernando)</p>
@@ -696,9 +721,10 @@ decisions are made by their county commission, so we follow those commissions.</
                 "(Legistar), plus the Hillsborough Clerk's Master Voting Record, collected nightly. "
                 f'<a href="{lite(site_url, "", db)}">Full database</a> · <a href="{db}.db">download</a>.</p>')
     else:
-        names = [JURISDICTIONS[x]["short"] for x in r["members"]]
-        cities = [JURISDICTIONS[x]["short"] for x in r["members"] if JURISDICTIONS[x]["govt"] == "city"]
-        has_county = any(JURISDICTIONS[x]["govt"] == "county" for x in r["members"])
+        have = [x for x in r["members"] if not JURISDICTIONS[x].get("florida") or counts["by_county"][x]["meetings"]]
+        names = [JURISDICTIONS[x]["short"] + (" County" if JURISDICTIONS[x]["govt"] == "county" else "") for x in have]
+        cities = [JURISDICTIONS[x]["short"] for x in have if JURISDICTIONS[x]["govt"] == "city"]
+        has_county = any(JURISDICTIONS[x]["govt"] == "county" for x in have)
         listed = cities[0] if len(cities) == 1 else ", ".join(cities[:-1]) + " and " + cities[-1] if cities else ""
         lede = ""
         if has_county:
@@ -707,6 +733,13 @@ decisions are made by their county commission, so we follow those commissions.</
         if cities:
             lede += (f"{e(listed)} {'has its' if len(cities) == 1 else 'each have their'} own city government. City "
                      "councils and commissions decide zoning, city services and city taxes inside city limits.")
+        also = {"Hillsborough": [("Hillsborough County Commission", "counties.html#hillsborough"),
+                                 ("Temple Terrace", "templeterrace.html")],
+                "Pasco": [("Pasco County Commission", "counties.html#pasco")],
+                "Hernando": [("Hernando County Commission", "counties.html#hernando")],
+                "Volusia": [("Edgewater, Oak Hill and New Smyrna Beach", "volusia.html")]}.get(r.get("county", ""), [])
+        if also and region != "volusia":
+            lede += " Also in this county: " + ", ".join(f'<a href="{h}">{e(t)}</a>' for t, h in also) + "."
         if r.get("county"):
             lede += (f' Other governments in {e(r["county"])} County aren\'t here yet: see '
                      f'<a href="florida.html#{e(r["db"])}">what we cover in Florida</a>.')

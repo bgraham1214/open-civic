@@ -17,8 +17,9 @@ remaining time goes to filling in older meetings, a slice per government in rota
 deadline. Whatever isn't reached keeps what it had and is picked up the next night. Newest meetings
 always come first, so a new government shows its latest meetings on its first night.
 
-Polite: one request at a time, about two a second to the two API hosts (neither sets a
-Crawl-delay), identified by our User-Agent.
+Polite: one request at a time to Legistar's API, about two a second. Each CivicClerk government is
+its own host; four are read at a time, each no faster than two requests a second. Neither platform
+sets a Crawl-delay; every request carries our User-Agent.
 """
 
 from __future__ import annotations
@@ -175,7 +176,7 @@ class CivicClerkGov:
 
     def list_events(self) -> None:
         try:
-            crawl = civicclerk.crawl_events(self.tenant, self.fetcher, since=self.f.get("since", "2025-01-01"))
+            crawl = civicclerk.crawl_events(self.tenant, self.fetcher, since=self.f.get("since", "2025-01-01"), top=200)
         except FetchError as e:
             print(f"{self.tenant}: meetings not updated: {e}", file=sys.stderr)
             self.stats["errors"] += 1
@@ -225,39 +226,62 @@ class CivicClerkGov:
 
 
 def collect(data: Path, minutes: float, first: int, slice_: int, only: set[str] | None = None,
-            fetchers: dict | None = None, today: date | None = None) -> dict:
+            fetchers: dict | None = None, today: date | None = None, workers: int = 4) -> dict:
     today = today or date.today()
     lst = data / "listings"
     lst.mkdir(parents=True, exist_ok=True)
     budget = Budget(minutes)
-    fetchers = fetchers or {"legistar": HttpFetcher(min_interval=0.5, retries=2),
-                            "civicclerk": HttpFetcher(min_interval=0.5, retries=2)}
+    shared = fetchers or {}
     govs = []
     rows = [f for f in FLORIDA if not only or f["slug"] in only]
     # rotate the starting point so a deadline doesn't always cut off the same governments
     start = today.toordinal() % len(rows) if rows else 0
+    leg_fetcher = shared.get("legistar") or HttpFetcher(min_interval=0.5, retries=2)
     for f in rows[start:] + rows[:start]:
-        cls = LegistarGov if f["platform"] == "legistar" else CivicClerkGov
-        govs.append(cls(f, lst, fetchers[f["platform"]], today))
-    for g in govs:  # pass 1: every government's meeting list and newest meetings
-        if not budget.left():
-            break
-        g.list_events()
-        g.step(first, budget)
-        g.save()
-    while budget.left():  # pass 2: older meetings, a slice each, until the time is up
-        waiting = [g for g in govs if g.todo and not g.failed]
-        if not waiting:
-            break
-        for g in waiting:
-            if not budget.left():
-                break
-            g.step(slice_, budget)
+        if f["platform"] == "legistar":
+            govs.append(LegistarGov(f, lst, leg_fetcher, today))
+        else:  # every CivicClerk tenant is its own host, so each gets its own polite fetcher
+            govs.append(CivicClerkGov(f, lst, shared.get("civicclerk") or HttpFetcher(min_interval=0.5, retries=2), today))
+
+    def first_pass(g) -> None:
+        if budget.left():
+            g.list_events()
+            g.step(first, budget)
             g.save()
+
+    def backfill(group: list) -> None:
+        while budget.left():
+            waiting = [g for g in group if g.todo and not g.failed]
+            if not waiting:
+                return
+            for g in waiting:
+                if budget.left():
+                    g.step(slice_, budget)
+                    g.save()
+
+    # Legistar is one host: one government at a time. CivicClerk tenants are separate hosts: a few at once.
+    legistar_govs = [g for g in govs if isinstance(g, LegistarGov)]
+    cc_govs = [g for g in govs if isinstance(g, CivicClerkGov)]
+
+    def legistar_line() -> None:
+        for g in legistar_govs:  # pass 1: every government's meeting list and newest meetings
+            first_pass(g)
+        backfill(legistar_govs)  # pass 2: older meetings, a slice each, until the time is up
+
+    def cc_one(g) -> None:
+        first_pass(g)
+        backfill([g])
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1 + (workers if cc_govs else 0)) as pool:
+        jobs = [pool.submit(legistar_line)] + [pool.submit(cc_one, g) for g in cc_govs]
+        for j in jobs:
+            j.result()
     summary = {"governments": len(govs), "requests": budget.requests,
                "complete": sum(1 for g in govs if g.todo == [] and not g.failed),
                "unfinished": {g.f["slug"]: len(g.todo) for g in govs if g.todo},
-               "failed": [g.f["slug"] for g in govs if g.failed or g.todo is None]}
+               "failed": [g.f["slug"] for g in govs if g.failed],
+               "not_reached": [g.f["slug"] for g in govs if g.todo is None and not g.failed]}
     return summary
 
 

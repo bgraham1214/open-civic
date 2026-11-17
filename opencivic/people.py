@@ -413,8 +413,11 @@ def county_page(county: str, ppl: dict[str, dict], footer: str) -> str:
     areas = " and ".join(j["areas"])
     plural = "doesn't" if len(j["areas"]) == 1 else "don't"
     if j["govt"] == "city":
-        lede = (f"{_e(j['short'])}'s local decisions are made by its {_e(j['body'])}: these {len(current)} members. "
-                "The mayor runs the meetings and votes too.")
+        lede = (f"{_e(j['short'])}'s local decisions are made by its {_e(j['body'])}: these {len(current)} members."
+                + ("" if j.get("florida") else " The mayor runs the meetings and votes too."))
+    elif not j["areas"]:
+        lede = (f"These {len(current)} {j['members']} make {_e(j['name'])}'s county-wide decisions, and the local "
+                "decisions (zoning, roads, county taxes) for everyone who lives outside a city.")
     else:
         lede = (f"{_e(areas)} {plural} have a city government. Decisions about zoning, roads and county taxes "
                 f"there are made by these {len(current)} commissioners.")

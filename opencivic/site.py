@@ -480,7 +480,7 @@ def _gov_links(out: Path, slug: str) -> tuple[str, str]:
     if people:
         links.append(f'<a href="{jur["people_dir"]}/{slug}.html">how each {jur["member"]} voted</a>')
     hub = jur.get("hub")
-    if hub:
+    if hub and (out / hub[1]).exists():
         links.append(f'<a href="{hub[1]}{"#" + slug if slug != "templeterrace" else ""}">search its records</a>')
     status = ("Meetings and each member's votes" if people else
               "Meetings and agendas (votes aren't in this source)" if links and not jur.get("votes", True) else
@@ -498,12 +498,14 @@ def rest_of_florida(out: Path) -> str:
         if not (out / r["page"]).exists():
             continue
         names = [JURISDICTIONS[m]["short"] + (" County" if JURISDICTIONS[m]["govt"] == "county" else "")
-                 for m in r["members"]]
+                 for m in r["members"] if (out / "meetings" / f"{m}.html").exists()]
+        if not names:
+            continue
         items.append(f'<li><a href="{r["page"]}">{e(r["county"])} County</a>: {e(", ".join(names))}</li>')
     if not items:
         return ""
     places = florida_places()
-    n = sum(1 for p in places if p["slug"] and not JURISDICTIONS[p["slug"]].get("blocked"))
+    n = sum(1 for p in places if p["slug"] and _gov_links(out, p["slug"])[1] and not JURISDICTIONS[p["slug"]].get("blocked"))
     return f"""<h2 id="florida">The rest of Florida</h2>
 <p>We follow {n} of Florida's {len(places)} county and city governments so far: the ones whose meeting records are
 on a system our software can read. Pick a county, or <a href="florida.html">find your city or county</a>.</p>
@@ -523,7 +525,8 @@ def florida_page(out: Path) -> str:
             label = f"{p['name']} County government" if p["kind"] == "county" else f"{p['name']} ({p['kind']})"
             if p["slug"]:
                 status, links = _gov_links(out, p["slug"])
-                n_ours += 0 if JURISDICTIONS[p["slug"]].get("blocked") or (p["kind"] != "county" and p["counties"][0] != c["name"]) else 1
+                n_ours += 0 if (not links or JURISDICTIONS[p["slug"]].get("blocked")
+                                or (p["kind"] != "county" and p["counties"][0] != c["name"])) else 1
                 rows.append(f'<li data-name="{e(p["name"].lower())}"><strong>{e(label)}</strong>: {e(status)}'
                             f'{". " + links if links else ""}</li>')
             else:

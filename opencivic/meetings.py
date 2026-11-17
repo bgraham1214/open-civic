@@ -101,6 +101,8 @@ def decisions_by_meeting(data: Path) -> dict[str, dict[str, list[dict]]]:
             continue
         if i.get("consent_section"):  # its vote is shown on each consent item
             continue
+        if JURISDICTIONS.get(c, {}).get("florida") and PROCEDURAL_TITLE.match(i["title"].strip()):
+            continue  # headings every agenda has, and public comment, which is never shown
         if c in ("hillsborough", "hernando") and i["date"] in voted_dates.get(c, set()):
             continue
         out[c][i["date"]].append({"item": i, "votes": [], "facts": None,
@@ -152,6 +154,23 @@ PROCEDURE_RX = re.compile(r"^(?:\d+:\d+ ?[ap]\.?m\.? \(time certain\) )?(?:oral 
                           r"(?:the )?(?:adoption of |enactment of )?(?:an? |the )?|^proposed |^(?:an? )?", re.I)
 BY_BOARD_RX = re.compile(r"^(?:ordinance|resolution) by the [\w ]{0,60}?commissioners?(?: of [\w ]{0,40}?county,? florida,?)? ", re.I)
 CODE_TO_RX = re.compile(r"^(?:ordinance|resolution)\b[^;]{0,90}?\b(?:code|ordinances?)(?: of ordinances(?: and laws)?)? to ", re.I)
+
+
+# Agenda lines that aren't decisions: the order of business, and public comment (never shown).
+PROCEDURAL_TITLE = re.compile(
+    r"^(?:[IVX\d]+[.)]\s*)?(?:call(?:ed)? to order|roll call|pledge(?: of allegiance)?(?: to the flag)?|invocation|"
+    r"moment of silen\w+|opening (?:prayer|ceremon\w+)|adjourn\w*|recess|"
+    r"(?:public|citizens?'?|audience|general public) (?:comments?|input|participation|forum|to be heard)[^.]{0,60}|"
+    r"comments? from the (?:public|audience|floor)[^.]{0,40}|citizens? (?:comments?|to be heard)[^.]{0,40}|"
+    r"(?:staff|board|commission(?:er)?s?'?|council(?: members?'?)?|mayor'?s?|closing|attorney'?s?|manager'?s?|"
+    r"administrator'?s?|clerk'?s?) (?:comments?|reports?|discussion|presentation|remarks|items?|communications?)|"
+    r"(?:introduction of )?public hearings?(?: by [^.]{0,60})?|cover documents?|notes?|general information|"
+    r"(?:approval|adoption|acceptance) of (?:the )?agenda|agenda (?:approval|review|changes|modifications)|"
+    r"(?:call to order|invocation|pledge)[\w ,/&]{0,80}|presentations?(?: and proclamations?)?|proclamations?|"
+    r"consent agenda|regular agenda|new business|old business|unfinished business|other business|"
+    r"announcements?|reports?|discussion items?|action items?|ordinances?|resolutions?|public hearings?:?|"
+    r"upcoming (?:meetings|events)[^.]{0,40}|next meeting[^.]{0,60}|welcome[^.]{0,40}|ceremonial[^.]{0,30})"
+    r"[\s.:;-]*$", re.I)
 
 
 def _essence(subject: str) -> str:
@@ -250,6 +269,10 @@ def meeting_page(county: str, d: str, rows: list[dict], has_people: bool, prev_n
     elif upcoming:
         note = ('<p class="fair">Agendas can change up to the day of the meeting, so check the official meeting page '
                 f"before you go. {j['body_short']} meetings are open to the public.</p>")
+    elif j.get("votes") is False:
+        note = (f'<p class="fair">This page shows what was on the agenda, not what was decided. {_e(j["name"])} '
+                "records its votes in its minutes, which we don't read yet. Open the official record for the "
+                "outcome.</p>")
     elif _days_between(d, today) <= 90:
         note = ('<p class="fair">The recorded votes for this meeting aren\'t out yet (they usually come a few weeks '
                 "later), so this page shows what was on the agenda, not what was decided. Open the official record "
@@ -359,11 +382,14 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, 
     areas = " and ".join(j["areas"])
     people = (f'<p><a href="../{j["people_dir"]}/{county}.html">How each {j["member"]} voted</a></p>' if has_people else "")
     who = (f"The {_e(j['body'])} makes {_e(j['short'])}'s local decisions." if j["govt"] == "city"
-           else f"The County Commission makes the local decisions for {_e(areas)}.")
+           else f"The County Commission makes the local decisions for {_e(areas)}." if areas
+           else f"The {_e(j['board'])} makes county-wide decisions, and the local decisions for everyone who "
+                "lives outside a city.")
+    see = ("see what was on its agenda" if j.get("votes") is False else "see what it\ndecided")
     body = f"""<h1>{_e(j['board'])} meetings</h1>
-<p class="role">What happened, in plain language</p>
-<p class="lede">{who} Pick a meeting to see what it
-decided, explained without the jargon.</p>
+<p class="role">{"What was on each agenda" if j.get("votes") is False else "What happened"}, in plain language</p>
+<p class="lede">{who} Pick a meeting to {see}, explained without the jargon.</p>
+{f'<p class="fair">{_e(j["name"])} records its votes in its minutes, which we do not read yet, so these pages show agendas, not outcomes.</p>' if j.get("votes") is False else ""}
 {people}
 <p class="learn"><a href="../learn/land.html">How building and land decisions work</a> ·
 <a href="../learn/money.html">How {"public" if j["govt"] == "city" else "county"} money works</a></p>
