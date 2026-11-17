@@ -498,5 +498,5 @@ def write(data: Path, out: Path) -> dict:
     from .build import _rss
     counts["spotlight"] = spotlight.write(by_meeting, out, today, _rss)
     from . import money
-    counts["money"] = money.write(by_meeting, out)
+    counts["money"] = money.write(by_meeting, out, data)
     return counts

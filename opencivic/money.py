@@ -691,7 +691,7 @@ def csv_rows(companies: dict[str, dict]) -> list[list]:
     return out
 
 
-def company_html(c: dict, s: str) -> str:
+def company_html(c: dict, s: str, pay: dict | None = None) -> str:
     from . import site
     paid = c["paid"]
     others = [x for x in c["rows"] if x["direction"] != "out"]
@@ -712,8 +712,8 @@ def company_html(c: dict, s: str) -> str:
 <h2>Decisions to pay {_e(c["name"])}</h2>
 <ol class="decisions">{''.join(decision_html(x, 1) for x in paid)}</ol>
 {f'<h2>Other decisions that name it</h2><p>Items where the company asked for something or pays the government, '
- f'not counted above.</p><ol class="decisions">' + "".join(decision_html(x, 1) for x in others) + "</ol>" if others else ""}"""
-    org = {"@type": "Organization", "name": c["name"], "alternateName": spellings[1:] or None}
+ f'not counted above.</p><ol class="decisions">' + "".join(decision_html(x, 1) for x in others) + "</ol>" if others else ""}{_payments_html(c, pay) if pay else ""}"""
+    org ={"@type": "Organization", "name": c["name"], "alternateName": spellings[1:] or None}
     return site.page(f"{c['name']}: public money approved", body, 1, path=f"companies/{s}.html",
                      crumbs=[("Money to companies", "companies.html")], here=c["name"],
                      description=(f"{c['name']}: {dollars(c['approved_total'])} approved in {c['approved_n']} decisions "
@@ -799,7 +799,7 @@ def _top_table(rows: list[dict], cap_id: str, caption: str, slugs: dict[str, str
     return (f'<div class="scroll" role="region" aria-labelledby="{cap_id}" tabindex="0"><table class="data">'
             f'<caption id="{cap_id}">{_e(caption)}</caption><thead><tr><th scope="col">Rank</th>'
             f'<th scope="col">Company or organization</th><th scope="col">Amount approved</th>'
-            f'<th scope="col">Contracts</th>' + ('<th scope="col">Paid by</th>' if show_govs else "")
+            f'<th scope="col">Contracts</th>' + ('<th scope="col">Approved by</th>' if show_govs else "")
             + f"</tr></thead><tbody>{body}</tbody></table></div>")
 
 
@@ -929,19 +929,40 @@ def write_top(companies: dict[str, dict], slugs: dict[str, str], out: Path, have
     return len(filters)
 
 
-def write(by_meeting: dict, out: Path) -> dict:
+def _payments_html(c: dict, pay: dict) -> str:
+    """Payments a Clerk recorded to this company (payments.py), for each government it has a decision with."""
+    from . import payments
+    parts = []
+    for clerk, rows in pay["by_clerk"].items():
+        approvals = [{"date": x["date"], "amount": x["amount"]} for x in c["paid"] if x["county"] == clerk
+                     and x["row"]["facts"] and x["row"]["facts"].get("passed")]
+        parts.append("\n" + payments.section_html(clerk, c["name"], rows, pay["data"][clerk]["registers"], approvals, 1))
+    return "".join(parts)
+
+
+def write(by_meeting: dict, out: Path, data_dir: Path | None = None) -> dict:
     companies = collect(by_meeting)
+    from . import payments
+    pay_data = payments.load(data_dir) if data_dir else {}
     slugs = _slugs(companies)
     (out / "companies").mkdir(parents=True, exist_ok=True)
     (out / "companies.html").write_text(index_html(companies, slugs), "utf-8")
     have_votes = {g for g, by_date in by_meeting.items() for rows in by_date.values() for r in rows if r["votes"]}
     collected = {g for g, by_date in by_meeting.items() if any(by_date.values())}
     tops = write_top(companies, slugs, out, have_votes, collected)
+    with_payments = 0
     for k, c in companies.items():
-        (out / "companies" / f"{slugs[k]}.html").write_text(company_html(c, slugs[k]), "utf-8")
+        # a Clerk's payments show only on a company with a decision by that Clerk's government: the name key
+        # alone could join two companies of one name in different places
+        by_clerk = {cl: rows for cl, rows in payments.for_company(k, pay_data, key).items() if cl in c["governments"]}
+        with_payments += bool(by_clerk)
+        (out / "companies" / f"{slugs[k]}.html").write_text(
+            company_html(c, slugs[k], {"by_clerk": by_clerk, "data": pay_data} if by_clerk else None), "utf-8")
+    pay_counts = payments.write_csv(pay_data, out) if pay_data else {}
     import csv
     with open(out / "companies.csv", "w", encoding="utf-8", newline="") as fh:
         csv.writer(fh).writerows(csv_rows(companies))
     flagged = {x["row"]["item"]["key"] for c in companies.values() for x in c["paid"] if x["flags"]}
     return {"companies": len(companies), "approved_total": round(sum(c["approved_total"] for c in companies.values())),
-            "flagged_decisions": len(flagged), "top_lists": tops}
+            "flagged_decisions": len(flagged), "top_lists": tops,
+            "payments": {"lines": pay_counts, "companies_with_payments": with_payments}}

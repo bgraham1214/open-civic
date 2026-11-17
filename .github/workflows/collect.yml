@@ -205,6 +205,15 @@ jobs:
           python -m opencivic.oakhillminutes --data-dir data --problems out/oakhill-minutes-problems.jsonl 2>&1 \
             | tee out/oakhill-minutes-log.txt
 
+      # Payments the county actually sent, from Pasco's Clerk's weekly payment registers (opencivic/payments.py).
+      # Only the last eight weeks are online, so this runs nightly to keep each week. No copies are uploaded:
+      # some of the Clerk's files keep text under its black boxes (Nov 17, 2026), and the user decides that.
+      - name: Pasco payments (the Clerk's weekly payment registers)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.payments collect --clerk pasco --data-dir data 2>&1 | tee out/payments-log.txt
+
       # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
       - name: Build entities
         continue-on-error: true
