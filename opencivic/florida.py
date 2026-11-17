@@ -36,6 +36,7 @@ from pathlib import Path
 from . import civicclerk, legistar
 from .fetch import FetchError, HostDown, HttpFetcher
 from .jurisdictions import FLORIDA, JURISDICTIONS
+from .privacy import unname_item
 from .region import PUBLIC_COMMENT_SECTION, narrative_line
 
 REFRESH_DAYS = 21     # meetings this recent are re-read every night
@@ -154,6 +155,7 @@ class LegistarGov:
         items = [it for eid, its in self.items.items() if eid in live for it in its if not narrative_line(it)]
         for it in items:
             it.pop("minutes_note", None)  # raw rich text of the discussion; never used
+            unname_item(it)  # volunteers removed from a board aren't named (privacy.py)
         keys = {it["key"] for it in items}
         votes = [v for k, vs in self.votes.items() if k in keys for v in vs]
         items.sort(key=lambda i: (i["date"], i["event_id"], i["sequence"], i["item_id"]))
@@ -224,7 +226,7 @@ class CivicClerkGov:
             return
         live = {m.event_id for m in self.meetings}
         _write([asdict(m) for m in self.meetings], self.paths["meetings"])
-        _write([it for eid, its in self.items.items() if eid in live for it in its
+        _write([unname_item(it) for eid, its in self.items.items() if eid in live for it in its
                 if it.get("is_section") or not PUBLIC_COMMENT_SECTION.match((it.get("section") or "").strip())],
                self.paths["items"])
         print(f"{self.tenant}: {len(self.meetings)} meetings, "

@@ -145,7 +145,7 @@ class Formats(unittest.TestCase):
         self.assertTrue(ds[0]["caption"].endswith("EFFECTIVE DATE."))
         self.assertNotIn("Resident", ds[0]["caption"])
 
-    def test_public_comment_heading_is_never_a_title(self):  # Apr 28, 2025: "2. DRU ANN WELCH: SPOKE …"
+    def test_public_comment_heading_is_never_a_title(self):  # Apr 28, 2025: "2. (a resident's name): SPOKE …"
         ds, _ = self.one("D. CITIZEN PARTICIPATION / PUBLIC INPUT\n2. JANE RESIDENT: SPOKE IN REGARD TO MEMORIAL DAY\n"
                          "Motion to accept Commissioner Werning Second Commissioner Hyatt Action Passed Unanimously\n")
         self.assertEqual(ds[0]["title"], "")

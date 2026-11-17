@@ -54,6 +54,8 @@ from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
 
+from .privacy import unname_removals
+
 ACCOUNT = "oakhillfl"
 SLUG = "oakhill"
 SEATS = 5
@@ -489,8 +491,9 @@ def run(data: Path) -> dict:
             # wording that names someone as Mr./Ms. could be a resident: left out (see Guardrails)
             actions.append({
                 "key": key, "date": d_, "body": body, "doc_key": v["key"], "page": d["page"], "number": d["number"],
-                "title": "" if PERSONAL.search(d["title"]) else d["title"], "caption": d["caption"],
-                "motion": "" if PERSONAL.search(d["motion"]) else d["motion"],
+                # and volunteers removed from a board aren't named (privacy.py)
+                "title": "" if PERSONAL.search(d["title"]) else unname_removals(d["title"]), "caption": d["caption"],
+                "motion": "" if PERSONAL.search(d["motion"]) else unname_removals(d["motion"]),
                 "action": d["action"], "result": "Pass" if d["passed"] else "Fail", "tally": d["tally"],
                 "mover": members.get(d["mover"], ""), "seconder": members.get(d["seconder"], ""),
                 "minutes_url": (v.get("url") or "") + frag if v.get("url") else "",

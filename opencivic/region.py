@@ -25,6 +25,7 @@ from datetime import date
 from pathlib import Path
 
 from .civicclerk import viewer_for, viewer_links
+from .privacy import unname_item
 from .jurisdictions import (JURISDICTIONS, REGIONAL, REGIONS, civicclerk_tenants, jurisdiction_of, legistar_clients,
                             weblinks_sites)
 from .legistar import is_private_body
@@ -326,6 +327,8 @@ def _load(data: Path) -> dict:
     _load_pasco_minutes(lst, out, viewers)
     _load_oakhill_minutes(lst, out)
     _load_hillsclerk(lst, out)
+    for i in out["items"]:  # volunteers removed from a board aren't named (privacy.py; the user, Nov 17, 2026)
+        unname_item(i)
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
                    if jurisdiction_of(k) in REGIONAL and e.get("sha256") and not is_private_body(e.get("body", ""))]

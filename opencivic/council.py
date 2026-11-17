@@ -26,6 +26,7 @@ import json
 import re
 from pathlib import Path
 
+from .privacy import unname_item
 from .civicclerk import viewer_links
 
 SLUG = "templeterrace"
@@ -176,7 +177,7 @@ def agenda_items(data: Path) -> list[dict]:
                     "matter_type": i.get("section", ""), "action": "", "result": "", "mover": "", "seconder": "",
                     "action_text": i.get("description", ""), "matter_url": "",
                     "portal_url": agenda_at.get(i.get("event_id")) or i.get("portal_url", "").replace("/agenda", "/files")})
-    return out
+    return [unname_item(i) for i in out]  # privacy.py
 
 
 def council_votes(data: Path) -> dict:
@@ -249,6 +250,8 @@ def council_votes(data: Path) -> dict:
                                "number": v.get("item", ""), "title": title, "matter_type": "Motion during the meeting",
                                "portal_url": "", **common}
         rec_votes[v["key"]] = ballot(v)
+    for i in rec_items.values():
+        unname_item(i)
     return {"items": rec_items, "votes": rec_votes}
 
 

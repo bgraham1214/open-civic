@@ -61,6 +61,7 @@ ORG_WORDS = re.compile(
     r"^(?:development|construction|services?|management|industries|enterprises|systems|solutions|group|partners|"
     r"associates|bank|homes|builders|contracting|contractors|engineering|consulting|consultants|society|agency|"
     r"church|center|centre|clubs?|way|league|council|alliance|coalition|ministries|foundation|association|institute|"
+    r"house|kids|shelter|"
     r"university|college|hospital|health|care|company|products|supply|equipment|paving|electric|roofing|plumbing|"
     r"utilities|waste|water|svcs?|inds?|bros|sons|title|realty|properties|holdings|investments|capital|communities|housing|habitat|"
     r"recovery|the|diocese|archdiocese|parish|temple|chabad|goodwill|united|american|national|florida|community|family|children|youth|senior|boys|girls|friends|"
@@ -90,7 +91,13 @@ GOV_AND = re.compile(r"^.*\b(?:Utilities|Agency|Authority|County|City|District|D
                      r"Sheriff|Government|Schools|University|Florida|State)\s+(?:and|&)\s+(?=[A-Z])")
 # Another name for the same company: "Shamrock Environmental Corporation d/b/a Aqua Clean Environmental Co., LLC"
 ALIAS_GAP = re.compile(r"^[\s,;(]*(?:d/b/a|dba|doing business as|f/?k/?a|formerly(?: known as)?|a/?k/?a|n/?k/?a)[\s,:]*$", re.I)
-DECREASE_RX = re.compile(r"\b(?:contract |cost |price )?decrease of \$|\bdecreas\w+ (?:the )?(?:contract|agreement|purchase order)\b|"
+# Decreases, as the records write them (Nov 17: Pasco's "Decrease in Contract Funding", Collier's "decrease
+# funding in the amount of" and "a decrease from the estimated funding", Hillsborough's "decrease standard contract
+# amt"). Not "Services to Prevent, Decrease, or Delay ..." (a program's purpose).
+DECREASE_RX = re.compile(r"\b(?:contract |cost |price )?decrease of \$|"
+                         r"\bdecreas\w+ (?:the )?(?:standard )?(?:contract|agreement|purchase order|task authorization|task order|funding)\b|"
+                         r"\bdecreas\w* in (?:the )?(?:contract |agreement )?(?:funding|amount)\b|\bdecreased amount of \$|"
+                         r"\ba decrease from the\b|\bdecrease is \$|\bdecrease the [\w/ -]{1,60}? funding\b|"
                          r"\bdeductive change order|\bcredit change order|[–-]\s*\(\$\s?[\d,]+(?:\.\d+)?\)|\breduc\w+ the contract (?:amount|price|sum)", re.I)
 RAISE_RX = re.compile(r"\bincreas\w+\b[^$]{0,80}?\bfrom \$\s?([\d,]+(?:\.\d+)?)\s?(million|M\b)? to \$\s?([\d,]+(?:\.\d+)?)\s?(million|M\b)?", re.I)
 # A contract number written before the name: "FM24-002 Bandes Construction Company",
@@ -118,9 +125,23 @@ IN_RX = re.compile(
 NO_BID_RX = re.compile(r"\bsole[- ]source|\bsingle[- ]source|\bexempt\w* from (?:the )?competitive|"
                        r"\bwithout competitive (?:bid|solicit)|\bno-bid\b|\bemergency (?:purchase|procurement|repair|contract)|"
                        r"\bexempt purchase", re.I)
-ADDED_RX = re.compile(r"\bchange (?:order|directive)\b|\badditional (?:purchase |spending |contract )?(?:authority|funding|funds)\b|"
-                      r"\bincreas\w+ (?:the )?(?:existing )?(?:contract|purchase|not[- ]to[- ]exceed|spending|compensation|amount)|"
+# Money added to a contract already approved. Nov 17: also the many ways the Florida records write an increase
+# ("an increase to the purchase order", "Increase in Contract Cost Capacity", "threshold increase", "Increased
+# Annual Expenditure of Contract", "increase the maximum not-to-exceed amount"), but not "no increase to".
+ADDED_RX = re.compile(r"\bchange (?:order|directive)\b|\badditional (?:purchase |purchasing |spending |contract )?(?:authority|funding|funds)\b|"
+                      r"(?<!\bno )(?<!\bprice )\bincreas\w+ (?:(?:to|in|of|for)(?: the)? )?(?:(?:existing|current|total|maximum|annual|aggregate|"
+                      r"potential(?: five-year)?|open-end|blanket|guaranteed|contract|agreement'?s?|agreement’s|cost|the) )*"
+                      r"(?:contract|purchase|not[- ]to[- ]exceed|spending|compensation|amount|expenditures?|threshold|"
+                      r"funding|maximum price|capacity|task order|work order)\b|"
+                      r"\bthreshold increase\b|"
                       r"\b(?:amendment|modification)\b[^.]{0,120}\b(?:increas|additional|add)\w*", re.I)
+# Organizations that fund the governments we follow rather than being paid by them. Florida's Area Agencies on
+# Aging (Senior Connection Center is Hillsborough's) pass state and Older Americans Act money to the county as
+# their local provider: every one of the 44 items naming them on Nov 17, 2026 was money to the government
+# (Pasco's "Standard Contract EZ025-PASCO", Hillsborough's "grant award from Senior Connection Center Inc").
+# Florida Housing Finance Corporation (the state's housing agency) is where SHIP money comes from ("expend no more
+# than $55,000.00 in Florida Housing Finance Corporation State Housing Initiatives Partnership (SHIP) funds").
+FUNDER_RX = re.compile(r"\barea agency on aging\b|\bsenior connection (?:center|ctr)\b|\bflorida housing finance corp", re.I)
 CONSENT_FLOOR = 1_000_000
 # A close-out restates a contract's final total; counting it again would double the award.
 CLOSEOUT_RX = re.compile(r"\bclose[- ]?out\b|\bfinal (?:payment|acceptance)\b|\brelease of retainage\b", re.I)
@@ -162,7 +183,8 @@ def clean_name(raw: str) -> str:
         prev = n
         n = LEAD_WORDS.sub("", n).strip(" ,;:–-")
         n = re.sub(r"^(?:(?:inc|llc|corp|co)\.?,?\s+(?:and\s+)?|[a-z]\s+|&\s*|[\d,.]+\s+)", "", n, flags=re.I)
-        n = re.sub(r"^\d[\d.,-]*\d[.,-]*\s*(?=[A-Z])|^\d[.)]\s*(?=[A-Z])", "", n)  # "2026-53 APPROVING …", "85.002Kalos …"
+        # "2026-53 APPROVING …", "85.002Kalos …", "Resolution No. 2025-107 for Shelley’s Septic Tanks Inc"
+        n = re.sub(r"^\d[\d.,-]*\d[.,-]*\s*(?:(?:for|to|with)\s+)?(?=[A-Z])|^\d[.)]\s*(?=[A-Z])", "", n)
         n = CONTRACT_NO.sub("", n)
         n = GOV_AND.sub("", n)
         parts = re.split(r"\s([–-]|from|with|w/|to|by|between|and/or)\s(?=[A-Z])", n, flags=re.I)
@@ -178,19 +200,22 @@ def clean_name(raw: str) -> str:
     return n
 
 
-def key(name: str) -> str:
-    """One company however it's spelled: 'Lennar Homes, LLC' and 'Lennar Homes LLC' -> 'lennar homes'."""
+def key(name: str, page: bool = False) -> str:
+    """One company however it's spelled: 'Lennar Homes, LLC' and 'Lennar Homes LLC' -> 'lennar homes'.
+    page: for a page address, which keeps "brothers" so addresses made before Nov 17, 2026 don't change."""
     k = name.lower().replace("&", " and ").replace("’", "'")
     k = re.sub(r"\bu\.?\s?s\.?\b", "us", k)
     k = re.sub(r"[.,'()]", " ", k)
     k = re.sub(r"\b(?:svcs?|service)\b", "services", k)  # "G.A. Food Svcs", "… Service", "… Services"
+    if not page:
+        k = re.sub(r"\bbrothers\b", "bros", k)  # "Goodwin Bros. Construction" and "Goodwin Brothers Construction"
     k = re.sub(r"\b([a-z])\s+(?=[a-z]\b)", r"\1", k)  # initials: "g a food" (G.A.) is "ga food" (GA)
     k = re.sub(r"\b(?:inc|incorporated|llc|l l c|corp|corporation|company|co|lp|l p|llp|lllp|p a|pa|pllc|ltd|n a|the)\b", " ", k)
     return re.sub(r"\s+", " ", k).strip()
 
 
 def slug(name: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", key(name)).strip("-")[:70] or "company"
+    return re.sub(r"[^a-z0-9]+", "-", key(name, page=True)).strip("-")[:70] or "company"
 
 
 def payees(text: str, aliases: dict[str, list[str]] | None = None) -> list[tuple[str, int, int]]:
@@ -305,10 +330,10 @@ def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
                         continue
                 if not names or not money(text):
                     continue
-                way = direction(text)
                 less = bool(DECREASE_RX.search(text))
                 for i, (n, _, _) in enumerate(names):
                     amt = amount_for(text, names, i)
+                    way = "in" if FUNDER_RX.search(n) else direction(text)
                     c = companies.setdefault(key(n), {"names": defaultdict(int), "rows": [], "aka": set()})
                     c["names"][n] += 1
                     c["aka"].update(aka.get(n, []))
@@ -468,6 +493,8 @@ def index_html(companies: dict[str, dict], slugs: dict[str, str]) -> str:
 agreed to pay, with <mark>{_e(dollars(total))}</mark> in approved amounts. These are amounts approved, not money paid.</p>
 <p class="fair">Amounts and names are read by fixed rules from each agenda's wording, which can be misread. Each
 decision links to the official record. <a href="#how">How this works</a>.</p>
+<p><a href="top-companies.html">Top companies</a>: the ten with the most money approved and the ten with the most
+contracts, for every government, one county, or one city.</p>
 <h2 id="look">Worth a second look</h2>
 <p>{" · ".join(f"{_e(FLAGS[f][0])}: {counts[f]:,}" for f in FLAG_ORDER if counts[f])}. Newest first, including
 items still on an agenda; none of these means anything improper happened.</p>
@@ -592,11 +619,222 @@ def company_html(c: dict, s: str) -> str:
                      jsonld=[{"@type": "AboutPage", "about": org}])
 
 
+# --- Top companies (top-companies.html and top-companies/<filter>.html), the user's ask of Nov 17, 2026:
+# "who received the most, top 10; who received the most contracts, top 10; a filter for county or city".
+
+SINCE = "2025-01-01"  # every government's record we read reaches back at least this far
+TOP_N = 10
+
+
+def county_of(g: str) -> str:
+    j = JURISDICTIONS[g]
+    if j.get("county"):
+        return j["county"]
+    return "Hillsborough" if g == "templeterrace" else j["short"]
+
+
+def _approved(x: dict) -> bool:
+    """Counted in a total: passed, and not a close-out or a decrease."""
+    return bool(x["row"]["facts"] and x["row"]["facts"].get("passed")) and x["counted"]
+
+
+def ranking(companies: dict[str, dict], govs: set[str], since: str = "") -> list[dict]:
+    """One row per company with approved decisions by `govs` on or after `since`: amount approved, contracts
+    (approved decisions that award a contract, task order or purchase) and changes that added money to a
+    contract approved earlier (not counted as contracts)."""
+    out = []
+    for k, c in companies.items():
+        xs = [x for x in c["paid"] if x["county"] in govs and x["date"] >= since and _approved(x)]
+        if not xs:
+            continue
+        added = [x for x in xs if "added" in x["flags"]]
+        out.append({"key": k, "name": c["name"], "amount": sum(x["amount"] or 0 for x in xs),
+                    "contracts": len(xs) - len(added), "added": len(added),
+                    "govs": sorted({x["county"] for x in xs}, key=_gov), "first": min(x["date"] for x in xs),
+                    "last": max(x["date"] for x in xs)})
+    return out
+
+
+def top_lists(rows: list[dict]) -> tuple[list[dict], list[dict], int]:
+    """(top by amount, top by contracts, how many more companies tie the 10th by contracts)."""
+    by_amount = sorted((r for r in rows if r["amount"]), key=lambda r: (-r["amount"], r["name"].lower()))[:TOP_N]
+    by_count = sorted((r for r in rows if r["contracts"]),
+                      key=lambda r: (-r["contracts"], -r["amount"], r["name"].lower()))
+    ties = 0
+    if len(by_count) > TOP_N:
+        ties = sum(1 for r in by_count[TOP_N:] if r["contracts"] == by_count[TOP_N - 1]["contracts"])
+    return by_amount, by_count[:TOP_N], ties
+
+
+def top_filters(companies: dict[str, dict]) -> list[dict]:
+    """Every list we can honestly make: all governments, each county with an approved decision in any of
+    its governments, and each such government. Places without approved decisions get no list."""
+    from .jurisdictions import county_slug
+    with_money = sorted({x["county"] for c in companies.values() for x in c["paid"] if _approved(x)}, key=_gov)
+    out = [{"key": "", "label": "Every government we follow", "govs": set(with_money), "kind": "all"}]
+    counties = sorted({county_of(g) for g in with_money})
+    for cn in counties:
+        gs = {g for g in with_money if county_of(g) == cn}
+        out.append({"key": f"{county_slug(cn)}-county", "label": f"{cn} County: every government we follow there",
+                    "short": f"{cn} County", "county": cn, "govs": gs, "kind": "county"})
+    for g in sorted(with_money, key=lambda g: JURISDICTIONS[g]["board"]):
+        out.append({"key": g, "label": JURISDICTIONS[g]["board"], "short": JURISDICTIONS[g]["board"],
+                    "county": county_of(g), "govs": {g}, "kind": "gov"})
+    return out
+
+
+def _top_table(rows: list[dict], cap_id: str, caption: str, slugs: dict[str, str], depth: int, show_govs: bool) -> str:
+    up = "../" * depth
+
+    def contracts(r: dict) -> str:
+        return f"{r['contracts']:,}" + (f" (+{r['added']:,} added)" if r["added"] else "")
+
+    body = "".join(
+        f'<tr><td>{i}</td><th scope="row"><a href="{up}companies/{slugs[r["key"]]}.html">{_e(r["name"])}</a></th>'
+        f'<td>{_e(dollars(r["amount"])) if r["amount"] else "not stated"}</td><td>{contracts(r)}</td>'
+        + (f'<td>{_e(", ".join(_gov(g) for g in r["govs"]))}</td>' if show_govs else "") + "</tr>"
+        for i, r in enumerate(rows, 1))
+    return (f'<div class="scroll" role="region" aria-labelledby="{cap_id}" tabindex="0"><table class="data">'
+            f'<caption id="{cap_id}">{_e(caption)}</caption><thead><tr><th scope="col">Rank</th>'
+            f'<th scope="col">Company or organization</th><th scope="col">Amount approved</th>'
+            f'<th scope="col">Contracts</th>' + ('<th scope="col">Paid by</th>' if show_govs else "")
+            + f"</tr></thead><tbody>{body}</tbody></table></div>")
+
+
+def _top_pair(rows: list[dict], slugs: dict[str, str], depth: int, show_govs: bool, sid: str, span: str) -> str:
+    by_amount, by_count, ties = top_lists(rows)
+    tie_note = ""
+    if ties:
+        n = by_count[-1]["contracts"]
+        tie_note = (f'<p class="small">{ties:,} more {"company also has" if ties == 1 else "companies also have"} '
+                    f'{n:,} {"contract" if n == 1 else "contracts"}. Companies with the same number of contracts are '
+                    "listed by amount approved.</p>")
+    return (f'<h3 id="money-{sid}">Most money approved</h3>'
+            + _top_table(by_amount, f"cap-m-{sid}", f"Top {len(by_amount)} by amount approved, {span}", slugs, depth, show_govs)
+            + f'<h3 id="count-{sid}">Most contracts</h3>'
+            + _top_table(by_count, f"cap-c-{sid}", f"Top {len(by_count)} by number of contracts approved, {span}",
+                         slugs, depth, show_govs) + tie_note)
+
+
+TOP_HOW = """<section id="how" aria-labelledby="h-how"><h2 id="h-how">How these lists are made</h2>
+<ul>
+<li><strong>Amount approved</strong> is the total of the figures the agenda wording names for the company in
+decisions that passed: usually a contract's ceiling ("not to exceed"), <strong>not money paid</strong>. It
+includes money added to contracts approved earlier (change orders, amendments, added spending authority).
+Close-outs and decreases aren't added.</li>
+<li><strong>Contracts</strong> counts each decision that passed and awards the company a contract, task order,
+work order or purchase, including renewals. A decision that only adds money to a contract approved earlier is
+not counted as a contract; the number of those is shown as "added". An amendment whose wording doesn't say it
+adds money is counted as a contract.</li>
+<li>When one decision names several companies (a pool of firms on call), each one counts it.</li>
+<li>Only governments whose votes we have can be counted, because only there do we know a decision passed.
+Governments whose pages show agendas without votes aren't in these lists yet.</li>
+<li>Names are matched by fixed rules, so a company that changed its name, or that two governments spell very
+differently, can appear twice. Each company's page lists every decision with its official record.</li>
+</ul>
+<p>More about how amounts and names are read: <a href="{up}companies.html#how">Public money to companies</a>.
+If something here is wrong, <a href="{repo}/issues">tell us</a>.</p>
+</section>"""
+
+
+def top_html(companies: dict[str, dict], slugs: dict[str, str], f: dict, filters: list[dict],
+             have_votes: set[str], collected: set[str]) -> str:
+    """have_votes: governments with any recorded vote; collected: governments with any decision on a page."""
+    from . import site
+    depth = 0 if f["kind"] == "all" else 1
+    up = "../" * depth
+    rows = ranking(companies, f["govs"], SINCE)
+    all_rows = ranking(companies, f["govs"])
+    last = max((r["last"] for r in all_rows), default=SINCE)
+    first = min((r["first"] for r in all_rows), default=SINCE)
+    span = f"{site.long_date(SINCE)} to {site.long_date(last)}"
+    show_govs = len(f["govs"]) > 1
+    where = "the governments we follow" if f["kind"] == "all" else f["short"]
+    options = []
+    for kind, group in (("all", ""), ("county", "A whole county"), ("gov", "One city, town or county government")):
+        opts = "".join(f'<option value="{up}{"top-companies.html" if g["kind"] == "all" else "top-companies/" + g["key"] + ".html"}"'
+                       f'{" selected" if g["key"] == f["key"] else ""}>{_e(g["short"] if g["kind"] == "county" else g["label"])}</option>'
+                       for g in filters if g["kind"] == kind)
+        options.append(f'<optgroup label="{_e(group)}">{opts}</optgroup>' if group else opts)
+    links = "".join(f'<li><a href="{up}{"top-companies.html" if g["kind"] == "all" else "top-companies/" + g["key"] + ".html"}">'
+                    f'{_e(g["label"])}</a></li>' for g in filters)
+    # who isn't counted, and why
+    if f["kind"] == "all":
+        no_votes = collected - have_votes
+        missing = (f'<p class="fair">These lists count {len(f["govs"]):,} governments: the ones whose votes we have and '
+                   f'whose agendas name the company and the amount. {len(no_votes):,} more show agendas without votes, '
+                   'so their decisions can\'t be counted as approved yet, and most Florida governments aren\'t collected '
+                   f'at all. <a href="{up}florida.html">What we cover in Florida</a>.</p>')
+    else:
+        same = [g for g in collected if county_of(g) == f["county"] and g not in f["govs"]]
+        nov = sorted((g for g in same if g not in have_votes), key=_gov)
+        quiet = sorted((g for g in same if g in have_votes), key=_gov)
+        bits = []
+        if nov:
+            bits.append(f'{_e(", ".join(_gov(g) for g in nov))} ({"its" if len(nov) == 1 else "their"} pages show agendas '
+                        "without votes, so nothing there can be counted as approved yet)")
+        if quiet:
+            bits.append(f'{_e(", ".join(_gov(g) for g in quiet))} (we have {"its" if len(quiet) == 1 else "their"} votes, '
+                        "but no approved decision whose wording names a company and an amount)")
+        missing = ""
+        if f["kind"] == "county":
+            missing = (f'<p class="fair">Counted here: {_e(", ".join(_gov(g) for g in sorted(f["govs"], key=_gov)))}.'
+                       + (f" Not counted: {'; '.join(bits)}." if bits else "")
+                       + f' Some {_e(f["county"])} County governments aren\'t collected at all: '
+                       f'<a href="{up}florida.html">what we cover in Florida</a>.</p>')
+        missing += ('<p class="fair">Agendas that don\'t name the company and the amount in the item\'s own wording '
+                    "aren't counted, so a government can have spent more than these lists show.</p>")
+    older = ""
+    if first < SINCE:
+        early = sorted({g for r in all_rows for g in r["govs"] if r["first"] < SINCE
+                        and any(x["county"] == g and x["date"] < SINCE and _approved(x) for x in companies[r["key"]]["paid"])}, key=_gov)
+        older = (f'<h2 id="every-year">Every year we have</h2><p>{_e(", ".join(_gov(g) for g in early))}\'s record goes back '
+                 f'to {_e(site.long_date(first))}; the lists above start in 2025 so every government is compared over '
+                 'the same years. Here is everything we have.</p>'
+                 + _top_pair(all_rows, slugs, depth, show_govs, "all", f"{site.long_date(first)} to {site.long_date(last)}"))
+    title = "Top companies" + ("" if f["kind"] == "all" else f": {f['short']}")
+    body = f"""<h1>{_e(title)}</h1>
+<p class="role">Which companies and organizations {_e(where)} agreed to pay the most</p>
+<p class="lede">The ten that got the most money approved, and the ten that got the most contracts, from
+<mark>{_e(span)}</mark>. Amounts are what a board approved, usually a contract's ceiling, not money paid.</p>
+{missing}
+<form class="search" action="#lists" onsubmit="var s=document.getElementById('tf');location.href=s.value;return false">
+<label for="tf">Show the lists for</label>
+<div class="row"><select id="tf">{''.join(options)}</select> <button type="submit">Show</button></div></form>
+<h2 id="since-2025">Since January 2025</h2>
+{_top_pair(rows, slugs, depth, show_govs, "2025", span) if rows else '<p>No approved decisions in these years.</p>'}
+{older}
+<h2 id="lists">Every list</h2>
+<ul class="links">{links}</ul>
+<p>Every company, with every decision: <a href="{up}companies.html#all">Public money to companies</a>
+(spreadsheet: <a href="{up}companies.csv">companies.csv</a>).</p>
+{TOP_HOW.format(up=up, repo=site.REPO)}"""
+    path = "top-companies.html" if f["kind"] == "all" else f"top-companies/{f['key']}.html"
+    crumbs = [("Money to companies", "companies.html")] + ([("Top companies", "top-companies.html")] if depth else [])
+    return site.page(title, body, depth, path=path, crumbs=crumbs, here=f.get("short") or "Top companies",
+                     description=(f"The ten companies {where} approved the most money for, and the ten with the most "
+                                  f"contracts, since January 2025, each linked to its decisions and the official record."),
+                     jsonld=[{"@type": "CollectionPage", "name": title}])
+
+
+def write_top(companies: dict[str, dict], slugs: dict[str, str], out: Path, have_votes: set[str],
+              collected: set[str]) -> int:
+    filters = top_filters(companies)
+    (out / "top-companies").mkdir(parents=True, exist_ok=True)
+    for f in filters:
+        dest = out / ("top-companies.html" if f["kind"] == "all" else f"top-companies/{f['key']}.html")
+        dest.write_text(top_html(companies, slugs, f, filters, have_votes, collected), "utf-8")
+    return len(filters)
+
+
 def write(by_meeting: dict, out: Path) -> dict:
     companies = collect(by_meeting)
     slugs = _slugs(companies)
     (out / "companies").mkdir(parents=True, exist_ok=True)
     (out / "companies.html").write_text(index_html(companies, slugs), "utf-8")
+    have_votes = {g for g, by_date in by_meeting.items() for rows in by_date.values() for r in rows if r["votes"]}
+    collected = {g for g, by_date in by_meeting.items() if any(by_date.values())}
+    tops = write_top(companies, slugs, out, have_votes, collected)
     for k, c in companies.items():
         (out / "companies" / f"{slugs[k]}.html").write_text(company_html(c, slugs[k]), "utf-8")
     import csv
@@ -604,4 +842,4 @@ def write(by_meeting: dict, out: Path) -> dict:
         csv.writer(fh).writerows(csv_rows(companies))
     flagged = {x["row"]["item"]["key"] for c in companies.values() for x in c["paid"] if x["flags"]}
     return {"companies": len(companies), "approved_total": round(sum(c["approved_total"] for c in companies.values())),
-            "flagged_decisions": len(flagged)}
+            "flagged_decisions": len(flagged), "top_lists": tops}

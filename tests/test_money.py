@@ -237,5 +237,97 @@ class Pages(unittest.TestCase):
             self.assertIn("Money added to an existing contract", page)
 
 
+class Nov17(unittest.TestCase):
+    """Found by reading the top-ten lists against their decisions, Nov 17, 2026 (real wording)."""
+
+    def test_more_decreases(self):
+        for t in ["Budget Amendment and Resolution to Standard Contract EZ025-PASCO Amendment No. 002 – Acme Paving, Inc. "
+                  "– Decrease in Contract Funding; CSFA No. 65.002 – $127,817.73",
+                  "agreement between Collier County and Habitat for Humanity of Collier County, Inc. to decrease funding in "
+                  "the amount of $125,000.00",
+                  "Approve Amendment 002 to contract w/Acme Paving Inc. to decrease standard contract amt by $154,983",
+                  "authorize the necessary Budget Amendment in the amount of $6,054 to reflect a decrease from the estimated funding"]:
+            self.assertTrue(money.DECREASE_RX.search(t), t)
+        self.assertFalse(money.DECREASE_RX.search(
+            "Case Management Services to Prevent, Decrease, or Delay Premature or Inappropriate Placement"))
+
+    def test_more_ways_to_add_money(self):
+        for t in ["Authorize an increase to the purchase order with Rowland, Inc. of Pinellas Park",
+                  "Approval of a $40,000.00 increase to Purchase Order No. 26-00055 with Ferguson Enterprises, LLC",
+                  "Motion Approving an Increase in Contract Cost Capacity to the Consultant Services Agreement",
+                  "MOTION TO APPROVE threshold increase for open-end Contract No. BLD2121366B1_1",
+                  "Increased Annual Expenditure of Contract With DesignLab, Inc., for Uniforms",
+                  "for an increased aggregate expenditure amount of $75,000",
+                  "increase the maximum not-to-exceed amount of the Agreement for Services by $14,880,473",
+                  "Moss & Associates, LLC - Increase the Guaranteed Maximum Price and the Project Budget"]:
+            self.assertTrue(money.ADDED_RX.search(t), t)
+        for t in ["closeout services in the amount of $153,281.10, with no increase to the previously approved Work Order",
+                  "for the first year an amount of $159,875.09 and subsequent annual price increases in the amount not to exceed 2.5%"]:
+            self.assertFalse(money.ADDED_RX.search(t), t)
+
+    def test_funders_are_not_paid(self):
+        rows = [row("Budget Amendment and Resolution to Standard Contract EZ025-PASCO Amendment No. 002 – Area Agency on "
+                    "Aging of Pasco-Pinellas, Inc.– Increase in Contract Funding; CSFA No. 65.002 – $63,517.19", key="a"),
+                row("Request for approval to expend no more than $55,000.00 in Florida Housing Finance Corporation State "
+                    "Housing Initiatives Partnership (SHIP) funds for the Purchase Assistance project", key="b", county="deltona")]
+        self.assertEqual(money.collect({"pasco": {"2026-10-06": rows[:1]}, "deltona": {"2025-08-04": rows[1:]}}), {})
+
+    def test_names(self):
+        one = Nov16.one
+        self.assertEqual(one(self, "Approve the First Amendment to the Child Protection Team Services Agreement with Kids "
+                                   "House of Seminole, Inc. for medical examination services – $70,000")[0][0][0],
+                         "Kids House of Seminole, Inc.")
+        self.assertEqual(one(self, "Request for approval of Resolution No. 2025-107 for Shelley’s Septic Tanks Inc located "
+                                   "in Zellwood, FL. Requested change order amount is $40,000.00.")[0][0][0],
+                         "Shelley’s Septic Tanks Inc")
+        self.assertEqual(money.key("Goodwin Bros. Construction, Inc."), money.key("Goodwin Brothers Construction, Inc."))
+
+
+class TopCompanies(unittest.TestCase):
+    def by(self):
+        return {
+            "pasco": {"2026-01-06": [
+                row("Award of Bid – Sun Civil LLC – Traffic Signal – $1,000,000.00", key="a"),
+                row("Change Order No. 1 – Sun Civil, LLC – Additional Funds – $200,000.00", key="b"),
+                row("Task Order No. 2-26 – Mead and Hunt, Inc. – Reservoir Services – $300,000.00", key="c"),
+                row("Task Order No. 3-26 – Mead and Hunt, Inc. – Lift Station Services – $300,000.00", key="d"),
+            ]},
+            "hillsborough": {"2016-03-02": [row("Approve agreement with Prince Contracting LLC for road work, $9,000,000",
+                                                key="h", county="hillsborough")]},
+            "zephyrhills": {"2026-02-02": [row("Award to Acme Paving Inc. – $50,000", key="z", county="zephyrhills",
+                                               votes=[], result="")]},
+        }
+
+    def test_ranking(self):
+        cs = money.collect(self.by())
+        rows = money.ranking(cs, {"pasco", "hillsborough"}, money.SINCE)
+        by_amount, by_count, ties = money.top_lists(rows)
+        self.assertEqual([r["name"] for r in by_amount], ["Sun Civil LLC", "Mead and Hunt, Inc."])  # 2016 not in 2025-on lists
+        sun = by_amount[0]
+        self.assertEqual((sun["amount"], sun["contracts"], sun["added"]), (1_200_000, 1, 1))  # a change order isn't a contract
+        self.assertEqual([r["name"] for r in by_count], ["Mead and Hunt, Inc.", "Sun Civil LLC"])
+        self.assertEqual(ties, 0)
+
+    def test_pages(self):
+        by = self.by()
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d)
+            site.configure("https://example.github.io/open-civic/", "2026-11-17T20:00:00Z")
+            site.write_assets(out)
+            res = money.write(by, out)
+            top = (out / "top-companies.html").read_text()
+            self.assertIn("Most money approved", top)
+            self.assertIn("Most contracts", top)
+            self.assertIn("Every year we have", top)  # Hillsborough's record starts before 2025
+            self.assertIn('value="top-companies/pasco-county.html"', top)
+            self.assertNotIn("zephyrhills.html", top)  # no votes, so no list
+            pc = (out / "top-companies" / "pasco-county.html").read_text()
+            self.assertIn("Zephyrhills", pc)  # named as not counted, with the reason
+            self.assertIn("without votes", pc)
+            self.assertIn("1 (+1 added)", pc)
+            self.assertNotIn("Every year we have", pc)
+            self.assertEqual(res["top_lists"], len(list((out / "top-companies").glob("*.html"))) + 1)
+
+
 if __name__ == "__main__":
     unittest.main()

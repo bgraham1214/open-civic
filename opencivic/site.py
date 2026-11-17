@@ -418,7 +418,8 @@ companies, across every government we follow. Each is tagged by fixed rules from
 <h2>Public money to companies</h2>
 <p>Every company the record shows these governments agreed to pay, with each decision, its vote and the
 official record, plus plain facts worth a second look (no competitive bidding, money added to a contract,
-approval over a no vote). <a href="companies.html">See who gets paid</a>.</p>
+approval over a no vote). <a href="companies.html">See who gets paid</a>, or the
+<a href="top-companies.html">top ten companies</a> by money and by contracts, overall and for each county and city whose votes we have.</p>
 <h2>New to this?</h2>
 <ul class="links"><li><a href="learn/land.html">How building and land decisions work</a></li>
 <li><a href="learn/money.html">How county money works</a></li>
@@ -769,6 +770,7 @@ automated tools not to. Other Florida governments (see "What we cover in Florida
 - [What we cover in Florida]({u('florida.html')}): every Florida county and city, with what is collected for each
 {regions}
 - [Public money to companies]({u('companies.html')}): companies and organizations the governments agreed to pay (contracts, purchases, change orders, grants), decision by decision, with approved amounts (not payments) and factual flags (no competitive bidding, money added to a contract, approved over a no vote, $1 million or more on consent, conflict-of-interest abstentions)
+- [Top companies]({u('top-companies.html')}): the ten companies with the most money approved and the ten with the most contracts since January 2025, for every government we follow with votes, each county, and each government
 - [Spotlight]({u('spotlight.html')}): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
 {counties}
 {people}
