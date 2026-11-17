@@ -25,7 +25,7 @@ from datetime import date
 from pathlib import Path
 
 from .civicclerk import viewer_for, viewer_links
-from .privacy import unname_item
+from .privacy import blank_names, officials_in, person_key, removed_people, scrub_text, unname_item
 from .jurisdictions import (JURISDICTIONS, REGIONAL, REGIONS, civicclerk_tenants, jurisdiction_of, legistar_clients,
                             weblinks_sites)
 from .legistar import is_private_body
@@ -332,6 +332,14 @@ def _load(data: Path) -> dict:
     state = json.loads((data / "state.json").read_text("utf-8")) if (data / "state.json").exists() else {}
     out["docs"] = [{**e, "county": jurisdiction_of(k)} for k, e in state.items()
                    if jurisdiction_of(k) in REGIONAL and e.get("sha256") and not is_private_body(e.get("body", ""))]
+    # a person a board removed isn't named anywhere for that government (privacy.py)
+    removed = removed_by_county(data, out["docs"])
+    for i in out["items"]:
+        if removed.get(i["county"]):
+            for f in ("title", "motion", "action_text"):
+                if isinstance(i.get(f), str):
+                    i[f] = blank_names(i[f], removed[i["county"]])
+    out["removed"] = removed
     out["meetings"] += weblinks_meetings(state, misfiled_minutes(lst))
     events = [x for x in _jsonl(data / "manifest.jsonl") if jurisdiction_of(x["key"]) in REGIONAL]
     # Documents excluded under the public-roles rule: hide their earlier events (titles, links to
@@ -340,6 +348,23 @@ def _load(data: Path) -> dict:
     out["changes"] = [{**x, "county": jurisdiction_of(x["key"]),
                        **({"title": x.get("reason", ""), "url": "", "copy_url": ""} if x["event"] == "excluded" else {})}
                       for x in events if x["key"] not in excluded or x["event"] == "excluded"]
+    return out
+
+
+def removed_by_county(data: Path, docs: list[dict]) -> dict[str, set[str]]:
+    """{government: names of people its removal motions remove from a board}, read from the machine-read text of
+    its archived documents (the agenda listings no longer hold the names: privacy.unname_item). Never written
+    anywhere."""
+    out: dict[str, set[str]] = {}
+    for e in docs:
+        tp = data / "text" / f"{e['sha256']}.json.gz"
+        if not tp.exists():
+            continue
+        with gzip.open(tp, "rt", encoding="utf-8") as fh:
+            for p in json.load(fh).get("pages", []):
+                names = removed_people(p["text"] if isinstance(p, dict) else str(p))
+                if names:
+                    out.setdefault(e["county"], set()).update(names)
     return out
 
 
@@ -513,7 +538,21 @@ def _load_pasco_minutes(lst: Path, out: dict, viewers: dict[int, str] | None = N
 
 
 def _only(d: dict, members: list[str]) -> dict:
-    return {k: [x for x in v if x.get("county") in members] for k, v in d.items()}
+    return {k: [x for x in v if x.get("county") in members] if isinstance(v, list) else v for k, v in d.items()}
+
+
+_MEMBERS: dict[int, dict[str, set[str]]] = {}
+
+
+def _members_of(votes: list[dict]) -> dict[str, set[str]]:
+    """Each government's voting members, as privacy.person_key writes them. Worked out once per vote list (the
+    feeds ask for it once per government)."""
+    if id(votes) not in _MEMBERS:
+        people: dict[str, set[str]] = {}
+        for v in votes:
+            people.setdefault(v["county"], set()).add(v["person"])
+        _MEMBERS[id(votes)] = {c: {person_key(p) for p in ps} for c, ps in people.items()}
+    return _MEMBERS[id(votes)]
 
 
 def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dict:
@@ -531,6 +570,7 @@ def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dic
     votes_by_item: dict[str, list[dict]] = {}
     for v in d["votes"]:
         votes_by_item.setdefault(v["item_key"], []).append(v)
+    members_of = _members_of(d["votes"])
     item_by_key = {}
     rows = []
     for i in d["items"]:
@@ -538,7 +578,10 @@ def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dic
         item_by_key[i["key"]] = i
         rows.append((i["county"], i["date"], i["body"], i.get("number", ""), i["title"], i.get("file_number", ""),
                      i.get("matter_type", ""), i.get("action", ""), i.get("result", ""), i.get("mover", ""),
-                     i.get("seconder", ""), summary, nays, i.get("action_text", ""), int(bool(i.get("consent"))),
+                     i.get("seconder", ""), summary, nays,
+                     # staff memos and clerks' narratives name residents too (Brevard: "Jane Doe, of Melbourne,
+                     # stated …"): left out of search like the documents' text (privacy.scrub_text)
+                     scrub_text(i.get("action_text", ""), members_of.get(i["county"], set()), addresses=False), int(bool(i.get("consent"))),
                      "; ".join(i.get("attachments", [])),
                      "; ".join(a for a in areas_in(f"{i['title']} {i.get('action_text', '')}", rx)
                                if a in _areas_near(i["county"])),
@@ -554,12 +597,20 @@ def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dic
                                    title[:100] + ("…" if len(title) > 100 else ""), v["item_key"])
     con.executemany("INSERT INTO votes VALUES (?,?,?,?,?,?,?)", list(vote_rows.values()))
     n_pages = 0
-    for e in sorted(d["docs"], key=lambda e: (e.get("date", ""), e["key"])):
-        text = None
+    texts = {}
+    for e in d["docs"]:
         tp = data / "text" / f"{e['sha256']}.json.gz"
         if tp.exists():
             with gzip.open(tp, "rt", encoding="utf-8") as fh:
-                text = json.load(fh)
+                texts[e["key"]] = json.load(fh)
+    # Residents' names and addresses are left out of the searchable text (privacy.scrub_text, the user, Nov 17,
+    # 2026); each government's members, and anyone its documents give an official title, stay.
+    keep = {c: set(ms) for c, ms in members_of.items()}
+    for e in d["docs"]:
+        for p in (texts.get(e["key"]) or {}).get("pages", []):
+            keep.setdefault(e["county"], set()).update(officials_in(p["text"]))
+    for e in sorted(d["docs"], key=lambda e: (e.get("date", ""), e["key"])):
+        text = texts.get(e["key"])
         pages = text["pages"] if text else []
         con.execute("INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
             e["county"], e["date"], e["kind"], e["title"], e.get("body", ""), e["url"], e.get("copy_url", ""),
@@ -569,7 +620,7 @@ def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dic
         # Oak Hill's own copies open in the browser; elsewhere our copy is the stable link
         base = e["url"] if e["key"].startswith("weblinks:") else (e.get("copy_url") or e["url"])
         for p in pages:
-            t = p["text"].strip()
+            t = blank_names(scrub_text(p["text"].strip(), keep.get(e["county"], set())), d.get("removed", {}).get(e["county"], set()))
             if not t:
                 continue
             con.execute("INSERT INTO pages (county,date,kind,title,page,method,text,areas,link,document_key) "
@@ -670,6 +721,7 @@ def lite_for(slug: str, site_url: str, path: str = "") -> str:
 def feed_entries(data: Path, county: str | None = None, area: str | None = None) -> list[dict]:
     d = load(data)
     rx = _area_rx()
+    members_of = _members_of(d["votes"])
     out = []
     for i in d["items"]:
         if county and i["county"] != county:
@@ -682,7 +734,7 @@ def feed_entries(data: Path, county: str | None = None, area: str | None = None)
         out.append({"title": f"{name} · {i['date']} · {i['body']}: {i['title'][:200]}",
                     "link": i.get("matter_url") or i.get("portal_url", ""), "guid": i["key"],
                     "sort": i["date"], "desc": " ".join(x for x in (i.get("action", ""), i.get("result", ""),
-                                                                   i.get("action_text", "")[:800]) if x)})
+                                                                   scrub_text(i.get("action_text", ""), members_of.get(i["county"], set()), addresses=False)[:800]) if x)})
     if not area:
         for e in d["docs"]:
             if county and e["county"] != county:

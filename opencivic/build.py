@@ -25,6 +25,8 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
+from .privacy import officials_in, person_key, scrub_text
+
 from .jurisdictions import REGIONAL, jurisdiction_of
 
 LITE = "https://lite.datasette.io/"
@@ -119,14 +121,17 @@ def build_db(data: Path, db_path: Path) -> dict:
     counts["meetings"] = len(meetings)
 
     n_docs = n_pages = 0
+    texts = {}
+    for e in state.values():
+        tp = data / "text" / f"{e.get('sha256')}.json.gz"
+        if e.get("sha256") and tp.exists():
+            with gzip.open(tp, "rt", encoding="utf-8") as fh:
+                texts[e["key"]] = json.load(fh)
+    keep = city_keep(data, texts.values())
     for e in sorted(state.values(), key=lambda e: (e.get("date", ""), e["key"])):
         if not e.get("sha256"):
             continue
-        text = None
-        tp = data / "text" / f"{e['sha256']}.json.gz"
-        if tp.exists():
-            with gzip.open(tp, "rt", encoding="utf-8") as fh:
-                text = json.load(fh)
+        text = texts.get(e["key"])
         pages = text["pages"] if text else []
         con.execute("INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
             e["date"], e["kind"], e["title"], e.get("body", ""), e["url"], e.get("copy_url", ""),
@@ -136,7 +141,7 @@ def build_db(data: Path, db_path: Path) -> dict:
         n_docs += 1
         link_base = e.get("copy_url") or e["url"]
         for p in pages:
-            t = p["text"].strip()
+            t = scrub_text(p["text"].strip(), keep)  # residents' names left out of search (privacy.py)
             if not t:
                 continue
             con.execute("INSERT INTO pages (date,kind,title,page,method,text,link,document_key) VALUES (?,?,?,?,?,?,?,?)",
@@ -148,7 +153,7 @@ def build_db(data: Path, db_path: Path) -> dict:
     items = [i for i in _jsonl(data / "listings" / "civicclerk-items.jsonl") if not i["is_section"]]
     items = list({i["key"]: i for i in items}.values())
     con.executemany("INSERT INTO agenda_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
-        (i["date"], i["outline"], i["title"], i["description"], i["portal_url"], video_by_event.get(i["event_id"]),
+        (i["date"], i["outline"], i["title"], scrub_text(i["description"], keep, addresses=False), i["portal_url"], video_by_event.get(i["event_id"]),
          i["section"], i["meeting"],
          i["category"], i["item_number"], i["fiscal_impact"], i["resolution_number"], i["ordinance_number"],
          len(i["attachments"]), "; ".join(a["name"] for a in i["attachments"]), i["key"]) for i in items])
@@ -161,7 +166,7 @@ def build_db(data: Path, db_path: Path) -> dict:
          x.get("previous_sha256"), x.get("bytes"), x.get("url"), x.get("copy_url")) for x in ev])
     counts["changes"] = len(ev)
 
-    counts.update(_entity_tables(con, data))
+    counts.update(_entity_tables(con, data, keep))
 
     con.executescript("""
       CREATE VIRTUAL TABLE votes_fts USING fts5(item_title, motion_text, content='votes', tokenize='porter');
@@ -182,7 +187,19 @@ def build_db(data: Path, db_path: Path) -> dict:
     return counts
 
 
-def _entity_tables(con: sqlite3.Connection, data: Path) -> dict:
+def city_keep(data: Path, texts) -> set[str]:
+    """Names that stay in Temple Terrace's searchable text: the council members, and anyone the documents give
+    an official title (privacy.scrub_text)."""
+    keep = {person_key(o["name"]) for o in _jsonl(data / "entities" / "officials.jsonl")}  # members and officers
+    for v in _jsonl(data / "entities" / "votes.jsonl"):
+        keep.update(person_key(p) for p in v.get("ayes", []) + v.get("nays", []) + [v.get("mover") or "", v.get("seconder") or ""] if p)
+    for t in texts:
+        for p in t.get("pages", []):
+            keep |= officials_in(p["text"])
+    return keep
+
+
+def _entity_tables(con: sqlite3.Connection, data: Path, keep: set[str] = frozenset()) -> dict:
     ent = data / "entities"
     officials = _jsonl(ent / "officials.jsonl")
     con.executemany("INSERT INTO officials VALUES (?,?,?,?,?,?,?,?)", [
@@ -193,7 +210,7 @@ def _entity_tables(con: sqlite3.Connection, data: Path) -> dict:
     con.executemany("INSERT INTO votes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
         (v["date"], v["item"], v["item_title"], v["result"], v["tally"], "; ".join(v["nays"]), "; ".join(v["ayes"]),
          v["mover"], v["seconder"], int(v["roll_call"]), v["record_number"], v["action"], v["minutes_link"],
-         v["page_method"], v["text"], v["agenda_item_key"], v["key"]) for v in votes])
+         v["page_method"], scrub_text(v["text"], keep), v["agenda_item_key"], v["key"]) for v in votes])
     contracts = _jsonl(ent / "contracts.jsonl")
     con.executemany("INSERT INTO contracts VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [
         (c["date"], c["title"], "; ".join(c["vendors"]), c["amount_stated"], c.get("vote", ""), c["agenda_link"],
@@ -298,6 +315,7 @@ def _pub(ts: str | None) -> str:
 def feed_entries(data: Path) -> list[dict]:
     """New documents (from the manifest) and agenda items, newest first."""
     state = _city_state(data)
+    keep = city_keep(data, [])
     out = []
     for e in state.values():
         if not e.get("first_seen"):
@@ -310,7 +328,7 @@ def feed_entries(data: Path) -> list[dict]:
             continue
         out.append({"title": f"{i['date']} · Agenda item {i['outline']} {i['title']}"[:300],
                     "link": i["portal_url"], "guid": i["key"], "pub": _pub(i["date"] + "T00:00:00Z"),
-                    "sort": i["date"], "desc": i["description"][:1000],
+                    "sort": i["date"], "desc": scrub_text(i["description"], keep, addresses=False)[:1000],
                     "match": f"{i['title']} {i['description']}"})
     out.sort(key=lambda x: x["sort"], reverse=True)
     return out

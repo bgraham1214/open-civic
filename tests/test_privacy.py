@@ -4,7 +4,7 @@
 
 import unittest
 
-from opencivic.privacy import unname_item, unname_removals
+from opencivic.privacy import blank_names, removed_people, scrub_text, unname_item, unname_removals
 
 
 class Removals(unittest.TestCase):
@@ -47,6 +47,75 @@ class Removals(unittest.TestCase):
         it = unname_item({"title": "VIA Hall/Museum Operations", "number": "F.3.",
                           "motion": "To remove the volunteer (Jane Doe) from all city boards"})
         self.assertEqual(it["motion"], "To remove the volunteer from all city boards")
+
+
+class SearchText(unittest.TestCase):
+    """Residents left out of the searchable text of minutes and memos (scrub_text), in the forms the Oak Hill,
+    Pasco, Temple Terrace and Brevard records use (names and addresses replaced)."""
+    KEEP = {"ricky taylor", "carrie werning", "jack mariano", "andy ross"}
+
+    def s(self, t):
+        return scrub_text(t, self.KEEP)
+
+    def test_residents_left_out(self):
+        for before, after in [
+            ("Jane Roe 205 N. Brooks Cir asked the city for speed bumps.", "[name left out] [address left out] asked the city for speed bumps."),
+            ("1. John Doe 130 N Putnam spoke regarding nails", "1. [name left out] [address left out] spoke regarding nails"),
+            ("Mary Roe 576 N. US Hwy 1 spoke about it.", "[name left out] [address left out] spoke about it."),
+            ("2. JANE ROE: SPOKE IN REGARD TO MEMORIAL DAY", "2. [name left out]: SPOKE IN REGARD TO MEMORIAL DAY"),
+            ("Ms. Jane Roe expressed her appreciation", "Ms. [name left out] expressed her appreciation"),
+            ("Approved to receive and file documents submitted by Ms. Jane Roe.",
+             "Approved to receive and file documents submitted by [name left out]."),
+            ("e Resident Jane Taylor spoke in favor", "e [name left out] spoke in favor"),  # not the Mayor
+            ("D. PUBLIC COMMENTS: Jane Roe spoke about the school", "D. PUBLIC COMMENTS: [name left out] spoke about the school"),
+            ("3. John Doe — Complimented city staff", "3. [name left out] — Complimented city staff"),
+            ("Tony and Patty Roe requested three variances", "[name left out] requested three variances"),
+            ("Citizens Comments\n\nJohn Doe (205 Randall Avenue) asked about it",
+             "Citizens Comments\n\n[name left out] ([address left out]) asked about it"),
+            ("Jane Roe and Mary Doe of Girl Scout Troop #1 spoke of learning", "[name left out] of Girl Scout Troop #1 spoke of learning"),
+            ("Applicant, Jane Roe, stated the location", "Applicant, [name left out], stated the location"),
+            ("Contact jroe@example.com or (813) 555-1234.", "Contact [email left out] or [phone left out]."),
+            # surnames that are also everyday words
+            ("Neil Bond 295 Indian Creek Rd spoke about the road.", "[name left out] [address left out] spoke about the road."),
+            ("Bill Grant asked about the park.", "[name left out] asked about the park."),
+            ("Jane Chambers stated her concerns.", "[name left out] stated her concerns."),
+            ("Mary Park commented on the plan.", "[name left out] commented on the plan."),
+            ("We ask you to deny it.\n\nSincerely,\n\nJane Q. Roe\n", "We ask you to deny it.\n\nSincerely,\n\n[name left out]\n"),
+        ]:
+            self.assertEqual(self.s(before), after)
+
+    def test_officials_and_headings_stay(self):
+        for t in ["Commissioner Werning moved to approve.", "Mayor Taylor assured the resident.", "MAYOR TAYLOR asked",
+                  "CITY ADMINISTRATOR JANE SHIRA stated", "Chairman Mariano spoke regarding the letter",
+                  "Senior Planner Jane Doe stated the request", "11. Consent Agenda:\nA. Resolution Approving",
+                  "Miscellaneous Business - District Five - Chairman Mariano", "Economic Development - [name left out]",
+                  "The Pledge of Allegiance was led", "REGULAR MEETING was called to order",
+                  "GO Bond Referendum was discussed", "House Bill 803 addressed building permits",
+                  "from Blue Lake Avenue to the Dr. Martin Luther King, Jr. Beltway",
+                  "The Placid Lakes Homeowners Association Inc is requesting a waiver",
+                  "closing on Right-of-Way for US Highway 441 - Sleepy Hollow Racetrack, which is in the City of Leesburg",
+                  "Carrie Werning stated", "Mr. Taylor stated"]:
+            self.assertEqual(self.s(t), t, t)
+        # a memo's property address stays when asked; a speaker's address never does
+        t = "Annexation of the parcel located at 8325 North Bradshaw Road. Jane Roe 12 Oak St spoke in favor."
+        self.assertEqual(scrub_text(t, addresses=False),
+                         "Annexation of the parcel located at 8325 North Bradshaw Road. [name left out] [address left out] spoke in favor.")
+        t = "from North of Commercial Circle to North of St. Johns Bluff Road (Item 4) is planned"
+        self.assertEqual(self.s(t), t)
+        # staff the documents name with a title stay elsewhere in the same text
+        t = "Sincerely,\n\nJohn Barkley\nCity Manager"  # the documents call him City Manager elsewhere
+        self.assertEqual(scrub_text(t, self.KEEP | {"john barkley"}), t)
+        t = "City Manager John Barkley presented the budget. Mr. Barkley stated it was balanced."
+        self.assertEqual(self.s(t), t)
+
+
+class RemovedPeople(unittest.TestCase):
+    def test_found_and_blanked_everywhere(self):
+        t = "Commissioner Doe moved to permanently remove the two volunteers (Jane Q Doe & Mary Roe) from all city boards"
+        self.assertEqual(removed_people(t), {"jane doe", "mary roe"})
+        self.assertEqual(removed_people("To appoint Jane Doe and Mary Roe to the Parks Board"), set())
+        self.assertEqual(blank_names("To appoint Jane Q.  Doe, Sam Poe and MARY ROE to the Parks Board", {"jane doe", "mary roe"}),
+                         "To appoint [name left out], Sam Poe and [name left out] to the Parks Board")
 
 
 if __name__ == "__main__":

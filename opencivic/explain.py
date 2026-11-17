@@ -332,7 +332,7 @@ def explain(title: str, category: str = "", county: str = "") -> dict:
                     else "New or changed county law (ordinance)")
     # --- people
     elif re.search(r"\b(appoint|reappoint|appointments?|nominat)", low) or re.search(
-            r"^to approve [a-z .,'’&-]{3,200}? (?:to|for) the [\w ]{0,50}\b(?:committee|board)\b", low):
+            r"^to approve [a-z .,'’&\[\]-]{3,200}? (?:to|for) the [\w ]{0,50}\b(?:committee|board)\b", low):  # [name left out]
         topic, headline = "people", "Appointments to boards and committees"
     elif re.search(r"employment agreement|contract extension with county administrator|(hire|select|appoint)\w* [\w ]{0,30}county (administrator|attorney)", low):
         topic, headline = "people", "County leadership contract or staffing"
