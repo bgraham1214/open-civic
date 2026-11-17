@@ -216,7 +216,9 @@ class Edgewater(unittest.TestCase):
             self.assertIn("The City Council makes Edgewater", idx)
 
             res = region.write(data, out, SITE, "2026-11-12T20:00:00Z", build._rss)
-            self.assertEqual(set(res), set(REGIONS))
+                # county regions with nothing collected yet get no page or database
+            self.assertEqual(set(res), {"counties", "volusia"})
+            self.assertLessEqual(set(res), set(REGIONS))
             v = res["volusia"]["by_county"]
             self.assertEqual(v["oakhill"]["documents"], 124)
             self.assertEqual(v["edgewater"]["votes"], 45)  # 4 roll calls x 5, plus the consent roll call on its line and 5 items
