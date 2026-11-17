@@ -39,6 +39,9 @@ jobs:
           else
             python -m opencivic.florida collect --data-dir data --minutes "${MINUTES:-120}" 2>&1 | tee out/florida-log.txt
           fi
+      - name: Contract amounts from staff reports
+        if: always()
+        run: python -m opencivic.staffreports collect --data-dir data --minutes 20 2>&1 | tee -a out/florida-log.txt
       - name: Commit data/
         if: always()
         run: |

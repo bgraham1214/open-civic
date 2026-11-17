@@ -391,16 +391,21 @@ def collect(by_meeting: dict[str, dict[str, list[dict]]]) -> dict[str, dict]:
                                 continue
                     elif len(names) != 1:
                         continue
-                if not names or not money(text):
+                # the title names one company and no amount: the staff report's labeled amount, where we have
+                # one (staffreports.py: Pinellas, Coconut Creek, Deltona)
+                staff = (it.get("staff_amount") if len(names) == 1 and not money(text) and it.get("staff_amount")
+                         else None)
+                if not names or not (money(text) or staff):
                     continue
                 less = bool(DECREASE_RX.search(text))
                 for i, (n, _, _) in enumerate(names):
-                    amt = amount_for(text, names, i)
+                    amt = staff if staff else amount_for(text, names, i)
                     way = "in" if FUNDER_RX.search(n) else direction(text)
                     c = companies.setdefault(key(n), {"names": defaultdict(int), "rows": [], "aka": set()})
                     c["names"][n] += 1
                     c["aka"].update(aka.get(n, []))
                     c["rows"].append({"county": county, "date": d, "row": r, "amount": amt, "direction": way,
+                                      "staff_label": it.get("staff_label") if staff else "",
                                       "shared": len(names) > 1, "decrease": less,
                                       "counted": not CLOSEOUT_RX.search(text) and not less,
                                       "flags": flags_for(it, r["votes"], r["facts"], amt, text) if way == "out" else []})
@@ -449,6 +454,7 @@ def decision_html(x: dict, depth: int, show_company: str = "", company_href: str
     amt = ""
     if x["amount"]:
         amt = (f'<p class="amount">{_e(dollars(x["amount"]))}'
+               + (f' (from the staff report: “{_e(x["staff_label"])}”)' if x.get("staff_label") else "")
                + (" (this company's share, as the wording lists it)" if x["shared"] else "")
                + (" (a decrease to a contract: not added to the total, and not subtracted)" if x.get("decrease")
                   else " (a close-out: the contract's final total, not added to the total again)" if not x["counted"] else "")
@@ -480,6 +486,9 @@ A decrease to a contract is listed but neither added nor subtracted.</li>
 <li>When a contract is changed, the wording sometimes gives the added amount and sometimes the contract's new
 total, and doesn't always say which. Where it says "from $A to $B" we count the difference; otherwise we count
 the figure as written, so a company's total can include part of one contract twice. Read the decisions.</li>
+<li>When the agenda's wording names the company but not the amount, and the government's staff report gives
+the amount in a labeled field ("Total contract not to exceed", "Expenditures", "Cost"), that amount is used and
+the decision says so. Only Pinellas County, Coconut Creek and Deltona write their reports that way.</li>
 <li>"Doing business as" and "formerly known as" names are joined to the company's legal name.</li>
 <li>Spellings are joined ("Lennar Homes, LLC" and "Lennar Homes LLC" are one company). Different companies
 with similar names stay separate. A company's own name is all we match on, so a company that changed its name
@@ -633,7 +642,8 @@ def csv_rows(companies: dict[str, dict]) -> list[list]:
     from . import site
     from .people import outcome
     head = ["company", "also_known_as", "government", "board", "date", "amount_approved", "counted_in_total",
-            "money_goes", "outcome", "worth_a_second_look", "names_several_companies", "official_wording", "page"]
+            "money_goes", "outcome", "worth_a_second_look", "names_several_companies", "official_wording", "page",
+            "amount_from"]
     out = [head]
     for k in sorted(companies, key=lambda k: companies[k]["name"].lower()):
         c = companies[k]
@@ -648,7 +658,8 @@ def csv_rows(companies: dict[str, dict]) -> list[list]:
                 outcome(f) if f else "On the agenda; no vote recorded",
                 "; ".join(FLAGS[fl][0] for fl in x["flags"]), "yes" if x["shared"] else "no",
                 re.sub(r"\s+", " ", it.get("motion") or it["title"]),
-                site.absolute(f"meetings/{x['county']}/{x['date']}.html") or f"meetings/{x['county']}/{x['date']}.html"])
+                site.absolute(f"meetings/{x['county']}/{x['date']}.html") or f"meetings/{x['county']}/{x['date']}.html",
+                f"staff report: {x['staff_label']}" if x.get("staff_label") else ("agenda wording" if x["amount"] is not None else "")])
     return out
 
 

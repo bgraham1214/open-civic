@@ -130,6 +130,14 @@ jobs:
           python -m opencivic.florida collect --data-dir data --minutes "${FLORIDA_MINUTES:-150}" 2>&1 \
             | tee out/florida-log.txt
 
+      # The amount a staff report gives for a contract whose title names the company but not the amount
+      # (Pinellas, Coconut Creek, Deltona; opencivic/staffreports.py). Three requests an item, items read once.
+      - name: Contract amounts from staff reports (Legistar matter texts)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.staffreports collect --data-dir data --minutes 20 2>&1 | tee out/staffreports-log.txt
+
       - name: Hillsborough Clerk BOCC voting record (list the yearly reports, 2014 on)
         continue-on-error: true
         run: python -m opencivic.hillsclerk list --since 2014 -o out/hillsclerk-listing.jsonl
