@@ -1,6 +1,6 @@
 # Open Civic Web (working name)
 
-Open, public-interest tools that collect local government meeting records and keep them searchable for free. The pilot city is Temple Terrace, FL. Since Nov 2026 it also follows the Hillsborough, Pasco and Hernando county commissions, which govern Brandon, Lutz, Wesley Chapel and Spring Hill.
+Open, public-interest tools that collect Florida local government meeting records and keep them searchable for free. It follows the governing boards of Florida cities and counties statewide: 111 governments read through their Legistar and CivicClerk records (see `opencivic/florida.json`), plus the areas where it began in Nov 2026: the Temple Terrace City Council, the Hillsborough, Pasco and Hernando county commissions, and Edgewater and Oak Hill in southeast Volusia County. It also reads payments counties recorded (`opencivic/payments.py`, `opencivic/agendapayments.py`) and groups the same subjects across the state (`opencivic/glance.py`).
 
 ## What's here
 

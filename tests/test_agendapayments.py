@@ -4,6 +4,7 @@
 names are invented."""
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -115,6 +116,7 @@ def _pdf_with_box(box: bool) -> bytes:
     return out + b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, x)
 
 
+@unittest.skipUnless(shutil.which("pdftoppm"), "needs pdftoppm (poppler-utils)")
 class BlackBoxes(unittest.TestCase):
     def test_box_found_text_not(self):
         self.assertEqual(ap.dark_pages(_pdf_with_box(True)), {1})
