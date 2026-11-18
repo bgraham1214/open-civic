@@ -37,6 +37,7 @@ class Subjects(unittest.TestCase):
                                       "Designated County Roads Within High Point Community"))
         self.assertNotIn("golf-carts", s("APPROVAL OF RESOLUTION NO. 173-26 APPROVING AN AGREEMENT WITH TEXTRON E-Z-GO "
                                          "LLC., FOR GOLF CART LEASES AND RELATED EQUIPMENT"))
+        self.assertNotIn("golf-carts", s("Cartin Tarpon Annual Christmas Golf Cart Parade"))
         self.assertIn("e-bikes", s("Ordinance No. 2026-036 Final E-Bikes"))
         self.assertIn("e-bikes", s("Council Communication - E-Bike Injury Study"))
 
@@ -61,6 +62,15 @@ class Subjects(unittest.TestCase):
         self.assertNotIn("impact-fees", s("Impact Fee West District Fund - Impact Fees West District - $45,500"))
         self.assertIn("utility-rates", s("Resolution No. 2026-36 Sanitation Rate Increase"))
         self.assertNotIn("utility-rates", s("Ordinance No. 2026-49 Mobility Fee Rate Adjustment Project # CCA26-00010"))
+
+    def test_storms(self):
+        self.assertIn("hurricanes", s("Recommendation Concerning Escambia County State of Local Emergency Related to "
+                                      "Hurricane Isaias."))
+        self.assertIn("hurricanes", s("Grant Acceptance - FEMA-Hazard Mitigation Grant Program - Lakewood Park Drainage "
+                                      "Improvement Project Phase II"))
+        self.assertNotIn("hurricanes", s("Approve the Port Security Grant Program (PSGP) Grant award, with the U.S. "
+                                         "Department of Homeland Security (DHS), Federal Emergency Management Agency "
+                                         "(FEMA), for FY2026-2027"))
 
     def test_resilience_needs_water(self):
         self.assertIn("flooding-resilience", s("Adoption of the Coastal Resiliency Plan with the 2026 update to the "

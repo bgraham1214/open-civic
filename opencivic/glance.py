@@ -68,7 +68,7 @@ ISSUES: dict[str, tuple[str, str, re.Pattern, re.Pattern | None]] = {
         "Golf carts on public roads",
         "Ordinances and resolutions allowing or limiting golf carts and low-speed vehicles on public roads.",
         re.compile(r"\bgolf carts?\b|\blow[- ]speed vehicles?\b", re.I),
-        re.compile(r"\b(?:purchase|procure\w*|lease\w*|acquisition|fuel|trust fund|LETF|manufactur\w*)\b", re.I)),
+        re.compile(r"\b(?:purchase|procure\w*|lease\w*|acquisition|fuel|trust fund|LETF|manufactur\w*|parade|special event)\b", re.I)),
     "live-local": (
         "Live Local Act housing",
         "Projects, tax exemptions and local rules under the state's Live Local Act, which lets affordable housing "
@@ -96,7 +96,10 @@ ISSUES: dict[str, tuple[str, str, re.Pattern, re.Pattern | None]] = {
     "hurricanes": (
         "Hurricanes and storm recovery",
         "Storm debris, FEMA reimbursement, repairs after hurricanes and storm preparations.",
-        re.compile(r"\bhurricanes?\b|\btropical storms?\b|\bFEMA\b|\bdebris (?:removal|monitoring|management)\b", re.I),
+        # FEMA also funds port security and generators; only its disaster programs count (Nov 18, 2026, Nassau)
+        re.compile(r"\bhurricanes?\b|\btropical storms?\b|\bdebris (?:removal|monitoring|management|hauling|collection)\b|"
+                   r"\bFEMA\b[^.;]{0,80}\b(?:reimburs\w*|hazard mitigation|public assistance|disaster|recovery|damage)|"
+                   r"\b(?:hazard mitigation|disaster|recovery|damage)\b[^.;]{0,80}\bFEMA\b", re.I),
         re.compile(r"\bhurricane (?:preparedness|season)\b.{0,40}\b(?:week|month)\b|\bhurricane shutters?\b", re.I)),
     "affordable-housing": (
         "Affordable housing",
