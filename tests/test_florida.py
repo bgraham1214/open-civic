@@ -100,3 +100,23 @@ class Registry(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BoardNames(unittest.TestCase):
+    """Nov 18, 2026: Santa Rosa and Palatka moved their board meetings to the "General" category; names_rx
+    keeps them without taking in other boards."""
+
+    def test_names_rx(self):
+        import re
+        from opencivic.jurisdictions import JURISDICTIONS as J
+        sr = re.compile(J["santarosacounty"]["board_rx"])
+        self.assertTrue(sr.match("Regular Meeting (Regular Meeting )"))
+        self.assertTrue(sr.match("Commission Regular Meeting (General)"))
+        self.assertTrue(sr.match("Commission Regular  Meeting (General)"))
+        self.assertFalse(sr.match("Commission Committee Meeting (General)"))
+        self.assertFalse(sr.match("Zoning Board (General)"))
+        pk = re.compile(J["palatka"]["board_rx"])
+        self.assertTrue(pk.match("City Commission Meeting (General)"))
+        self.assertTrue(pk.match("City Commission Budget Workshop #2 (General)"))
+        self.assertFalse(pk.match("Community Redevelopment Agency Meeting (General)"))
+        self.assertFalse(pk.match("Planning Board Meeting (Planning Board)"))

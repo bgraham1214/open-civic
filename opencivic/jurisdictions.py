@@ -101,10 +101,15 @@ COUNTIES = [k for k, j in JURISDICTIONS.items() if j.get("govt", "county") == "c
 FLORIDA: list[dict] = json.loads((Path(__file__).parent / "florida.json").read_text("utf-8"))
 
 
-def _board_rx(names: list[str], platform: str = "legistar") -> str:
+def _board_rx(names: list[str], platform: str = "legistar", names_rx: str = "") -> str:
     alt = "(?:" + "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True)) + ")"
-    # CivicClerk meetings are listed as "Meeting name (Category)"; the category says whose meeting it is
-    return rf"^.*\({alt}\s*\)$" if platform == "civicclerk" else f"^{alt}$"
+    # CivicClerk meetings are listed as "Meeting name (Category)"; the category says whose meeting it is.
+    # Some clerks later file the board's meetings under another category ("General"): names_rx (florida.json)
+    # names those meetings by their own name (Nov 18, 2026: Santa Rosa's "Commission Regular Meeting" and
+    # Palatka's "City Commission Meeting" in "General" were skipped from Dec 2025 and Sep 2026 on).
+    if platform == "civicclerk":
+        return rf"^(?:.*\({alt}\s*\)|(?:{names_rx})\s*\(.*\))$" if names_rx else rf"^.*\({alt}\s*\)$"
+    return f"^{alt}$"
 
 
 def _coverage(f: dict) -> str:
@@ -124,7 +129,7 @@ for _f in FLORIDA:
         "name": _f["name"], "short": _f["short"], "body": _f["body"], "county": _f["county"], "areas": [],
         "groups": [f"{_f['platform']}:{_f['account']}"], "since": "2025-01-01",
         "govt": "county" if _f["kind"] == "county" else "city", "kind": _f["kind"],
-        "board_rx": _board_rx(_f["boards"], _f["platform"]), "coverage": _coverage(_f), "florida": True,
+        "board_rx": _board_rx(_f["boards"], _f["platform"], _f.get("names_rx", "")), "coverage": _coverage(_f), "florida": True,
         "platform": _f["platform"], "votes": _f["platform"] == "legistar",
     }
 
