@@ -63,6 +63,10 @@ from pathlib import Path
 
 from .fetch import FetchError, HttpFetcher
 
+# Bump when a parser changes: lists read by an older reader are read again (Nov 18, 2026: Santa Rosa changed
+# financial systems in May 2026; its newer registers have another layout, read as 0 lines until a parser exists).
+READER = 1
+
 SOURCES = {
     "colliercounty": {"tenant": "colliercofl", "parser": "collier",
                       "item": re.compile(r"\bdisbursements?\b", re.I),
@@ -305,7 +309,7 @@ def collect(clerk: str, data_dir: Path, fetcher=None, pdfs: dict[int, bytes] | N
         summary["listed"] += 1
         key = f"{src['tenant']}:{c['id']}"
         old = registers.get(key)
-        if old and old.get("bytes") == c["bytes"]:
+        if old and old.get("bytes") == c["bytes"] and old.get("reader", 1) == READER:
             summary["unchanged"] += 1
             continue
         try:
@@ -325,13 +329,16 @@ def collect(clerk: str, data_dir: Path, fetcher=None, pdfs: dict[int, bytes] | N
         summary["boxed_pages"] += len(counts["boxed_pages"])
         for g in counts["groups_wrong"]:
             print(f"{clerk}: {c['name']}: subtotal disagrees, group left out: {g}", file=sys.stderr)
+        if not counts["lines"]:  # a layout the parser doesn't know: kept as unread, retried when READER changes
+            summary["unreadable"] = summary.get("unreadable", 0) + 1
+            print(f"{clerk}: {c['name']}: no lines read (a layout the reader doesn't know)", file=sys.stderr)
         paid = sorted({r["paid"] for r in kept})
         registers[key] = {"name": key, "title": c["name"], "item": c["item"], "meeting_date": c["date"],
                           "url": c["portal_url"], "week": c["date"], "first_paid": paid[0] if paid else "",
                           "last_paid": paid[-1] if paid else "", "sha256": sha, "bytes": c["bytes"],
                           "pages": pdf_text(body).count("\f") or 1, "lines": counts["lines"], "unread": counts["unread"],
                           "groups_wrong": len(counts["groups_wrong"]), "boxed_pages": counts["boxed_pages"],
-                          "kept": len(kept), "copy_url": "",
+                          "kept": len(kept), "copy_url": "", "reader": READER,
                           "retrieved_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                           **({"replaces": old["sha256"]} if old else {})}
         payments = [x for x in payments if x["register"] != key]

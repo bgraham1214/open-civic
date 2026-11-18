@@ -492,13 +492,17 @@ def section_html(clerk: str, name: str, rows: list[dict], registers: dict[str, d
     span = _e(f"paid on {last}" if first == last else f"paid from {first} to {last}")
     docs, doc = ("lists", "the Clerk's list") if agenda else ("registers", "the register")
     if agenda:
-        live = [r for r in registers.values() if not r.get("duplicate_of")]
+        live = [r for r in registers.values() if not r.get("duplicate_of") and r.get("lines", 1)]
+        unread = [r for r in registers.values() if not r.get("duplicate_of") and not r.get("lines", 1)]
+        weeks = sorted(r["week"] for r in live if r.get("week"))
         paid_from = min((r["first_paid"] for r in live if r.get("first_paid")), default="")
         paid_to = max((r["last_paid"] for r in live if r.get("last_paid")), default="")
         source = (f"These are payments actually sent, read from {_e(c['lists'])}. We have the {len(live)} lists filed "
                   f"with agendas from {_e(site.long_date(weeks[0]))} to {_e(site.long_date(weeks[-1]))}, covering "
                   f"payments made from {_e(site.long_date(paid_from))} to {_e(site.long_date(paid_to))}; a payment "
-                  "outside those dates isn't here." + _gaps(live)) if weeks and paid_from else (
+                  "outside those dates isn't here." + _gaps(live)
+                  + (f" {len(unread)} newer {'list uses' if len(unread) == 1 else 'lists use'} a layout we don't "
+                     "read yet." if unread else "")) if weeks and paid_from else (
                   f"These are payments actually sent, read from {_e(c['lists'])}.")
         note = c.get("account_note", "")
     else:
