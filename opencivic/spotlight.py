@@ -348,15 +348,15 @@ def page_html(items: list[dict], today: str) -> str:
 <p class="role">New restrictions, and money, land or breaks for companies</p>
 <p class="lede">In the last 12 months, the local governments we follow made <mark>{n_r} {"decision" if n_r == 1 else "decisions"}
 that restrict something</mark> and <mark>{n_b} that give a company money, land or special terms</mark>.</p>
-<p class="fair">Tagged by fixed rules from the official wording, for Temple Terrace and the Hillsborough, Pasco
-and Hernando county commissions. Tags say what a decision does, never whether it was right.
+<p class="fair">Tagged by fixed rules from the official wording, for every Florida city and county government we
+follow (<a href="florida.html">see which</a>). Tags say what a decision does, never whether it was right.
 Hillsborough's votes appear a few weeks after each meeting, when the Clerk publishes them.
 <a href="#how">How the tags work</a>. <a href="feeds/spotlight.xml">Get updates (RSS feed)</a>.</p>
 {''.join(sections)}
 {HOW}"""
     desc = (f"New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases "
-            f"for companies, from Temple Terrace and the Hillsborough, Pasco and Hernando county commissions.")
-    return page("Spotlight: new restrictions and breaks for companies in Tampa Bay local government", body, 0,
+            f"for companies, from the Florida city and county governments we follow.")
+    return page("Spotlight: new restrictions and breaks for companies in Florida local government", body, 0,
                 path="spotlight.html", description=desc, here="Spotlight",
                 feeds=[("Spotlight: new restrictions and breaks for companies", "feeds/spotlight.xml")],
                 jsonld=[{"@type": "CollectionPage", "name": "Spotlight", "description": desc,

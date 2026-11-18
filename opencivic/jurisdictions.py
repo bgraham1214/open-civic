@@ -132,7 +132,7 @@ for _f in FLORIDA:
 REGIONS: dict[str, dict] = {
     "counties": {"title": "County commission records", "short": "County records", "db": "counties",
                  "page": "counties.html", "members": COUNTIES,
-                 "place": "Tampa Bay county records"},
+                 "place": "Hillsborough, Pasco and Hernando county records"},
     "volusia": {"title": "Southeast Volusia city records", "short": "Southeast Volusia", "db": "volusia",
                 "page": "volusia.html", "members": ["edgewater", "oakhill", "newsmyrnabeach"],
                 "place": "Southeast Volusia city records"},

@@ -635,7 +635,7 @@ recently, or whose agendas don't name the company and amount in the item's title
 }})();
 </script>"""
     return site.page("Public money to companies", body, 0, path="companies.html",
-                     description=(f"{len(companies):,} companies and organizations Tampa Bay and southeast Volusia "
+                     description=(f"{len(companies):,} companies and organizations Florida city and county "
                                   "governments agreed to pay, with each decision, its vote and the official record."),
                      jsonld=[{"@type": "CollectionPage", "name": "Public money to companies"}])
 

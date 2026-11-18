@@ -497,6 +497,8 @@ def write(data: Path, out: Path) -> dict:
     from . import spotlight
     from .build import _rss
     counts["spotlight"] = spotlight.write(by_meeting, out, today, _rss)
+    from . import glance
+    counts["glance"] = glance.write(by_meeting, out, today)
     from . import money
     counts["money"] = money.write(by_meeting, out, data)
     return counts

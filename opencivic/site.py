@@ -155,7 +155,7 @@ def page(title: str, body: str, depth: int, *, path: str = "", description: str 
 <link rel="stylesheet" href="{up}plain.css"></head>
 <body><a class="skip" href="#main">Skip to main content</a>
 <header class="site"><div class="wrap"><a class="brand" href="{up}index.html">{NAME}</a>
-<nav aria-label="Site"><ul><li><a href="{up}index.html#areas">Your area</a></li><li><a href="{up}spotlight.html">Spotlight</a></li><li><a href="{up}companies.html">Money</a></li><li><a href="{up}learn/index.html">Learn</a></li><li><a href="{up}data.html">Data</a></li></ul></nav></div></header>
+<nav aria-label="Site"><ul><li><a href="{up}index.html#areas">Your area</a></li><li><a href="{up}at-a-glance.html">Statewide</a></li><li><a href="{up}spotlight.html">Spotlight</a></li><li><a href="{up}companies.html">Money</a></li><li><a href="{up}learn/index.html">Learn</a></li><li><a href="{up}data.html">Data</a></li></ul></nav></div></header>
 <div class="wrap">{crumb_html}
 <main id="main" tabindex="-1">
 {body}
@@ -194,7 +194,7 @@ a:focus-visible,summary:focus-visible{background:var(--mark)}
 header.site{border-bottom:1px solid var(--line);margin-bottom:1.25rem}
 header.site .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.25rem 1rem;padding-top:.6rem;padding-bottom:.6rem}
 .brand{font-weight:700;text-decoration:none;padding:.4rem 0}
-header.site ul{display:flex;gap:1.1rem;list-style:none;margin:0;padding:0}
+header.site ul{display:flex;flex-wrap:wrap;gap:0 1.1rem;list-style:none;margin:0;padding:0}
 header.site nav a{display:inline-block;padding:.4rem 0;font-size:1rem}
 .crumbs ol{list-style:none;margin:0 0 1.75rem;padding:0;font-size:.95rem;color:var(--quiet)}
 .crumbs li{display:inline}
@@ -280,6 +280,22 @@ select{font:inherit;padding:.5rem;border:2px solid var(--ink);border-radius:6px;
 .pager li{margin:.5rem 0}
 .links{padding-left:1.2rem}
 .links li{margin:.35rem 0}
+.tiles{list-style:none;padding:0;margin:1.5rem 0 .75rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(8.25rem,1fr));gap:.6rem}
+.tiles a{display:flex;flex-direction:column;height:100%;min-height:5.25rem;border:2px solid var(--ink);padding:.55rem .7rem;text-decoration:none}
+.tiles a:hover{background:var(--soft)}
+.tiles .big{font-size:2.1rem;font-weight:700;line-height:1}
+.tiles .lbl{font-size:.95rem;line-height:1.25;margin-top:.35rem}
+.issue{border-top:3px solid var(--ink);margin:2.5rem 0 0;padding-top:.4rem;scroll-margin-top:1rem}
+.issue h2{margin:.4rem 0 .4rem}
+.issue h2 .big{display:inline-block;font-size:2.4rem;line-height:1;background:var(--mark);padding:.05em .2em;margin-right:.35rem;vertical-align:-.1em}
+.sqs{margin:.6rem 0;display:flex;flex-wrap:wrap;gap:5px}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.sq{display:inline-block;width:24px;height:24px;border:2px solid var(--ink);vertical-align:middle;flex:none}
+.sq.yes{background:var(--ink)}
+p.key{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;margin:.25rem 0 1rem}
+p.key>span{display:inline-flex;align-items:center;gap:.4rem}
+p.key .sq{width:18px;height:18px}
+.places{font-size:1rem;color:var(--quiet);margin:.2rem 0 .6rem}
 form.search{margin:1rem 0 .5rem}
 form.search label{display:block;font-weight:700;margin:0 0 .3rem}
 form.search .row{display:flex;gap:.5rem}
@@ -411,6 +427,10 @@ and county taxes for your neighborhood.</p>
 <p class="small">Search <a href="counties.html">all three counties' records</a> or
 <a href="volusia.html">southeast Volusia city records</a>.</p>
 {rest_of_florida(out)}
+<h2>Florida at a glance</h2>
+<p>The same subjects coming up in many cities and counties at once, from data-center moratoriums to license-plate
+cameras, with every government that took each one up in the last three months.
+<a href="at-a-glance.html">See Florida at a glance</a>.</p>
 <h2>Spotlight</h2>
 <p>New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases for
 companies, across every government we follow. Each is tagged by fixed rules from the official wording.
@@ -432,8 +452,8 @@ NetNewsWire) checks for you. Email and text alerts are planned.</p>
 <p>Every record is also available as a searchable database and as downloadable files.
 <a href="data.html">Data and downloads</a>.</p>"""
     return page(f"{NAME}: what your local government decided", body, 0, path="index.html",
-                description=("Free, nonpartisan, plain-language records of what Temple Terrace, Edgewater, Oak Hill and the "
-                             "Hillsborough, Pasco and Hernando county commissions decided, and how each member voted."),
+                description=("Free, nonpartisan, plain-language records of what Florida's city and county governments "
+                             "decided, and how each member voted."),
                 jsonld=[{"@type": "WebSite", "name": NAME, "url": absolute("") or None, "inLanguage": "en",
                          "publisher": PUBLISHER, "isAccessibleForFree": True,
                          "about": [{"@type": "GovernmentOrganization", "name": JURISDICTIONS[j]["name"]}
@@ -694,7 +714,7 @@ People, terms as DefinedTerms). Please identify your tool and keep request rates
          "description": "Agendas, packets, minutes, agenda items, roll-call votes and contracts of the Temple Terrace, Florida City Council, archived nightly with SHA-256 fingerprints and a change log.",
          "spatialCoverage": "Temple Terrace, Florida", "temporalCoverage": "2025-10/..",
          "distribution": [tt_db_ld, tt_ftm_ld], **common},
-        {"@type": "Dataset", "name": "Tampa Bay county commission records",
+        {"@type": "Dataset", "name": "Hillsborough, Pasco and Hernando county commission records",
          "description": "Meetings, agenda items and per-member roll-call votes of the Hillsborough (2014 on), Pasco and Hernando (2025 on) county commissions in Florida.",
          "spatialCoverage": ["Hillsborough County, Florida", "Pasco County, Florida", "Hernando County, Florida"],
          "temporalCoverage": "2014-01/..", "distribution": [c_db_ld, c_ftm_ld], **common},
@@ -704,7 +724,7 @@ People, terms as DefinedTerms). Please identify your tool and keep request rates
          "temporalCoverage": "2025-01/..", "distribution": [x for x in (v_db_ld, v_ftm_ld) if x], **common},
     ] + [{**d_, **common} for d_ in more_ld]
     return page("Data and downloads", body, 0, path="data.html",
-                description="Free downloads of Temple Terrace, Tampa Bay county commission and southeast Volusia city records: SQLite databases, FollowTheMoney entities, RSS feeds and raw files.",
+                description="Free downloads of the Florida city and county government records we collect: SQLite databases, FollowTheMoney entities, CSV files, RSS feeds and raw files.",
                 jsonld=[{"@type": "DataCatalog", "name": f"{NAME} data", "url": absolute("data.html") or None,
                          "publisher": PUBLISHER, "dataset": datasets}])
 
@@ -749,10 +769,11 @@ def llms_txt(out: Path) -> str:
         if (out / r["page"]).exists())
     return f"""# {NAME}
 
-> Free, nonpartisan, plain-language public records of local government in Florida: around Tampa Bay, the
-> Temple Terrace City Council and the Hillsborough, Pasco and Hernando county commissions (which govern
-> Brandon, Lutz, Wesley Chapel and Spring Hill); in southeast Volusia County, the Edgewater City Council and
-> the Oak Hill City Commission. Collected nightly from official sources; every record links to its source.
+> Free, nonpartisan, plain-language public records of local government across Florida: city and county
+> governing boards statewide (see "What we cover in Florida"), including the Temple Terrace City Council, the
+> Hillsborough, Pasco and Hernando county commissions (which govern Brandon, Lutz, Wesley Chapel and Spring Hill)
+> and, in southeast Volusia County, the Edgewater City Council and the Oak Hill City Commission, where the project
+> began. Collected nightly from official sources; every record links to its source.
 > Headlines are produced by fixed rules, not AI, and the official wording is always shown.
 
 Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
@@ -771,6 +792,7 @@ automated tools not to. Other Florida governments (see "What we cover in Florida
 {regions}
 - [Public money to companies]({u('companies.html')}): companies and organizations the governments agreed to pay (contracts, purchases, change orders, grants), decision by decision, with approved amounts (not payments) and factual flags (no competitive bidding, money added to a contract, approved over a no vote, $1 million or more on consent, conflict-of-interest abstentions)
 - [Top companies]({u('top-companies.html')}): the ten companies with the most money approved and the ten with the most contracts since January 2025, for every government we follow with votes, each county, and each government
+- [Florida at a glance]({u('at-a-glance.html')}): subjects coming up in many governments at once in the last 90 days (data centers, license-plate cameras, property tax rates and more), each with every government that took it up; one page per subject under issues/
 - [Spotlight]({u('spotlight.html')}): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
 {counties}
 {people}
