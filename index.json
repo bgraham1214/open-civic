@@ -1,0 +1,10 @@
+[
+ {
+  "url": "https://colliercofl.api.civicclerk.com/v1/Events?$filter=startDateTime%20ge%202026-11-15T00:00:00Z&$top=5",
+  "file": "4346cbb9d0f0.json",
+  "bytes": 16614,
+  "content_type": "application/json; odata.metadata=minimal; odata.streaming=true; charset=utf-8",
+  "final_url": "https://colliercofl.api.civicclerk.com/v1/Events?$filter=startDateTime%20ge%202026-11-15T00:00:00Z&$top=5",
+  "content_disposition": ""
+ }
+]
