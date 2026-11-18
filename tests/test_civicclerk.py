@@ -175,6 +175,37 @@ class Since(unittest.TestCase):
         self.assertEqual(f.requested, [url])
         self.assertEqual(len(crawl.meetings), 15)
 
+    def test_full_window_asks_again_from_its_last_date(self):
+        # Nov 18, 2026: $top caps the whole answer. A full window must not be the end of the list.
+        class Windows:
+            def __init__(self):
+                self.requested = []
+
+            def get_json(self, url):
+                self.requested.append(url)
+                ev = lambda i, d: {"id": i, "eventName": "Board", "eventDate": d + "T09:00:00Z", "publishedFiles": []}
+                if "2025-01-01T" in url:
+                    return {"value": [ev(1, "2025-01-05"), ev(2, "2025-06-01"), ev(3, "2026-03-05")]}
+                if "2026-03-05T" in url:  # the boundary day comes again, then newer events
+                    return {"value": [ev(3, "2026-03-05"), ev(4, "2026-11-17")]}
+                raise AssertionError(url)
+
+        f = Windows()
+        crawl = cc.crawl_events(TENANT, f, since="2025-01-01", top=3)
+        self.assertEqual([m.event_id for m in crawl.meetings], [1, 2, 3, 4])
+        self.assertEqual(len(f.requested), 2)
+        # a window that isn't full is the end: one request
+        f = Windows()
+        self.assertEqual(len(cc.crawl_events(TENANT, f, since="2025-01-01", top=200).meetings), 3)
+        self.assertEqual(len(f.requested), 1)
+
+    def test_a_full_window_on_one_day_is_an_error_not_a_loop(self):
+        class Same:
+            def get_json(self, url):
+                return {"value": [{"id": i, "eventName": "B", "eventDate": "2026-01-01T09:00:00Z"} for i in range(2)]}
+        with self.assertRaises(FetchError):
+            cc.crawl_events(TENANT, Same(), since="2026-01-01", top=2)
+
 
 if __name__ == "__main__":
     unittest.main()

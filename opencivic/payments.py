@@ -72,10 +72,29 @@ from urllib.parse import urljoin
 from .fetch import FetchError, HttpFetcher
 
 CLERKS = {
+    # kind "register": the Clerk's own weekly payment registers (this module).
+    # kind "agenda": payment lists the Clerk files with the Commission's agendas (agendapayments.py, Nov 18, 2026).
     "pasco": {
+        "kind": "register",
         "name": "Pasco County Clerk & Comptroller",
         "index": "https://app.pascoclerk.com/appdot-public-statistical-reports-boccpr.asp",
         "kept_online": "about eight weeks",
+    },
+    "colliercounty": {
+        "kind": "agenda",
+        "name": "Collier County Clerk of the Circuit Court & Comptroller",
+        "lists": "the Disbursements Reports the Clerk files with the County Commission's agenda about every two weeks",
+        "account": "The Clerk's account name (G/L)",
+        "account_note": "Account names are as the report prints them. Payee names are cut at 35 characters by the "
+                        "report, so a company whose name is longer may not be matched. Lines paid on a person's "
+                        "behalf (assistance, refunds) are left out.",
+    },
+    "santarosacounty": {
+        "kind": "agenda",
+        "name": "Santa Rosa County Clerk of Courts & Comptroller",
+        "lists": "the Check Registers filed with the County Commission's agenda about once a month",
+        "account": "Department",
+        "account_note": "Department names are as the register prints them. Voided checks are left out.",
     },
 }
 COPY_BASE = "https://github.com/bgraham1214/open-civic/releases/download/files"
@@ -353,7 +372,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="opencivic.payments")
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("collect")
-    c.add_argument("--clerk", default="pasco", choices=sorted(CLERKS))
+    c.add_argument("--clerk", default="pasco", choices=sorted(k for k, v in CLERKS.items() if v["kind"] == "register"))
     c.add_argument("--data-dir", type=Path, default=Path("data"))
     c.add_argument("--store-dir", type=Path)
     p = sub.add_parser("parse", help="read a saved register PDF and print its kept rows (for checking)")
@@ -402,8 +421,20 @@ def for_company(company_key: str, data: dict, keyfn) -> dict[str, list[dict]]:
                 d["_by_key"].setdefault(keyfn(p["vendor"]), []).append(p)
         rows = d["_by_key"].get(company_key)
         if rows:
-            out[clerk] = sorted(rows, key=lambda p: (p["paid"], p["check"], p["invoice"]), reverse=True)
+            out[clerk] = sorted(rows, key=lambda p: (p["paid"], p["check"], p.get("invoice", "")), reverse=True)
     return out
+
+
+def _gaps(registers: list[dict], days: int = 14) -> str:
+    """' No list here covers payments between X and Y.' for each hole of more than `days` between one list's
+    last payment and the next list's first (Santa Rosa, Nov 18, 2026: May 6 to June 10, 2025)."""
+    from datetime import date
+    from . import site
+    rs = sorted((r for r in registers if r.get("first_paid") and r.get("last_paid")), key=lambda r: r["first_paid"])
+    holes = [(a["last_paid"], b["first_paid"]) for a, b in zip(rs, rs[1:])
+             if (date.fromisoformat(b["first_paid"]) - date.fromisoformat(a["last_paid"])).days > days]
+    return "".join(f" No list here covers payments between {_e(site.long_date(x))} and {_e(site.long_date(y))}."
+                   for x, y in holes)
 
 
 def section_html(clerk: str, name: str, rows: list[dict], registers: dict[str, dict], approvals: list[dict],
@@ -413,12 +444,17 @@ def section_html(clerk: str, name: str, rows: list[dict], registers: dict[str, d
     from . import site
     from .jurisdictions import JURISDICTIONS
     c = CLERKS[clerk]
-    weeks = sorted(r["week"] for r in registers.values() if r.get("week"))
+    agenda = c.get("kind") == "agenda"
+    weeks = sorted(r["week"] for r in registers.values() if r.get("week") and not r.get("duplicate_of"))
     total = sum(p["amount"] for p in rows)
     up = "../" * depth
 
     def where(p: dict) -> str:
         r = registers.get(p["register"], {})
+        if agenda:
+            when = site.long_date(r["meeting_date"]) if r.get("meeting_date") else ""
+            return (f'<a href="{_e(r["url"])}">Payment list filed with the {_e(when)} agenda</a> '
+                    f'(&ldquo;{_e(r.get("title", ""))}&rdquo;, PDF page {p["page"]})') if r.get("url") else _e(when)
         wk = site.long_date(r["week"]) if r.get("week") else p["register"]
         link = (f'<a href="{_e(r["url"])}#page={p["page"]}">Clerk\'s register, week through {_e(wk)}</a> '
                 f'(PDF, page {p["page"]})') if r.get("url") else _e(wk)
@@ -431,35 +467,63 @@ def section_html(clerk: str, name: str, rows: list[dict], registers: dict[str, d
         return ("<br><span class=\"small\">Same amount as the approval of "
                 + ", ".join(site.long_date(a["date"]) for a in hits) + " (a match the machine found)</span>") if hits else ""
 
-    body = "".join(
-        f'<tr><td>{_e(site.long_date(p["paid"]))}</td><td class="num">{_e(_money(p["amount"]))}{same(p)}</td>'
-        f'<td>{_e(p["type"])} {_e(p["check"])}</td><td>{_e(p["invoice"] or "not shown")}'
-        f'{" (invoice dated " + _e(site.long_date(p["invoice_date"])) + ")" if p.get("invoice_date") else ""}</td>'
-        f'<td>{_e(p["po"] or ("voucher " + p["voucher"] if p["voucher"] else "") or (p["ref"] + " (voucher or order)" if p.get("ref") else "") or "none listed")}</td><td>{_e(p["account_desc"])}</td><td>{where(p)}</td></tr>'
-        for p in rows[:SHOW])
+    if agenda:
+        head = (f'<th scope="col">Paid</th><th scope="col">Amount</th><th scope="col">Check or payment number</th>'
+                f'<th scope="col">{_e(c["account"])}</th><th scope="col">Source</th>\n')
+        body = "".join(
+            f'<tr><td>{_e(site.long_date(p["paid"]))}</td><td class="num">{_e(_money(p["amount"]))}{same(p)}</td>'
+            f'<td>{_e(p["check"] or "not shown")}</td><td>{_e(p.get("account_desc") or "not shown")}</td><td>{where(p)}</td></tr>'
+            for p in rows[:SHOW])
+    else:
+        head = ('<th scope="col">Paid</th>\n<th scope="col">Amount</th><th scope="col">Check or transfer</th>'
+                '<th scope="col">Invoice</th>\n<th scope="col">Purchase order</th><th scope="col">The Clerk\'s '
+                'account name</th><th scope="col">Source</th>\n')
+        body = "".join(
+            f'<tr><td>{_e(site.long_date(p["paid"]))}</td><td class="num">{_e(_money(p["amount"]))}{same(p)}</td>'
+            f'<td>{_e(p["type"])} {_e(p["check"])}</td><td>{_e(p["invoice"] or "not shown")}'
+            f'{" (invoice dated " + _e(site.long_date(p["invoice_date"])) + ")" if p.get("invoice_date") else ""}</td>'
+            f'<td>{_e(p["po"] or ("voucher " + p["voucher"] if p["voucher"] else "") or (p["ref"] + " (voucher or order)" if p.get("ref") else "") or "none listed")}</td><td>{_e(p["account_desc"])}</td><td>{where(p)}</td></tr>'
+            for p in rows[:SHOW])
     gov = JURISDICTIONS[clerk]["short"] if clerk in JURISDICTIONS else clerk
     more = (f'<p class="small">The {SHOW} newest of {len(rows):,} are listed. All of them are in '
             f'<a href="{up}payments/{clerk}.csv">payments/{clerk}.csv</a> (spreadsheet).</p>') if len(rows) > SHOW else ""
     sid = f"pay-{clerk}"
     first, last = site.long_date(rows[-1]["paid"]), site.long_date(rows[0]["paid"])
-    have = (f"the week ending {site.long_date(weeks[0])}" if len(weeks) == 1 else
-            f"{len(weeks)} weeks, ending {site.long_date(weeks[0])} through {site.long_date(weeks[-1])}")
     span = _e(f"paid on {last}" if first == last else f"paid from {first} to {last}")
-    return f"""<h2 id="{sid}">Payments {_e(gov)} County's Clerk recorded</h2>
-<p class="lede">The {_e(c["name"])} recorded <mark>{_e(_money(total))}</mark> in {len(rows):,}
-{"payment line" if len(rows) == 1 else "payment lines"} to {_e(name)}, {span}.</p>
-<p class="fair">These are payments actually sent, read from the Clerk's weekly payment registers. The decisions
+    docs, doc = ("lists", "the Clerk's list") if agenda else ("registers", "the register")
+    if agenda:
+        live = [r for r in registers.values() if not r.get("duplicate_of")]
+        paid_from = min((r["first_paid"] for r in live if r.get("first_paid")), default="")
+        paid_to = max((r["last_paid"] for r in live if r.get("last_paid")), default="")
+        source = (f"These are payments actually sent, read from {_e(c['lists'])}. We have the {len(live)} lists filed "
+                  f"with agendas from {_e(site.long_date(weeks[0]))} to {_e(site.long_date(weeks[-1]))}, covering "
+                  f"payments made from {_e(site.long_date(paid_from))} to {_e(site.long_date(paid_to))}; a payment "
+                  "outside those dates isn't here." + _gaps(live)) if weeks and paid_from else (
+                  f"These are payments actually sent, read from {_e(c['lists'])}.")
+        note = c.get("account_note", "")
+    else:
+        have = (f"the week ending {site.long_date(weeks[0])}" if len(weeks) == 1 else
+                f"{len(weeks)} weeks, ending {site.long_date(weeks[0])} through {site.long_date(weeks[-1])}")
+        note = "Account names are as the register prints them, cut at 25 characters."
+    if agenda:
+        fair = f"""{source} The decisions above are permissions to spend up to an amount. The lists don't say which
+decision a payment belongs to; a payment is shown beside a decision only when the amounts are the same, and that
+match is the machine's, not the Clerk's. No payment here doesn't mean none was made. Payees the Clerk blacked out
+are left out."""
+    else:  # the Pasco wording of Nov 17, 2026, unchanged so its pages don't change
+        fair = f"""These are payments actually sent, read from the Clerk's weekly payment registers. The decisions
 above are permissions to spend up to an amount. The registers don't say which decision a payment belongs to;
 a payment is shown beside a decision only when the amounts are the same, and that match is the machine's, not
 the Clerk's. The Clerk keeps {_e(c["kept_online"])} of registers online; we have {_e(have)}, so an earlier payment isn't here, and no
-payment here doesn't mean none was made. Payees the Clerk blacked out are left out.</p>
-<p class="small">Matched to this company by name; the register calls it {_e("; ".join(sorted({p["vendor"] for p in rows})))}.</p>
+payment here doesn't mean none was made. Payees the Clerk blacked out are left out."""
+    return f"""<h2 id="{sid}">Payments {_e(gov)} County's Clerk recorded</h2>
+<p class="lede">The {_e(c["name"])} recorded <mark>{_e(_money(total))}</mark> in {len(rows):,}
+{"payment line" if len(rows) == 1 else "payment lines"} to {_e(name)}, {span}.</p>
+<p class="fair">{fair}</p>
+<p class="small">Matched to this company by name; {doc} calls it {_e("; ".join(sorted({p["vendor"] for p in rows})))}.</p>
 <div class="scroll" role="region" aria-labelledby="{sid}-cap" tabindex="0"><table class="data">
-<caption id="{sid}-cap">Payment lines to {_e(name)}, newest first</caption><thead><tr><th scope="col">Paid</th>
-<th scope="col">Amount</th><th scope="col">Check or transfer</th><th scope="col">Invoice</th>
-<th scope="col">Purchase order</th><th scope="col">The Clerk's account name</th><th scope="col">Source</th>
-</tr></thead><tbody>{body}</tbody></table></div>
-{more}<p class="small">Account names are as the register prints them, cut at 25 characters.</p>"""
+<caption id="{sid}-cap">Payment lines to {_e(name)}, newest first</caption><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>
+{more}<p class="small">{_e(note)}</p>"""
 
 
 def write_csv(data: dict, out: Path) -> dict[str, int]:
@@ -467,8 +531,10 @@ def write_csv(data: dict, out: Path) -> dict[str, int]:
     counts = {}
     (out / "payments").mkdir(parents=True, exist_ok=True)
     for clerk, d in data.items():
-        cols = ["paid", "vendor", "amount", "type", "check", "invoice", "invoice_date", "po", "voucher", "account",
-                "account_desc", "pay_run", "register", "page", "sha256"]
+        cols = (["paid", "vendor", "amount", "check", "account_desc", "register", "page"]
+                if CLERKS[clerk].get("kind") == "agenda" else
+                ["paid", "vendor", "amount", "type", "check", "invoice", "invoice_date", "po", "voucher", "account",
+                 "account_desc", "pay_run", "register", "page", "sha256"])
         with open(out / "payments" / f"{clerk}.csv", "w", encoding="utf-8", newline="") as fh:
             w = csv.writer(fh)
             w.writerow(cols + ["register_url"])

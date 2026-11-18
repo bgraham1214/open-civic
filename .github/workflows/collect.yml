@@ -214,6 +214,15 @@ jobs:
           set -o pipefail
           python -m opencivic.payments collect --clerk pasco --data-dir data 2>&1 | tee out/payments-log.txt
 
+      # Payments other counties recorded, from the payment lists their Clerks file with Commission agendas
+      # (opencivic/agendapayments.py, Nov 18, 2026: Collier, Santa Rosa). Each list is read once, when it first
+      # appears on an agenda the Florida step above collected; pages with a black box are never read.
+      - name: Payments filed with agendas (Collier, Santa Rosa)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.agendapayments collect --data-dir data 2>&1 | tee out/agendapayments-log.txt
+
       # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
       - name: Build entities
         continue-on-error: true

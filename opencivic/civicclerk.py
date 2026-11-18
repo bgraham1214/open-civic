@@ -214,16 +214,36 @@ def events_url(tenant: str, since: str | None = None, top: int | None = None) ->
             "&$orderby=startDateTime" + (f"&$top={top}" if top else ""))
 
 
+MAX_WINDOWS = 40  # `top`-sized windows per crawl: 8,000 events, far beyond any tenant (Nov 18, 2026: most ~200-400)
+
+
 def crawl_events(tenant: str, fetcher: Fetcher, max_pages: int | None = None, since: str | None = None,
                  top: int | None = None) -> Crawl:
+    """Every event from `since` on. **`$top` caps the whole answer, not a page** (found Nov 18, 2026: with
+    `$top=200` from Jan 2025, 24 tenants with more than 200 events since then stopped getting anything newer;
+    Collier's last stored meeting was Mar 5, 2026). So when a window comes back full, ask again from the last
+    date in it, and keep going until a window isn't full. Events on that boundary day come twice; ids dedupe."""
     by_id: dict[int, Meeting] = {}
     pages = 0
     nxt = None
-    for page, nxt in iter_event_pages(fetcher, events_url(tenant, since, top), max_pages):
-        pages += 1
-        for raw in page.get("value", []):
-            mtg = parse_event(tenant, raw)
-            by_id[mtg.event_id] = mtg  # later pages win if an id repeats
+    start = since
+    for _ in range(MAX_WINDOWS if (top and since) else 1):
+        got = 0
+        last = ""
+        for page, nxt in iter_event_pages(fetcher, events_url(tenant, start, top), max_pages):
+            pages += 1
+            for raw in page.get("value", []):
+                mtg = parse_event(tenant, raw)
+                by_id[mtg.event_id] = mtg  # later pages win if an id repeats
+                got += 1
+                last = max(last, mtg.date)
+        if max_pages is not None and pages >= max_pages:
+            break
+        if not (top and since) or got < top or not last:
+            break
+        if last == start:  # a whole window on one day: can't move forward by date
+            raise FetchError(f"{tenant}: more than {top} events on {last}; can't page past them")
+        start = last
     meetings = sorted(by_id.values(), key=lambda m: (m.date, m.event_id))
     stopped_early = max_pages is not None and pages >= max_pages
     return Crawl(meetings, pages, nxt if stopped_early else None)
