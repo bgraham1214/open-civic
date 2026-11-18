@@ -196,3 +196,8 @@
 {"added": false, "amount": 35659260.0, "found": true, "item_last_modified": "2026-11-16T15:44:44.837", "key": "legistar:pinellas:item:97904", "label": "Total estimated expenditure not to exceed", "matter_id": 76730, "reader": 2, "text_id": 43258}
 {"added": true, "amount": 4000000.0, "found": true, "item_last_modified": "2026-10-22T15:14:07.057", "key": "legistar:pinellas:item:97952", "label": "First Amendment", "matter_id": 76798, "reader": 2, "text_id": 43341}
 {"found": true, "item_last_modified": "2026-10-20T14:41:04.76", "key": "legistar:pinellas:item:97953", "matter_id": 76683, "reader": 2, "text_id": 43211}
+{"found": true, "item_last_modified": "2026-11-18T13:17:23.29", "key": "legistar:pinellas:item:97994", "matter_id": 77270, "reader": 2, "text_id": 43824}
+{"added": false, "amount": 8819488.0, "found": true, "item_last_modified": "2026-11-18T13:17:23.293", "key": "legistar:pinellas:item:98002", "label": "Total contract amount not to exceed", "matter_id": 77341, "reader": 2, "text_id": 43897}
+{"found": true, "item_last_modified": "2026-11-18T13:17:23.307", "key": "legistar:pinellas:item:98007", "matter_id": 77275, "reader": 2, "text_id": 43829}
+{"added": false, "amount": 805594.0, "found": true, "item_last_modified": "2026-11-18T13:17:23.297", "key": "legistar:pinellas:item:98033", "label": "Total contract not to exceed", "matter_id": 75701, "reader": 2, "text_id": 42206}
+{"added": false, "amount": 3453.86, "found": true, "item_last_modified": "2026-11-18T13:17:23.303", "key": "legistar:pinellas:item:98034", "label": "Total Contract Expenditure Not to Exceed", "matter_id": 77154, "reader": 2, "text_id": 43708}
