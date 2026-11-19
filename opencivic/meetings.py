@@ -353,7 +353,7 @@ The official wording is under each one. Outcomes count the recorded votes.{peopl
                 note=f"<p>From {_e(j['name'])}'s official records.</p>", jsonld=[event], here=long_date(d))
 
 
-def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, today: str = "") -> str:
+def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, today: str = "", subjects: str = "") -> str:
     j = JURISDICTIONS[county]
     today = today or date.today().isoformat()
     years: dict[str, list[str]] = defaultdict(list)
@@ -393,7 +393,8 @@ def county_index(county: str, by_date: dict[str, list[dict]], has_people: bool, 
 {people}
 <p class="learn"><a href="../learn/land.html">How building and land decisions work</a> ·
 <a href="../learn/money.html">How {"public" if j["govt"] == "city" else "county"} money works</a></p>
-{''.join(blocks)}"""
+{''.join(blocks)}
+{subjects}"""
     return page(f"{j['board']} meetings", body, 1, path=f"meetings/{county}.html", here=f"{j['short']} meetings",
                 crumbs=[j["hub"]],
                 description=(f"Every {j['board']} meeting we have, explained in plain language: what was "
@@ -482,6 +483,9 @@ def write(data: Path, out: Path) -> dict:
     info = meeting_info(data)
     counts = {}
     by_meeting = decisions_by_meeting(data)
+    from . import glance
+    gathered = glance.gather(by_meeting)
+    subs = glance.by_government(gathered)
     for county, by_date in by_meeting.items():
         if not by_date:
             continue
@@ -492,13 +496,13 @@ def write(data: Path, out: Path) -> dict:
             pn = (dates[i - 1] if i else "", dates[i + 1] if i + 1 < len(dates) else "")
             (d / county / f"{day}.html").write_text(meeting_page(county, day, rows, county in have_people, pn,
                                                                 info.get((county, day)), today), "utf-8")
-        (d / f"{county}.html").write_text(county_index(county, by_date, county in have_people, today), "utf-8")
+        (d / f"{county}.html").write_text(county_index(county, by_date, county in have_people, today,
+                                                       glance.reverse_html(county, subs.get(county, []))), "utf-8")
         counts[county] = len(dates)
     from . import spotlight
     from .build import _rss
     counts["spotlight"] = spotlight.write(by_meeting, out, today, _rss)
-    from . import glance
-    counts["glance"] = glance.write(by_meeting, out, today)
+    counts["glance"] = glance.write(by_meeting, out, today, _rss, gathered)
     from . import money
     counts["money"] = money.write(by_meeting, out, data)
     return counts

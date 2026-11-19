@@ -293,15 +293,23 @@ def _lite(site_url: str, path: str = "") -> str:
     return f"{LITE}{q}{'#' + path if path else ''}"
 
 
+# Characters XML 1.0 forbids: one \x02 in a Zephyrhills agenda title made its whole feed unreadable (Nov 19, 2026).
+_NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
+
+
+def _x(s) -> str:
+    return html.escape(_NOT_XML.sub("", str(s)))
+
+
 def _rss(title: str, link: str, desc: str, entries: list[dict]) -> str:
     items = "".join(
-        f"<item><title>{html.escape(x['title'])}</title><link>{html.escape(x['link'])}</link>"
-        f"<guid isPermaLink=\"false\">{html.escape(x['guid'])}</guid>"
-        f"<pubDate>{x['pub']}</pubDate><description>{html.escape(x['desc'])}</description></item>"
+        f"<item><title>{_x(x['title'])}</title><link>{_x(x['link'])}</link>"
+        f"<guid isPermaLink=\"false\">{_x(x['guid'])}</guid>"
+        f"<pubDate>{x['pub']}</pubDate><description>{_x(x['desc'])}</description></item>"
         for x in entries)
     return (f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
-            f"<title>{html.escape(title)}</title><link>{html.escape(link)}</link>"
-            f"<description>{html.escape(desc)}</description>{items}</channel></rss>\n")
+            f"<title>{_x(title)}</title><link>{_x(link)}</link>"
+            f"<description>{_x(desc)}</description>{items}</channel></rss>\n")
 
 
 def _pub(ts: str | None) -> str:

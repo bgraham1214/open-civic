@@ -296,6 +296,20 @@ p.key{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;margin:.25rem 0 1rem}
 p.key>span{display:inline-flex;align-items:center;gap:.4rem}
 p.key .sq{width:18px;height:18px}
 .places{font-size:1rem;color:var(--quiet);margin:.2rem 0 .6rem}
+ul.kinds{list-style:none;padding:0;margin:.4rem 0 .6rem}
+ul.kinds li{margin:.3rem 0}
+ul.kinds .kind{font-weight:700;color:var(--ink)}
+.issue .more{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .6rem;margin:.4rem 0 0}
+.issue .more .spark{flex:none;color:var(--ink)}
+.tl-fig{margin:1rem 0}
+svg.tl{display:block;width:100%;max-width:640px;height:auto}
+.tl-line{stroke:var(--ink);stroke-width:2.5}
+.tl-recent{fill:var(--mark);opacity:.55}
+.tl-axis{stroke:var(--quiet);stroke-width:1}
+.tl-lab{font-size:15px;fill:var(--ink)}
+table.tl-table{border-collapse:collapse;margin:.5rem 0}
+table.tl-table th,table.tl-table td{border-bottom:1px solid var(--line);padding:.3rem .6rem .3rem 0;text-align:left;vertical-align:top}
+p.kind{margin:.1rem 0}
 form.search{margin:1rem 0 .5rem}
 form.search label{display:block;font-weight:700;margin:0 0 .3rem}
 form.search .row{display:flex;gap:.5rem}
@@ -735,6 +749,12 @@ def _feed_label(name: str) -> str:
         return f"{stem[5:].replace('-', ' ').title()}: county agenda items naming the area"
     if stem in JURISDICTIONS:
         return f"{JURISDICTIONS[stem]['name']}: everything new"
+    if stem.startswith("issue-"):
+        from .glance import ISSUES
+        if stem[6:] in ISSUES:
+            return f"Florida at a glance: {ISSUES[stem[6:]][0]}"
+    if stem == "spotlight":  # statewide since Nov 16; labeled "Temple Terrace: spotlight" until Nov 18, 2026
+        return "Spotlight: new restrictions and breaks for companies"
     return f"Temple Terrace: {stem.replace('-', ' ')}"
 
 

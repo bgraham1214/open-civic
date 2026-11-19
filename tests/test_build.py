@@ -49,6 +49,15 @@ def make_data(d: Path) -> Path:
     return data
 
 
+class Feed(unittest.TestCase):
+    def test_control_characters_dropped(self):
+        import xml.etree.ElementTree as ET
+        from opencivic.build import _rss
+        x = _rss("t", "https://example.org/", "d", [{"title": "CITY OF ZEPH\x02YRHILLS", "link": "https://example.org/a",
+                                                      "guid": "g", "pub": "Tue, 17 Nov 2026 12:00:00 +0000", "desc": "x"}])
+        self.assertEqual(ET.fromstring(x).find("./channel/item/title").text, "CITY OF ZEPHYRHILLS")
+
+
 class Build(unittest.TestCase):
     def test_site(self):
         with tempfile.TemporaryDirectory() as d:
