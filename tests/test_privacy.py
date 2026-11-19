@@ -4,7 +4,7 @@
 
 import unittest
 
-from opencivic.privacy import blank_names, removed_people, scrub_text, unname_item, unname_removals
+from opencivic.privacy import blank_names, removed_people, resident_speaker, scrub_text, unname_item, unname_removals
 
 
 class Removals(unittest.TestCase):
@@ -116,6 +116,24 @@ class RemovedPeople(unittest.TestCase):
         self.assertEqual(removed_people("To appoint Jane Doe and Mary Roe to the Parks Board"), set())
         self.assertEqual(blank_names("To appoint Jane Q.  Doe, Sam Poe and MARY ROE to the Parks Board", {"jane doe", "mary roe"}),
                          "To appoint [name left out], Sam Poe and [name left out] to the Parks Board")
+
+
+class ResidentSpeakers(unittest.TestCase):
+    """Items about a resident who asked to speak are never stored (florida.py), as public comment isn't."""
+
+    def test_title_and_speaker_form_share_a_name(self):
+        self.assertTrue(resident_speaker({"title": "Short-Term Rental Ordinance Enforcement - Pat Example",
+                                          "attachments": [{"name": "Speaker form city council 4-7-26, Example"}]}))
+        self.assertTrue(resident_speaker({"title": "Request to Speak about Safety - Pat Example",
+                                          "attachments": ["Request to Speak Pat Example"]}))
+
+    def test_cards_on_ordinary_items_left_alone(self):
+        self.assertFalse(resident_speaker({"title": "An Ordinance Amending the Official Zoning Atlas of the City of Venice",
+                                           "attachments": ["Staff Report", "Speaker card 01.14.25"]}))
+        self.assertFalse(resident_speaker({"title": "Citizens To Be Heard - Public Comment.",
+                                           "attachments": ["Citizens to be Heard Speaker Cards", "Public Comment Letter"]}))
+        self.assertFalse(resident_speaker({"title": "Assistant City Manager: Resiliency Presentation",
+                                           "attachments": ["Memorandum", "Speaker Card 01.28.25"]}))
 
 
 if __name__ == "__main__":

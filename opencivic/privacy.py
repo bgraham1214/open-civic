@@ -240,3 +240,25 @@ def scrub_text(text: str, keep: set[str] = frozenset(), addresses: bool = True) 
     text = EMAIL.sub("[email left out]", text)
     text = PHONE.sub("[phone left out]", text)
     return ADDRESS.sub(ADDRESS_OUT, text) if addresses else text
+
+
+# A resident who asked to speak, named in the item's title and on its speaker form ("Short-Term Rental Ordinance
+# Enforcement - Robert Clifford", Destin, Apr 7, 2026). Speaker cards also ride along on hundreds of ordinary
+# hearings (Venice, Pinellas), so only a surname shared by the title and the form counts (Nov 19, 2026: 2 items
+# in every listing we hold, both Destin's).
+_SPEAKER = re.compile(r"speaker (?:form|card|request)|request to (?:speak|address)", re.I)
+_NOT_NAMES = {"City", "Council", "Commission", "Town", "Board", "Speaker", "Form", "Card", "Regular", "Special",
+              "Meeting", "County", "Request", "Speak", "Address", "Public", "Comment", "Workshop", "Citizens",
+              "Heard", "Received", "Letter", "Correspondence"}
+
+
+def resident_speaker(item: dict) -> bool:
+    """An item about a resident who asked to speak: never stored (florida.py) or grouped (glance.py)."""
+    title = item.get("title") or ""
+    for a in item.get("attachments") or []:
+        name = a.get("name", "") if isinstance(a, dict) else str(a)
+        if _SPEAKER.search(name):
+            words = [w for w in re.findall(r"[A-Z][a-z]{2,}", _SPEAKER.sub(" ", name)) if w not in _NOT_NAMES]
+            if any(re.search(rf"\b{re.escape(w)}\b", title) for w in words):
+                return True
+    return False

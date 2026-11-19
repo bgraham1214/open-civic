@@ -36,7 +36,7 @@ from pathlib import Path
 from . import civicclerk, legistar
 from .fetch import FetchError, HostDown, HttpFetcher
 from .jurisdictions import FLORIDA, JURISDICTIONS
-from .privacy import unname_item
+from .privacy import resident_speaker, unname_item
 from .region import PUBLIC_COMMENT_SECTION, narrative_line
 
 REFRESH_DAYS = 21     # meetings this recent are re-read every night
@@ -227,7 +227,8 @@ class CivicClerkGov:
         live = {m.event_id for m in self.meetings}
         _write([asdict(m) for m in self.meetings], self.paths["meetings"])
         _write([unname_item(it) for eid, its in self.items.items() if eid in live for it in its
-                if it.get("is_section") or not PUBLIC_COMMENT_SECTION.match((it.get("section") or "").strip())],
+                if it.get("is_section") or not (PUBLIC_COMMENT_SECTION.match((it.get("section") or "").strip())
+                                                 or resident_speaker(it))],
                self.paths["items"])
         print(f"{self.tenant}: {len(self.meetings)} meetings, "
               f"{sum(len(v) for k, v in self.items.items() if k in live)} agenda rows; {json.dumps(self.stats)}",

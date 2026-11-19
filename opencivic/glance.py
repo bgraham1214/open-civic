@@ -32,6 +32,8 @@ import re
 from collections import defaultdict
 from datetime import date, timedelta
 
+from .privacy import resident_speaker
+
 WINDOW_DAYS = 90
 AHEAD_DAYS = 60     # agendas already posted for the coming weeks count in the window, as "coming up"
 MIN_PLACES = 3
@@ -180,25 +182,6 @@ def _text(item: dict) -> str:
     """The item's title only: motion text can be a whole meeting's report (Broward's "Mayor and Commissioner
     Reports ... thank you" motions name a dozen subjects). Hillsborough's titles already carry the motion."""
     return item.get("title") or ""
-
-
-# A resident who asked to speak, named in the item's title and on its speaker form ("Short-Term Rental Ordinance
-# Enforcement - Robert Clifford", Destin, Apr 7, 2026). Speaker cards also ride along on hundreds of ordinary
-# hearings (Venice, Pinellas), so only a surname shared by the title and the form counts (Nov 19, 2026: 2 items).
-_SPEAKER = re.compile(r"speaker (?:form|card|request)|request to (?:speak|address)", re.I)
-_NOT_NAMES = {"City", "Council", "Commission", "Town", "Board", "Speaker", "Form", "Card", "Regular", "Special",
-              "Meeting", "County", "Request", "Speak", "Address", "Public", "Comment", "Workshop"}
-
-
-def resident_speaker(item: dict) -> bool:
-    title = _text(item)
-    for a in item.get("attachments") or []:
-        name = a.get("name", "") if isinstance(a, dict) else str(a)
-        if _SPEAKER.search(name):
-            words = [w for w in re.findall(r"[A-Z][a-z]{2,}", _SPEAKER.sub(" ", name)) if w not in _NOT_NAMES]
-            if any(re.search(rf"\b{re.escape(w)}\b", title) for w in words):
-                return True
-    return False
 
 
 def subjects(item: dict) -> list[str]:
