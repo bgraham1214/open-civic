@@ -546,18 +546,22 @@ def _only(d: dict, members: list[str]) -> dict:
     return {k: [x for x in v if x.get("county") in members] if isinstance(v, list) else v for k, v in d.items()}
 
 
-_MEMBERS: dict[int, dict[str, set[str]]] = {}
+_MEMBERS: dict[int, tuple[list, dict[str, set[str]]]] = {}
 
 
 def _members_of(votes: list[dict]) -> dict[str, set[str]]:
     """Each government's voting members, as privacy.person_key writes them. Worked out once per vote list (the
     feeds ask for it once per government)."""
-    if id(votes) not in _MEMBERS:
+    # The cache holds the list itself: an id() alone is reused once a list is freed, and then one region got
+    # another's members, so whether a name was blanked in search changed from build to build (Nov 19, 2026:
+    # Marco Island's council-vacancy candidates).
+    hit = _MEMBERS.get(id(votes))
+    if hit is None or hit[0] is not votes:
         people: dict[str, set[str]] = {}
         for v in votes:
             people.setdefault(v["county"], set()).add(v["person"])
-        _MEMBERS[id(votes)] = {c: {person_key(p) for p in ps} for c, ps in people.items()}
-    return _MEMBERS[id(votes)]
+        hit = _MEMBERS[id(votes)] = (votes, {c: {person_key(p) for p in ps} for c, ps in people.items()})
+    return hit[1]
 
 
 def build_db(data: Path, db_path: Path, members: list[str] | None = None) -> dict:

@@ -785,25 +785,30 @@ def top_filters(companies: dict[str, dict]) -> list[dict]:
     return out
 
 
-def _top_table(rows: list[dict], cap_id: str, caption: str, slugs: dict[str, str], depth: int, show_govs: bool) -> str:
+def _top_rank(rows: list[dict], slugs: dict[str, str], depth: int, show_govs: bool, by: str) -> str:
+    """One top-10 list as numbered entries (the organized style, Nov 19, 2026): name, then the figure the list is
+    ranked by first, then where. A table ran off the side of a phone."""
     up = "../" * depth
 
     def contracts(r: dict) -> str:
-        return f"{r['contracts']:,}" + (f" (+{r['added']:,} added)" if r["added"] else "")
+        n = r["contracts"]
+        a = r["added"]
+        return f"{n:,} {'contract' if n == 1 else 'contracts'}" + (f", {a:,} {'increase' if a == 1 else 'increases'}" if a else "")
 
-    body = "".join(
-        f'<tr><td>{i}</td><th scope="row"><a href="{up}companies/{slugs[r["key"]]}.html">{_e(r["name"])}</a></th>'
-        f'<td>{_e(dollars(r["amount"])) if r["amount"] else "not stated"}</td><td>{contracts(r)}</td>'
-        + (f'<td>{_e(", ".join(_gov(g) for g in r["govs"]))}</td>' if show_govs else "") + "</tr>"
-        for i, r in enumerate(rows, 1))
-    return (f'<div class="scroll" role="region" aria-labelledby="{cap_id}" tabindex="0"><table class="data">'
-            f'<caption id="{cap_id}">{_e(caption)}</caption><thead><tr><th scope="col">Rank</th>'
-            f'<th scope="col">Company or organization</th><th scope="col">Amount approved</th>'
-            f'<th scope="col">Contracts</th>' + ('<th scope="col">Approved by</th>' if show_govs else "")
-            + f"</tr></thead><tbody>{body}</tbody></table></div>")
+    def amount(r: dict) -> str:
+        return f"{dollars(r['amount'])} approved" if r["amount"] else "amount not stated"
+
+    items = []
+    for r in rows:
+        first, second = (amount(r), contracts(r)) if by == "money" else (contracts(r), amount(r))
+        where = f'<p class="meta">{_e(", ".join(_gov(g) for g in r["govs"]))}</p>' if show_govs else ""
+        items.append(f'<li><p class="nm"><a href="{up}companies/{slugs[r["key"]]}.html">{_e(r["name"])}</a></p>'
+                     f'<p class="fig"><strong>{_e(first)}</strong> · {_e(second)}</p>{where}</li>')
+    return f'<ol class="rank">{"".join(items)}</ol>'
 
 
-def _top_pair(rows: list[dict], slugs: dict[str, str], depth: int, show_govs: bool, sid: str, span: str) -> str:
+def _top_pair(rows: list[dict], slugs: dict[str, str], depth: int, show_govs: bool, sid: str, span: str,
+              years_label: str) -> str:
     by_amount, by_count, ties = top_lists(rows)
     tie_note = ""
     if ties:
@@ -811,11 +816,14 @@ def _top_pair(rows: list[dict], slugs: dict[str, str], depth: int, show_govs: bo
         tie_note = (f'<p class="small">{ties:,} more {"company also has" if ties == 1 else "companies also have"} '
                     f'{n:,} {"contract" if n == 1 else "contracts"}. Companies with the same number of contracts are '
                     "listed by amount approved.</p>")
-    return (f'<h3 id="money-{sid}">Most money approved</h3>'
-            + _top_table(by_amount, f"cap-m-{sid}", f"Top {len(by_amount)} by amount approved, {span}", slugs, depth, show_govs)
-            + f'<h3 id="count-{sid}">Most contracts</h3>'
-            + _top_table(by_count, f"cap-c-{sid}", f"Top {len(by_count)} by number of contracts approved, {span}",
-                         slugs, depth, show_govs) + tie_note)
+    return (f'<section class="toplist" data-years="{sid}" data-rank="money" aria-labelledby="money-{sid}">'
+            f'<h2 id="money-{sid}">Most money approved <span class="topic-count">{_e(years_label)}</span></h2>'
+            f'<p class="small">Top {len(by_amount)}, {_e(span)}</p>'
+            + _top_rank(by_amount, slugs, depth, show_govs, "money") + "</section>"
+            f'<section class="toplist" data-years="{sid}" data-rank="count" aria-labelledby="count-{sid}">'
+            f'<h2 id="count-{sid}">Most contracts <span class="topic-count">{_e(years_label)}</span></h2>'
+            f'<p class="small">Top {len(by_count)}, {_e(span)}</p>'
+            + _top_rank(by_count, slugs, depth, show_govs, "count") + tie_note + "</section>")
 
 
 TOP_HOW = """<section id="how" aria-labelledby="h-how"><h2 id="h-how">How these lists are made</h2>
@@ -826,7 +834,7 @@ includes money added to contracts approved earlier (change orders, amendments, a
 Close-outs and decreases aren't added.</li>
 <li><strong>Contracts</strong> counts each decision that passed and awards the company a contract, task order,
 work order or purchase, including renewals. A decision that only adds money to a contract approved earlier is
-not counted as a contract; the number of those is shown as "added". An amendment whose wording doesn't say it
+not counted as a contract; the number of those is shown as "increases". An amendment whose wording doesn't say it
 adds money is counted as a contract.</li>
 <li>When one decision names several companies (a pool of firms on call), each one counts it.</li>
 <li>Only governments whose votes we have can be counted, because only there do we know a decision passed.
@@ -858,8 +866,6 @@ def top_html(companies: dict[str, dict], slugs: dict[str, str], f: dict, filters
                        f'{" selected" if g["key"] == f["key"] else ""}>{_e(g["short"] if g["kind"] == "county" else g["label"])}</option>'
                        for g in filters if g["kind"] == kind)
         options.append(f'<optgroup label="{_e(group)}">{opts}</optgroup>' if group else opts)
-    links = "".join(f'<li><a href="{up}{"top-companies.html" if g["kind"] == "all" else "top-companies/" + g["key"] + ".html"}">'
-                    f'{_e(g["label"])}</a></li>' for g in filters)
     # who isn't counted, and why
     if f["kind"] == "all":
         no_votes = collected - have_votes
@@ -886,31 +892,68 @@ def top_html(companies: dict[str, dict], slugs: dict[str, str], f: dict, filters
                        f'<a href="{up}florida.html">what we cover in Florida</a>.</p>')
         missing += ('<p class="fair">Agendas that don\'t name the company and the amount in the item\'s own wording '
                     "aren't counted, so a government can have spent more than these lists show.</p>")
-    older = ""
+    older, early_note, years_field = "", "", ""
     if first < SINCE:
         early = sorted({g for r in all_rows for g in r["govs"] if r["first"] < SINCE
                         and any(x["county"] == g and x["date"] < SINCE and _approved(x) for x in companies[r["key"]]["paid"])}, key=_gov)
-        older = (f'<h2 id="every-year">Every year we have</h2><p>{_e(", ".join(_gov(g) for g in early))}\'s record goes back '
-                 f'to {_e(site.long_date(first))}; the lists above start in 2025 so every government is compared over '
-                 'the same years. Here is everything we have.</p>'
-                 + _top_pair(all_rows, slugs, depth, show_govs, "all", f"{site.long_date(first)} to {site.long_date(last)}"))
+        early_note = (f'<p class="small" id="every-year">{_e(", ".join(_gov(g) for g in early))}\'s record goes back to '
+                      f'{_e(site.long_date(first))}. The lists start in 2025 so every government is compared over the '
+                      'same years; "All years we have" uses everything.</p>')
+        older = _top_pair(all_rows, slugs, depth, show_govs, "all", f"{site.long_date(first)} to {site.long_date(last)}",
+                          "(all years we have)")
+        years_field = ('<div class="org-field js-only" hidden><label for="ty">Years</label><select id="ty">'
+                       '<option value="2025">Since 2025</option><option value="all">All years we have</option>'
+                       '</select></div>')
     title = "Top companies" + ("" if f["kind"] == "all" else f": {f['short']}")
+    n_lists = len(filters)
+    by_kind = {k: [g for g in filters if g["kind"] == k] for k in ("all", "county", "gov")}
+    def _link(g: dict) -> str:
+        return (f'<li><a href="{up}{"top-companies.html" if g["kind"] == "all" else "top-companies/" + g["key"] + ".html"}">'
+                f'{_e(g["short"] if g["kind"] != "all" else g["label"])}</a></li>')
+    every = (f'<details class="grp"><summary><h3 class="grp-h">Whole counties <span class="grp-n">({len(by_kind["county"])})</span></h3></summary>'
+             f'<ul class="links cols">{"".join(_link(g) for g in by_kind["county"])}</ul></details>'
+             f'<details class="grp"><summary><h3 class="grp-h">One city, town or county government <span class="grp-n">'
+             f'({len(by_kind["gov"])})</span></h3></summary><ul class="links cols">{"".join(_link(g) for g in by_kind["gov"])}</ul></details>')
     body = f"""<h1>{_e(title)}</h1>
 <p class="role">Which companies and organizations {_e(where)} agreed to pay the most</p>
 <p class="lede">The ten that got the most money approved, and the ten that got the most contracts, from
 <mark>{_e(span)}</mark>. Amounts are what a board approved, usually a contract's ceiling, not money paid.</p>
-{missing}
-<form class="search" action="#lists" onsubmit="var s=document.getElementById('tf');location.href=s.value;return false">
-<label for="tf">Show the lists for</label>
-<div class="row"><select id="tf">{''.join(options)}</select> <button type="submit">Show</button></div></form>
-<h2 id="since-2025">Since January 2025</h2>
-{_top_pair(rows, slugs, depth, show_govs, "2025", span) if rows else '<p>No approved decisions in these years.</p>'}
+<details class="more"><summary>Which governments are counted</summary>{missing}</details>
+<form class="org-bar" aria-label="Choose the lists" action="#lists" onsubmit="location.href=document.getElementById('tf').value;return false">
+<div class="org-field wide"><label for="tf">Place</label><select id="tf">{''.join(options)}</select></div>
+{years_field}
+<div class="org-field js-only" hidden><label for="tr">Lists</label><select id="tr"><option value="">Both lists</option>
+<option value="money">Most money approved</option><option value="count">Most contracts</option></select></div>
+<button type="submit" class="no-js">Show</button></form>
+<div id="toplists">
+{_top_pair(rows, slugs, depth, show_govs, "2025", span, "") if rows else '<p>No approved decisions in these years.</p>'}
 {older}
-<h2 id="lists">Every list</h2>
-<ul class="links">{links}</ul>
+</div>
+{early_note}
+<h2 id="lists">Every list <span class="topic-count">({n_lists:,})</span></h2>
+<p class="small">The same two lists for each county and each government with approved decisions; also in the Place
+choice above. <a href="{up}top-companies.html">Every government we follow</a>.</p>
+<div class="org-groups">{every}</div>
 <p>Every company, with every decision: <a href="{up}companies.html#all">Public money to companies</a>
 (spreadsheet: <a href="{up}companies.csv">companies.csv</a>).</p>
-{TOP_HOW.format(up=up, repo=site.REPO)}"""
+{TOP_HOW.format(up=up, repo=site.REPO)}
+<script>
+(function () {{
+  var tf = document.getElementById('tf'), ty = document.getElementById('ty'), tr = document.getElementById('tr');
+  document.querySelectorAll('.js-only').forEach(function (e) {{ e.hidden = false; }});
+  document.querySelectorAll('.no-js').forEach(function (e) {{ e.hidden = true; }});
+  tf.addEventListener('change', function () {{ location.href = tf.value; }});
+  function show() {{
+    var years = ty ? ty.value : '2025', rank = tr.value;
+    document.querySelectorAll('#toplists .toplist').forEach(function (s) {{
+      s.hidden = s.getAttribute('data-years') !== years || (rank && s.getAttribute('data-rank') !== rank);
+    }});
+  }}
+  if (ty) ty.addEventListener('change', show);
+  tr.addEventListener('change', show);
+  show();
+}})();
+</script>"""
     path = "top-companies.html" if f["kind"] == "all" else f"top-companies/{f['key']}.html"
     crumbs = [("Money to companies", "companies.html")] + ([("Top companies", "top-companies.html")] if depth else [])
     return site.page(title, body, depth, path=path, crumbs=crumbs, here=f.get("short") or "Top companies",

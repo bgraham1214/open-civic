@@ -335,7 +335,9 @@ main a[href^="http"]::after{content:" (" attr(href) ")";font-size:.8em;word-brea
 
 def write_assets(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    (out / "plain.css").write_text(CSS, "utf-8")
+    from . import organize
+    (out / "plain.css").write_text(CSS + organize.CSS, "utf-8")
+    (out / "organize.js").write_text(organize.JS, "utf-8")
     fonts = out / "fonts"
     fonts.mkdir(exist_ok=True)
     for f in (STATIC / "fonts").iterdir():

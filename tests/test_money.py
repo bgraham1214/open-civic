@@ -338,14 +338,14 @@ class TopCompanies(unittest.TestCase):
             top = (out / "top-companies.html").read_text()
             self.assertIn("Most money approved", top)
             self.assertIn("Most contracts", top)
-            self.assertIn("Every year we have", top)  # Hillsborough's record starts before 2025
+            self.assertIn("All years we have", top)  # Hillsborough's record starts before 2025
             self.assertIn('value="top-companies/pasco-county.html"', top)
             self.assertNotIn("zephyrhills.html", top)  # no votes, so no list
             pc = (out / "top-companies" / "pasco-county.html").read_text()
             self.assertIn("Zephyrhills", pc)  # named as not counted, with the reason
             self.assertIn("without votes", pc)
-            self.assertIn("1 (+1 added)", pc)
-            self.assertNotIn("Every year we have", pc)
+            self.assertIn("1 contract, 1 increase", pc)
+            self.assertNotIn("All years we have", pc)
             self.assertEqual(res["top_lists"], len(list((out / "top-companies").glob("*.html"))) + 1)
 
 

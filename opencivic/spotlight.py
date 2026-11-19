@@ -242,6 +242,95 @@ def for_item(item: dict) -> list[dict]:
     return spot(item.get("title") or "", "", item.get("action") or "")
 
 
+# --- Topics: what a tagged decision is about, for grouping the page (Nov 19, 2026) ---------------------------
+# Read from the first 600 characters (titles often name their subject only in the chapter they amend: "AMENDING
+# CHAPTER 6 ANIMALS"); first match wins, specific before general. Every tagged item was read for these rules.
+TOPIC_HEAD = 600
+TOPICS: list[tuple[str, str, re.Pattern]] = [
+    ("events", "Events and fees waived for groups",
+     re.compile(r"\bspecial events?\b|\bfacility use fees?\b|\bwaiv\w* (?:of )?(?:the )?(?:facility |rental )?fees\b|"
+                r"\bback-to-school\b|\bfestival\b", re.I)),
+    ("liens", "Code enforcement, liens and fines",
+     re.compile(r"\bliens?\b|\bcode enforcement\b|\bforgive fines\b|\bspecial (?:master|magistrate)\b", re.I)),
+    ("tech", "Data centers, cameras and technology",
+     re.compile(r"\bdata cent\w+|\bartificial intelligence\b|\bA\.?I\.? facilit|\bsoftware\b|\bcameras?\b|\blicense plate|"
+                r"\btechnology\b|\bnetwork\w*\b|\brecords management\b|\bcomputers?\b|\bcyber\w*|\bdrones?\b|\bSCADA\b|"
+                r"\bsupervisory control\b|\bsubscriptions?\b", re.I)),
+    ("substances", "Alcohol, smoking, vaping, hemp and kratom",
+     re.compile(r"\balcohol\w*|\bliquor\b|\bbeer\b|\bwine\b|\bsmok\w+|\bvap(?:e|es|ing)\b|\btobacco\b|\bkratom\b|\bkava\b|"
+                r"\bhemp\b|\bmarijuana\b|\bcannabis\b|\bdispensar\w+|\bTHC\b|\b7-OH\b|\bnitrous\b|\bsmoke shops?\b", re.I)),
+    ("animals", "Animals",
+     re.compile(r"\banimals?\b|\bdogs?\b|\bcats?\b|\bpets?\b|\bpet stores?\b|\broosters?\b|\bchickens?\b|\bcoops\b|"
+                r"\bwildlife\b|\bbirds?\b|\bfowl\b|\brabbits?\b|\bhorses?\b|\bbees?\b|\bfeeding\b", re.I)),
+    ("emergency", "Burn bans, fireworks and emergencies",
+     re.compile(r"\bburn bans?\b|\bopen burning\b|\bfireworks?\b|\bstate of (?:local )?emergency\b|\bhurricane\b|\bdebris\b", re.I)),
+    ("airports", "Airports",
+     re.compile(r"\bairports?\b|\baviation\b|\bhangars?\b|\bairfield\b", re.I)),
+    ("traffic", "Traffic, parking and vehicles",
+     re.compile(r"\bparking\b|\btraffic\b|(?<!mobile )\bvehicles?\b|\btow(?:ing|ed)?\b|\bimmobiliz\w+|\bgolf carts?\b|\bmicromobility\b|"
+                r"\be-?bikes?\b|\bscooters?\b|\btrucks?\b|\bspeed\b|\broads?\b|\bright[- ]of[- ]way\b|\bbus(?:es)?\b|\btransit\b|\bbeacons?\b|\bcrosswalks?\b|\btraffic signals?\b|\bpedestrians?\b", re.I)),
+    ("government", "Elections, ethics and meetings",
+     re.compile(r"\belections?\b|\bethics\b|\bconflict of interest\b|\blobby\w*|\bdecorum\b|\bcharter\b|"
+                r"\bnonpublic forum|\bballot\b", re.I)),
+    ("nuisance", "Noise and nuisances",
+     re.compile(r"\bnoise\b|\bnuisances?\b|\bloiter\w*|\burinat\w+|\bdefecat\w+|\bgraffiti\b|\blighting\b|\bodors?\b|"
+                r"\blitter\w*|\bsunday construction\b", re.I)),
+    ("safety", "Police, fire and public safety",
+     re.compile(r"\bpolice\b|\bfire (?:department|rescue)\b|\bsheriff\b|\bemergency medical\b|\bEMS\b|\bpublic safety\b|"
+                r"\bjail\b|\bweapons?\b|\bfirearms?\b|\blightning\b|\bcurfew\b|\bmisdemeanor\b|\bthreats?\b|\blifeguards?\b|"
+                r"\bmedical examiner\b|\bhelicopters?\b", re.I)),
+    ("public", "Beaches, parks and public spaces",
+     re.compile(r"\bbeach(?:es)?\b(?! county)|\bparks?\b|\bwaterways?\b|\bdocks?\b|\bmarinas?\b|\bboat\w*|\bcamping\b|"
+                r"\bsleeping\b|\bhomeless\w*|\bpanhandl\w+|\bprotests?\b|\bdemonstrations?\b|\btrespass\w*|\bpublic property\b|\bplaza\b|"
+                r"\bcity properties\b", re.I)),
+    ("signs", "Signs",
+     re.compile(r"\b(?:temporary |permanent |political |portable )?signs\b|\bsignage\b|\bbillboards?\b", re.I)),
+    ("housing", "Housing and rentals",
+     re.compile(r"\bshort[- ]term rentals?\b|\bvacation rentals?\b|\brentals?\b|\bhousing\b|\bapartments?\b|\bdwellings?\b|"
+                r"\bduplex\w*|\bmobile homes?\b|\blandlords?\b|\blive local\b|\bresidential\b", re.I)),
+    ("water", "Utilities, water, trash and environment",
+     re.compile(r"\b(?:storm|waste)?water\b|\bsewer\b|\birrigation\b|\bpumps?\b|\bbiosolids?\b|\bfertiliz\w+|\blandfill\b|"
+                r"\bsolid waste\b|\btipping\b|\brecycl\w+|\bplastics?\b|\bballoons?\b|\bseptic\b|\bwetlands?\b|"
+                r"\benvironment\w*|\bchemical\w*|\btrees?\b|\bland application\b|\butilit(?:y|ies)\b|\breclaimed\b|\bpotable\b|"
+                r"\blakes?\b|\baerators?\b", re.I)),
+    ("money", "Tax breaks and incentives",
+     re.compile(r"\bad valorem\b|\btax exemptions?\b|\bincentives?\b|\bqualified target\b|\beconomic development\b|"
+                r"\bjob creation\b|\bimpact fees?\b|\babatements?\b", re.I)),
+    ("business", "Businesses and sales",
+     re.compile(r"\bvendors?\b|\bpeddl\w+|\bsolicit\w+|\bretail\b|\bbusiness\w*|\bstores?\b|\bshops?\b|\bpawn\w*|\bmassage\b|"
+                r"\btattoo\w*|\bfood trucks?\b|\bdiscriminat\w+", re.I)),
+    ("zoning", "Building, zoning and development",
+     re.compile(r"\bzoning\b|\bland development\b|\bLDC\b|\bdevelopment orders?\b|\brezon\w*|\bland[- ]use\b|"
+                r"\bcomprehensive plan\b|\bannexations?\b|\bsetbacks?\b|\bbuilding permits?\b|\bconstruction\b|"
+                r"\bsubdivision\w*|\bhistoric\b|\bsite plans?\b|\bdevelopment\b|\bCPA\b|\bpermits?\b|\bapplications\b|\bapps\.", re.I)),
+    ("land", "Public land sold or leased",
+     re.compile(r"\bsurplus (?:real )?property\b|\bsale and purchase of\b|\bauction\w*|\bground lease\b|\bleases?\b", re.I)),
+    ("equipment", "Buildings, equipment and supplies",
+     re.compile(r"\bHVAC\b|\belevators?\b|\bbuilding (?:control|solutions)\b|\bcourthouse\b|\bwindows?\b|\bequipment\b|"
+                r"\bparts\b|\bactuators?\b|\bsupplies\b|\bcables?\b|\bwire\b|\bmaintenance\b|\brepairs?\b|\bproducts\b|"
+                r"\bpurchase orders?\b|\bservices\b", re.I)),
+    ("fines", "Code enforcement, liens and fines",
+     re.compile(r"\bfine schedule\b|\bpenalt\w+|\bcode violations?\b|\bfines?\b", re.I)),
+]
+TOPIC_LABELS = {k: label for k, label, _ in TOPICS} | {"fines": "Code enforcement, liens and fines", "other": "Other"}
+
+
+# Place names aren't subjects: "Town of Palm Beach", "CITY OF DANIA BEACH", "Pinellas Park", "Palm Beach County"
+# read as beaches and parks until removed (Nov 19, 2026).
+_PLACE = re.compile(r"\b(?:(?:[A-Z][a-z]+|St\.)(?:[ -](?:[A-Z][a-z]+|By|by|The|the))*|[A-Z][A-Z.'-]+(?: [A-Z][A-Z.'-]+)*) "
+                    r"(?:Beach(?: Shores| County)?|BEACH(?: SHORES| COUNTY)?|Park|PARK|Gardens|GARDENS)\b")
+
+
+def topic(item: dict) -> str:
+    """What a tagged decision is about: one TOPICS key, or "other"."""
+    t = re.sub(r"\s+", " ", (item.get("title") or "") + " " + (item.get("motion") or ""))[:TOPIC_HEAD]
+    t = _PLACE.sub(" ", t)
+    for k, _, rx in TOPICS:
+        if rx.search(t):
+            return "liens" if k == "fines" else k
+    return "other"
+
+
 # --- On pages -----------------------------------------------------------------------------------
 
 def _e(s: str) -> str:
@@ -286,7 +375,7 @@ def entries(by_meeting: dict[str, dict[str, list[dict]]]) -> list[dict]:
 
 HOW = """<h2 id="how">How the tags work</h2>
 <p>The tags come from fixed rules that read the official wording of each decision. No AI is involved, and the
-official wording is always one tap away.</p>
+official wording is always one tap away, under "Details and official wording".</p>
 <h3>New bans, fines or penalties</h3>
 <p>The test: <strong>you can't do it now, but you could yesterday.</strong> A decision is tagged when its
 wording describes a ban or prohibition, a moratorium, temporary or permanent (for example on building permits), a new crime,
@@ -309,39 +398,90 @@ don't, and many breaks for companies come with promised jobs or services. The ru
 rarely, tag the wrong one. <a href="https://github.com/bgraham1214/open-civic/issues">Report a mistake</a>.</p>"""
 
 
+# What each tag reason is called as a group ("Kind of decision" in the dropdown)
+REASON_GROUPS = {
+    "ban": "Bans and prohibitions", "moratorium": "Moratoriums", "new crime": "New crimes",
+    "limit on sales or use": "Limits on sales or use", "fines": "Fines and penalties",
+    "tax break": "Tax breaks", "incentive": "Incentive payments", "forgiven": "Fees or fines forgiven",
+    "land": "Public land sold or leased", "no bid": "No-bid purchases ($100,000 or more)",
+}
+
+
+def _stage_key(x: dict) -> str:
+    """For the "Where it stands" dropdown, from the tag's words (which come from the vote, never the wording)."""
+    if not x["voted"]:
+        return "agenda"
+    lab = x["label"].lower()
+    if "didn't pass" in lab or "put off" in lab:
+        return "no"
+    if "in the works" in lab:
+        return "works"
+    return "passed"
+
+
+def _county(g: str) -> str:
+    from .jurisdictions import JURISDICTIONS
+    j = JURISDICTIONS[g]
+    c = j.get("county") or ("Hillsborough" if g == "templeterrace" else j["short"])
+    return f"{c} County"
+
+
 def page_html(items: list[dict], today: str) -> str:
     from .jurisdictions import JURISDICTIONS
     from .people import long_date, outcome, plain, record_link
     from .site import absolute, page
+    from . import organize
     from datetime import date, timedelta
     year_ago = (date.fromisoformat(today) - timedelta(days=365)).isoformat()
+    d90 = (date.fromisoformat(today) - timedelta(days=90)).isoformat()
 
-    def li(x: dict) -> str:
+    def card(x: dict) -> str:
         r, j = x["row"], JURISDICTIONS[x["county"]]
-        out_ = f'<p class="outcome">{_e(outcome(r["facts"]))}.</p>' if x["voted"] else ""
-        return (f'<li><p class="when"><a href="meetings/{x["county"]}/{x["date"]}.html">{_e(j["board"])}, '
-                f'{_e(long_date(x["date"]))}</a></p>' + plain(r["item"], 0, r["facts"] if x["voted"] else None)
-                + out_ + record_link(r["item"]) + "</li>")
+        if x["voted"]:
+            how = outcome(r["facts"])
+        else:
+            how = "On an upcoming agenda" if x["date"] > today else "On the agenda; no vote recorded"
+        meta = (f'<p class="meta"><a href="meetings/{x["county"]}/{x["date"]}.html">{_e(j["board"])}</a> · '
+                f'{_e(long_date(x["date"]))} · {_e(how)}</p>')
+        return plain(r["item"], 0, r["facts"] if x["voted"] else None, compact=meta, after=record_link(r["item"]))
 
-    coming = [x for x in items if x["date"] > today]
-    past = [x for x in items if x["date"] <= today]
-    recent = [x for x in past if x["date"] >= year_ago]
-    sections = []
+    org_items = []
+    for x in items:
+        j = JURISDICTIONS[x["county"]]
+        tk = topic(x["row"]["item"])
+        y, m = int(x["date"][:4]), int(x["date"][5:7])
+        org_items.append(organize.Item(
+            card(x),
+            {"topic": (TOPIC_LABELS[tk], TOPIC_LABELS[tk]),
+             "county": (_county(x["county"]), _county(x["county"])),
+             "government": (j["name"], j["short"]),
+             "month": (f"{date(y, m, 1):%B %Y}", x["date"][:7]),
+             "reason": (REASON_GROUPS[x["tag"]["reason"]], REASON_GROUPS[x["tag"]["reason"]])},
+            {"kind": x["kind"], "stage": _stage_key(x)}, x["date"]))
+    listing = organize.render(
+        "spot", org_items,
+        [organize.Grouping("topic", "Topic"), organize.Grouping("county", "County", "asc"),
+         organize.Grouping("month", "Month", "desc"), organize.Grouping("government", "City or county government", "asc"),
+         organize.Grouping("reason", "Kind of decision")],
+        [organize.Filter("kind", "Show", [("", "Everything"), ("restriction", KINDS["restriction"][0]),
+                                          ("business", KINDS["business"][0])]),
+         organize.Filter("when", "When", [("", "Any time"), (f"after:{today}", "Coming up"),
+                                          (f"span:{d90}:{today}", "Last 90 days"),
+                                          (f"span:{year_ago}:{today}", "Last 12 months"),
+                                          (f"span:2025-01-01:{today}", "Since Jan. 2025")]),
+         organize.Filter("stage", "Where it stands", [("", "Any"), ("passed", "Passed"), ("works", "In the works"),
+                                                      ("agenda", "On the agenda"), ("no", "Didn't pass or put off")])],
+        level=2, noun=("decision", "decisions"), label="Arrange the Spotlight")
+    coming = sorted((x for x in items if x["date"] > today), key=lambda x: x["date"])
+    soon = ""
     if coming:
-        sections.append(f'<h2>Coming up <span class="topic-count">({len(coming)})</span></h2><p>On upcoming agendas. '
-                        'Meetings are open to the public, and agendas can change up to the day.</p>'
-                        f'<ol class="decisions">{"".join(li(x) for x in sorted(coming, key=lambda x: x["date"]))}</ol>')
-    for k, (title, desc) in KINDS.items():
-        mine = [x for x in past if x["kind"] == k]
-        new = [x for x in mine if x["date"] >= year_ago]
-        old = [x for x in mine if x["date"] < year_ago]
-        block = f'<h2 id="{k}">{_e(title)} <span class="topic-count">({len(mine)})</span></h2><p>{_e(desc)}</p>'
-        block += (f'<h3>The last 12 months ({len(new)})</h3><ol class="decisions">{"".join(li(x) for x in new)}</ol>'
-                  if new else '<p class="empty">None in the last 12 months.</p>')
-        if old:
-            block += (f'<details><summary>Show {len(old)} earlier</summary><ol class="decisions">'
-                      f'{"".join(li(x) for x in old)}</ol></details>')
-        sections.append(block)
+        soon = (f'<section class="soon" aria-labelledby="soon-h"><h2 id="soon-h">Coming up '
+                f'<span class="topic-count">({len(coming)})</span></h2><p class="small">On upcoming agendas. Meetings are '
+                'open to the public, and agendas can change up to the day.</p>'
+                f'<ol class="cards">{"".join("<li>" + card(x) + "</li>" for x in coming[:5])}</ol>'
+                + (f'<p class="small">{len(coming) - 5} more: choose "Coming up" under When, below.</p>' if len(coming) > 5 else "")
+                + "</section>")
+    recent = [x for x in items if year_ago <= x["date"] <= today]
     n_r = sum(1 for x in recent if x["kind"] == "restriction")
     n_b = sum(1 for x in recent if x["kind"] == "business")
     body = f"""<h1>Spotlight</h1>
@@ -350,10 +490,15 @@ def page_html(items: list[dict], today: str) -> str:
 that restrict something</mark> and <mark>{n_b} that give a company money, land or special terms</mark>.</p>
 <p class="fair">Tagged by fixed rules from the official wording, for every Florida city and county government we
 follow (<a href="florida.html">see which</a>). Tags say what a decision does, never whether it was right.
-Hillsborough's votes appear a few weeks after each meeting, when the Clerk publishes them.
-<a href="#how">How the tags work</a>. <a href="feeds/spotlight.xml">Get updates (RSS feed)</a>.</p>
-{''.join(sections)}
-{HOW}"""
+<a href="#how">How the tags work</a> · <a href="feeds/spotlight.xml">Get updates (RSS feed)</a></p>
+{soon}
+<h2 id="all">Every tagged decision</h2>
+<p class="small">Grouped by topic. Open a group to see its decisions, newest first; use the choices to group them by
+county, month, government or kind of decision instead, or to narrow them down. Topics are found by fixed rules
+too, and can misfile an item.</p>
+{listing}
+{HOW}
+<script src="organize.js" defer></script>"""
     desc = (f"New bans, moratoriums, fines and penalties, and tax breaks, incentives, land deals and no-bid purchases "
             f"for companies, from the Florida city and county governments we follow.")
     return page("Spotlight: new restrictions and breaks for companies in Florida local government", body, 0,

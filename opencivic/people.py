@@ -182,9 +182,16 @@ def cityify(text: str, council: bool = True) -> str:
     return text
 
 
-def plain(item: dict, depth: int, vote: dict | None = None) -> str:
+# "AN ORDINANCE OF THE CITY COMMISSION OF THE CITY OF OPA-LOCKA, FLORIDA, " says nothing the page doesn't
+_BOILER = re.compile(r"^\W*(?:[A-Za-z#.]+(?: No\.?)? ?#?[\w-]*\d[\w-]*:?\s*)?(?:an? )?(ordinance|resolution)"
+                     r"(?: no\.? ?[\w-]+)?,? (?:of|by) the .{0,160}?\bFlorida\b,?\s*", re.I)
+
+
+def plain(item: dict, depth: int, vote: dict | None = None, compact: str | None = None, after: str = "") -> str:
     """Spotlight tags, plain headline, decoded facts, what the terms mean, and the official wording (folded).
-    vote: the vote (decision_facts), so a tag can say whether it passed; None for an item with no vote."""
+    vote: the vote (decision_facts), so a tag can say whether it passed; None for an item with no vote.
+    compact: a one-line <p class="meta"> (who, when, outcome) for the organized style: everything after the
+    headline then folds into one "Details" (with `after`, such as the record link, at its end)."""
     from .explain import TERMS, explain
     # When an agenda item carried several motions, each decision is the motion itself; the item is context.
     e = explain(item.get("motion") or item["title"], item.get("matter_type") or "")
@@ -206,11 +213,18 @@ def plain(item: dict, depth: int, vote: dict | None = None) -> str:
                 + f'{_e(full[:4000])}{"…" if len(full) > 4000 else ""}</p></details>')
     headline = cityify(e["headline"], council) if city else e["headline"]
     from .spotlight import badges
-    return (badges(item, vote, depth) + f'<p class="headline">{_e(headline)}</p>'
-            + (f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
+    rest = ((f'<p class="subject">{_e(e["subject"])}</p>' if e["subject"] else "")
             + (f'<p class="subject"><strong>Agenda item {_e(item.get("number", ""))}</strong> {_e(full[:320])}</p>'
                if item.get("motion") else "")
             + (f'<ul class="facts">{facts}</ul>' if facts else "") + means + official)
+    if compact is not None:
+        # the organized style (organize.py): tags, headline, one line of who/when/outcome; the rest folds.
+        # A headline that is the raw title loses its boilerplate and is cut; the full wording is one tap away.
+        head = _BOILER.sub(lambda m: m.group(1).capitalize() + ": ", headline, count=1)
+        head = head if len(head) <= 150 else head[:150].rsplit(" ", 1)[0].rstrip(",;:-–") + "…"
+        return (badges(item, vote, depth) + f'<p class="headline">{_e(head)}</p>' + compact
+                + f'<details class="more"><summary>Details and official wording</summary>{rest}{after}</details>')
+    return badges(item, vote, depth) + f'<p class="headline">{_e(headline)}</p>' + rest
 
 
 def record_link(it: dict) -> str:
