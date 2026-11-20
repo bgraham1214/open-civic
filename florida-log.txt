@@ -1,0 +1,112 @@
+hollywoodfl: 161 events, 1921 items, 2420 votes; {"fetched": 2, "requests": 8, "errors": 0, "left": 0}
+margatefl: 240 events, 748 items, 305 votes; {"fetched": 2, "requests": 5, "errors": 0, "left": 0}
+hillsborobeachfl: 51 meetings, 683 agenda rows; {"fetched": 1, "requests": 6, "errors": 0, "left": 0}
+lauderdalebytheseafl: 108 meetings, 1188 agenda rows; {"fetched": 1, "requests": 10, "errors": 0, "left": 0}
+parklandfl: 145 meetings, 316 agenda rows; {"fetched": 1, "requests": 13, "errors": 0, "left": 0}
+miramar: 62 events, 566 items, 0 votes; {"fetched": 15, "requests": 17, "errors": 0, "left": 0}
+invernessfl: 77 meetings, 1214 agenda rows; {"fetched": 1, "requests": 7, "errors": 0, "left": 0}
+charlottecountyfl: 51 events, 3017 items, 0 votes; {"fetched": 6, "requests": 8, "errors": 0, "left": 0}
+wiltonmanorsfl: 144 meetings, 1562 agenda rows; {"fetched": 3, "requests": 13, "errors": 0, "left": 0}
+marcoisland: 206 events, 2050 items, 3264 votes; {"fetched": 2, "requests": 12, "errors": 0, "left": 0}
+plantcity: 138 events, 997 items, 40 votes; {"fetched": 1, "requests": 3, "errors": 0, "left": 0}
+marionfl: 408 events, 6057 items, 4834 votes; {"fetched": 5, "requests": 11, "errors": 0, "left": 0}
+pembrokeparkfl: 95 meetings, 548 agenda rows; {"fetched": 48, "requests": 56, "errors": 0, "left": 0}
+jacksonvillebeachfl: 292 meetings, 1004 agenda rows; {"fetched": 5, "requests": 27, "errors": 0, "left": 0}
+colliercofl: 371 meetings, 4396 agenda rows; {"fetched": 1, "requests": 34, "errors": 0, "left": 0}
+neptunebeachfl: 121 meetings, 753 agenda rows; {"fetched": 3, "requests": 12, "errors": 0, "left": 0}
+ocala: 280 events, 2635 items, 5912 votes; {"fetched": 15, "requests": 42, "errors": 0, "left": 0}
+martin: 292 events, 1952 items, 3715 votes; {"fetched": 3, "requests": 11, "errors": 0, "left": 0}
+coralgables: 690 events, 2153 items, 6300 votes; {"fetched": 0, "requests": 2, "errors": 0, "left": 0}
+doral: 46 events, 1425 items, 0 votes; {"fetched": 1, "requests": 3, "errors": 0, "left": 0}
+flaglercofl: 30 meetings, 368 agenda rows; {"fetched": 3, "requests": 5, "errors": 0, "left": 0}
+pinecrest: 60 events, 973 items, 0 votes; {"fetched": 2, "requests": 4, "errors": 0, "left": 0}
+delraybeach: 355 events, 2349 items, 436 votes; {"fetched": 5, "requests": 8, "errors": 0, "left": 0}
+wellington: 153 events, 1765 items, 0 votes; {"fetched": 3, "requests": 5, "errors": 0, "left": 0}
+pinellas: 94 events, 1866 items, 8778 votes; {"fetched": 4, "requests": 8, "errors": 0, "left": 0}
+lakecityfl: 205 meetings, 64 agenda rows; {"fetched": 69, "requests": 85, "errors": 0, "left": 0}
+belleairfl: 53 events, 253 items, 742 votes; {"fetched": 1, "requests": 3, "errors": 0, "left": 0}
+clearwater: 242 events, 2816 items, 3610 votes; {"fetched": 3, "requests": 5, "errors": 0, "left": 0}
+polkcountyfl: 147 events, 5806 items, 11622 votes; {"fetched": 3, "requests": 7, "errors": 0, "left": 0}
+pensacolafl: 350 meetings, 1260 agenda rows; {"fetched": 1, "requests": 33, "errors": 0, "left": 0}
+flaglerbeachfl: 200 meetings, 1007 agenda rows; {"fetched": 15, "requests": 31, "errors": 0, "left": 0}
+cityofnorthport: 396 events, 2471 items, 3010 votes; {"fetched": 12, "requests": 20, "errors": 0, "left": 0}
+escambiacofl: 622 meetings, 3251 agenda rows; {"fetched": 5, "requests": 50, "errors": 0, "left": 0}
+venice: 202 events, 1887 items, 2705 votes; {"fetched": 8, "requests": 29, "errors": 0, "left": 0}
+clewistonfl: 106 meetings, 223 agenda rows; {"fetched": 37, "requests": 46, "errors": 0, "left": 0}
+jacksoncofl: 111 meetings, 1602 agenda rows; {"fetched": 3, "requests": 11, "errors": 0, "left": 0}
+highlandscofl: 158 meetings, 1323 agenda rows; {"fetched": 21, "requests": 32, "errors": 0, "left": 0}
+clermontfl: 125 meetings, 1304 agenda rows; {"fetched": 1, "requests": 11, "errors": 0, "left": 0}
+seminolecountyfl: 170 events, 1129 items, 4427 votes; {"fetched": 6, "requests": 45, "errors": 0, "left": 0}
+deltona: 183 events, 1932 items, 2545 votes; {"fetched": 8, "requests": 13, "errors": 0, "left": 0}
+brevardfl: 133 events, 2709 items, 4888 votes; {"fetched": 5, "requests": 9, "errors": 0, "left": 0}
+ladylakefl: 143 meetings, 1054 agenda rows; {"fetched": 5, "requests": 18, "errors": 0, "left": 0}
+indianrivercofl: 367 meetings, 1183 agenda rows; {"fetched": 39, "requests": 66, "errors": 0, "left": 0}
+broward: 40 events, 2189 items, 0 votes; {"fetched": 5, "requests": 7, "errors": 0, "left": 0}
+coconutcreek: 301 events, 622 items, 1865 votes; {"fetched": 1, "requests": 4, "errors": 0, "left": 0}
+fortlauderdale: 135 events, 2039 items, 7304 votes; {"fetched": 4, "requests": 8, "errors": 0, "left": 0}
+hallandalebeach: 141 events, 1752 items, 0 votes; {"fetched": 3, "requests": 5, "errors": 0, "left": 0}
+leesburgfl: 121 meetings, 1858 agenda rows; {"fetched": 2, "requests": 11, "errors": 0, "left": 0}
+eustisfl: 136 meetings, 107 agenda rows; {"fetched": 60, "requests": 70, "errors": 0, "left": 0}
+tavaresfl: 66 meetings, 1084 agenda rows; {"fetched": 2, "requests": 8, "errors": 0, "left": 0}
+leecofl: 69 meetings, 3213 agenda rows; {"fetched": 3, "requests": 8, "errors": 0, "left": 0}
+mountdorafl: 398 meetings, 2177 agenda rows; {"fetched": 2, "requests": 33, "errors": 0, "left": 0}
+jupiterislandfl: 144 meetings, 1166 agenda rows; {"fetched": 1, "requests": 11, "errors": 0, "left": 0}
+fortmyersbeachfl: 180 meetings, 715 agenda rows; {"fetched": 1, "requests": 18, "errors": 0, "left": 0}
+bayharborislandsfl: 97 meetings, 735 agenda rows; {"fetched": 0, "requests": 7, "errors": 0, "left": 0}
+stuartfl: 166 meetings, 1319 agenda rows; {"fetched": 2, "requests": 14, "errors": 0, "left": 0}
+miamispringsfl: 108 meetings, 905 agenda rows; {"fetched": 1, "requests": 9, "errors": 0, "left": 0}
+tallahasseefl: 128 meetings, 238 agenda rows; {"fetched": 31, "requests": 40, "errors": 0, "left": 0}
+opalockafl: 115 meetings, 2487 agenda rows; {"fetched": 9, "requests": 17, "errors": 0, "left": 0}
+crestviewfl: 180 meetings, 1425 agenda rows; {"fetched": 3, "requests": 18, "errors": 0, "left": 0}
+maryestherfl: 54 meetings, 814 agenda rows; {"fetched": 1, "requests": 5, "errors": 0, "left": 0}
+destinfl: 305 meetings, 2212 agenda rows; {"fetched": 3, "requests": 26, "errors": 0, "left": 0}
+fernandinabeachfl: 558 meetings, 2429 agenda rows; {"fetched": 8, "requests": 49, "errors": 0, "left": 0}
+nassaucofl: 288 meetings, 920 agenda rows; {"fetched": 42, "requests": 64, "errors": 0, "left": 0}
+apopkafl: 237 meetings, 1806 agenda rows; {"fetched": 4, "requests": 22, "errors": 0, "left": 0}
+maitlandfl: 223 meetings, 835 agenda rows; {"fetched": 1, "requests": 18, "errors": 0, "left": 0}
+ocoeefl: 248 meetings, 1186 agenda rows; {"fetched": 1, "requests": 22, "errors": 0, "left": 0}
+stcloudfl: 52 meetings, 128 agenda rows; {"fetched": 0, "requests": 4, "errors": 0, "left": 0}
+wintergardenfl: 306 meetings, 794 agenda rows; {"fetched": 7, "requests": 30, "errors": 0, "left": 0}
+kissimmeefl: 282 meetings, 1619 agenda rows; {"fetched": 15, "requests": 35, "errors": 0, "left": 0}
+greenacresfl: 127 meetings, 399 agenda rows; {"fetched": 25, "requests": 36, "errors": 0, "left": 0}
+winterparkfl: 868 meetings, 1459 agenda rows; {"fetched": 2, "requests": 66, "errors": 0, "left": 0}
+lakecountyfl: meetings not updated: The read operation timed out for https://lakecountyfl.api.civicclerk.com/v1/Events?$filter=startDateTime%20ge%202025-01-01T00%3A00%3A00Z&$orderby=startDateTime&$top=110&$skiptoken=startDateTime-2025-10-13T18%3A00%3A00Z,id-2473
+junobeachfl: 115 meetings, 41 agenda rows; {"fetched": 48, "requests": 57, "errors": 0, "left": 0}
+jupiterfl: 228 meetings, 1277 agenda rows; {"fetched": 2, "requests": 21, "errors": 0, "left": 0}
+oceanridgefl: 87 meetings, 1001 agenda rows; {"fetched": 2, "requests": 10, "errors": 0, "left": 0}
+southbayfl: 37 meetings, 1238 agenda rows; {"fetched": 1, "requests": 4, "errors": 0, "left": 0}
+palmspringsfl: 132 meetings, 776 agenda rows; {"fetched": 2, "requests": 14, "errors": 0, "left": 0}
+zephyrhillsfl: 208 meetings, 1429 agenda rows; {"fetched": 2, "requests": 17, "errors": 0, "left": 0}
+pinellasparkfl: 80 meetings, 150 agenda rows; {"fetched": 15, "requests": 21, "errors": 0, "left": 0}
+seminolefl: 74 meetings, 1112 agenda rows; {"fetched": 1, "requests": 6, "errors": 0, "left": 0}
+bartowfl: 58 meetings, 626 agenda rows; {"fetched": 3, "requests": 8, "errors": 0, "left": 0}
+palmbeachfl: 273 meetings, 1798 agenda rows; {"fetched": 16, "requests": 39, "errors": 0, "left": 0}
+loxahatcheegrovesfl: 194 meetings, 129 agenda rows; {"fetched": 57, "requests": 75, "errors": 0, "left": 0}
+stpetebeachfl: 324 meetings, 1071 agenda rows; {"fetched": 2, "requests": 28, "errors": 0, "left": 0}
+palatkafl: 200 meetings, 1853 agenda rows; {"fetched": 1, "requests": 17, "errors": 0, "left": 0}
+santarosacofl: 253 meetings, 1770 agenda rows; {"fetched": 1, "requests": 19, "errors": 0, "left": 0}
+tarponspringsfl: 405 meetings, 1936 agenda rows; {"fetched": 4, "requests": 36, "errors": 0, "left": 0}
+casselberryfl: 84 meetings, 1356 agenda rows; {"fetched": 1, "requests": 7, "errors": 0, "left": 0}
+miltonfl: 213 meetings, 2001 agenda rows; {"fetched": 5, "requests": 20, "errors": 0, "left": 0}
+lakemaryfl: 172 meetings, 862 agenda rows; {"fetched": 3, "requests": 16, "errors": 0, "left": 0}
+longwoodfl: 137 meetings, 1548 agenda rows; {"fetched": 3, "requests": 14, "errors": 0, "left": 0}
+suwanneecofl: 44 meetings, 704 agenda rows; {"fetched": 2, "requests": 5, "errors": 0, "left": 0}
+staugustinefl: 160 meetings, 2010 agenda rows; {"fetched": 3, "requests": 16, "errors": 0, "left": 0}
+wildwoodfl: 181 meetings, 2187 agenda rows; {"fetched": 3, "requests": 19, "errors": 0, "left": 0}
+daytonabeachshoresfl: 68 meetings, 659 agenda rows; {"fetched": 1, "requests": 8, "errors": 0, "left": 0}
+taylorcofl: 80 meetings, 1537 agenda rows; {"fetched": 7, "requests": 13, "errors": 0, "left": 0}
+stluciecofl: 270 meetings, 3468 agenda rows; {"fetched": 4, "requests": 25, "errors": 0, "left": 0}
+delandfl: 263 meetings, 1294 agenda rows; {"fetched": 4, "requests": 25, "errors": 0, "left": 0}
+portorangefl: 194 meetings, 1877 agenda rows; {"fetched": 6, "requests": 24, "errors": 0, "left": 0}
+alachuafl: 228 meetings, 1001 agenda rows; {"fetched": 2, "requests": 18, "errors": 0, "left": 0}
+defuniakspringsfl: 248 meetings, 1922 agenda rows; {"fetched": 5, "requests": 24, "errors": 0, "left": 0}
+hollyhillfl: 122 meetings, 546 agenda rows; {"fetched": 36, "requests": 46, "errors": 0, "left": 0}
+gainesvillefl: 275 meetings, 179 agenda rows; {"fetched": 1, "requests": 21, "errors": 0, "left": 0}
+lynnhavenfl: 72 meetings, 306 agenda rows; {"fetched": 7, "requests": 12, "errors": 0, "left": 0}
+cocoafl: 176 meetings, 1399 agenda rows; {"fetched": 2, "requests": 17, "errors": 0, "left": 0}
+cocoabeachfl: 220 meetings, 1100 agenda rows; {"fetched": 2, "requests": 20, "errors": 0, "left": 0}
+daniabeachfl: 102 meetings, 1612 agenda rows; {"fetched": 1, "requests": 8, "errors": 0, "left": 0}
+indianharbourbeachfl: 135 meetings, 0 agenda rows; {"fetched": 28, "requests": 38, "errors": 0, "left": 0}
+melbournefl: 397 meetings, 1058 agenda rows; {"fetched": 3, "requests": 33, "errors": 0, "left": 0}
+titusvillefl: 498 meetings, 279 agenda rows; {"fetched": 85, "requests": 123, "errors": 0, "left": 0}
+{"florida": {"governments": 111, "requests": 1108, "complete": 110, "unfinished": {}, "failed": ["lakecounty"], "not_reached": []}}

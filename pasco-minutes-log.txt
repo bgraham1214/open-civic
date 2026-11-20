@@ -1,0 +1,2 @@
+{"2 motions": 7, "no decision found": 7, "3 motions": 2, "18 motions": 1, "4 motions": 1, "17 motions": 1, "no agenda item with this file number": 1}
+{"documents": 44, "decisions": 1988, "unmatched": 1, "votes": 9940, "problems": 20}

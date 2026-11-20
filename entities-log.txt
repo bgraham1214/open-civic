@@ -1,0 +1,16 @@
+{"officials": 10, "votes": 200, "split_votes": 12, "votes_linked_to_items": 167, "contracts": 69, "contracts_with_vendor": 49, "ftm_entities": 325, "schemata": {"PublicBody": 2, "Person": 10, "Membership": 5, "Employment": 5, "Event": 26, "Document": 108, "Contract": 69, "Organization": 17, "ContractAward": 56, "Company": 27}}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/open-civic/open-civic/opencivic/county_entities.py", line 158, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/runner/work/open-civic/open-civic/opencivic/county_entities.py", line 153, in main
+    print(json.dumps(write(args.data_dir)))
+                     ~~~~~^^^^^^^^^^^^^^^
+  File "/home/runner/work/open-civic/open-civic/opencivic/county_entities.py", line 139, in write
+    ents = build(data, r["members"])
+  File "/home/runner/work/open-civic/open-civic/opencivic/county_entities.py", line 68, in build
+    d = {k: [x for x in v if x.get("county") in members] for k, v in load(data).items()}
+                             ^^^^^
+AttributeError: 'str' object has no attribute 'get'

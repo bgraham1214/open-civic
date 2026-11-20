@@ -1,0 +1,1 @@
+{"staffreports": {"coconutcreek": {"candidates": 62, "read": 0, "errors": 0, "left": 0, "with_amount": 35}, "deltona": {"candidates": 13, "read": 0, "errors": 0, "left": 0, "with_amount": 8}, "pinellas": {"candidates": 203, "read": 0, "errors": 0, "left": 0, "with_amount": 105}}}

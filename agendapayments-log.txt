@@ -1,0 +1,1 @@
+{"payments": {"colliercounty": {"listed": 46, "new": 0, "changed": 0, "unchanged": 46, "errors": 0, "unread_lines": 0, "groups_wrong": 0, "boxed_pages": 0, "kept": 107864}, "santarosacounty": {"listed": 43, "new": 0, "changed": 0, "unchanged": 43, "errors": 0, "unread_lines": 0, "groups_wrong": 0, "boxed_pages": 0, "kept": 15244}}}

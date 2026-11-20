@@ -1,0 +1,1 @@
+{"indexnow_submitted": 119, "status": [200], "sample": ["alachua-county.html", "at-a-glance.html", "bay-county.html", "brevard-county.html", "broward-county.html"]}
