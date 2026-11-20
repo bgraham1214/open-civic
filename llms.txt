@@ -1,0 +1,228 @@
+# Open Civic Web
+
+> Free, nonpartisan, plain-language public records of local government across Florida: city and county
+> governing boards statewide (see "What we cover in Florida"), including the Temple Terrace City Council, the
+> Hillsborough, Pasco and Hernando county commissions (which govern Brandon, Lutz, Wesley Chapel and Spring Hill)
+> and, in southeast Volusia County, the Edgewater City Council and the Oak Hill City Commission, where the project
+> began. Collected nightly from official sources; every record links to its source.
+> Headlines are produced by fixed rules, not AI, and the official wording is always shown.
+
+Pages count recorded votes; they never say why anyone voted or whether a decision was good. Hillsborough votes
+come from the Clerk's Master Voting Record (2014 on); Pasco and Temple Terrace votes are read from the Clerk's minutes;
+Hernando and Edgewater votes come from their Legistar records. New Smyrna Beach isn't collected: its records site asks
+automated tools not to. Other Florida governments (see "What we cover in Florida") come from their Legistar records
+(meetings, agenda items and each member's vote) or their CivicClerk portals (meetings and agenda items only).
+
+## Start here
+
+- [Home: pick an area](https://bgraham1214.github.io/open-civic/index.html)
+- [Temple Terrace City Council records](https://bgraham1214.github.io/open-civic/templeterrace.html)
+- [County commission records and search](https://bgraham1214.github.io/open-civic/counties.html)
+- [Southeast Volusia city records and search](https://bgraham1214.github.io/open-civic/volusia.html): Edgewater, Oak Hill, New Smyrna Beach
+- [What we cover in Florida](https://bgraham1214.github.io/open-civic/florida.html): every Florida county and city, with what is collected for each
+- [Alachua County governments](https://bgraham1214.github.io/open-civic/alachua-county.html): City of Alachua, City of Gainesville
+- [Bay County governments](https://bgraham1214.github.io/open-civic/bay-county.html): City of Lynn Haven
+- [Brevard County governments](https://bgraham1214.github.io/open-civic/brevard-county.html): Brevard County, City of Cocoa, City of Cocoa Beach, City of Indian Harbour Beach, City of Melbourne, City of Titusville
+- [Broward County governments](https://bgraham1214.github.io/open-civic/broward-county.html): Broward County, City of Coconut Creek, City of Dania Beach, City of Fort Lauderdale, City of Hallandale Beach, Town of Hillsboro Beach, City of Hollywood, Town of Lauderdale-by-the-Sea, City of Margate, City of Miramar, City of Parkland, Town of Pembroke Park, City of Wilton Manors
+- [Charlotte County governments](https://bgraham1214.github.io/open-civic/charlotte-county.html): Charlotte County
+- [Citrus County governments](https://bgraham1214.github.io/open-civic/citrus-county.html): City of Inverness
+- [Collier County governments](https://bgraham1214.github.io/open-civic/collier-county.html): Collier County, City of Marco Island
+- [Columbia County governments](https://bgraham1214.github.io/open-civic/columbia-county.html): City of Lake City
+- [Duval County governments](https://bgraham1214.github.io/open-civic/duval-county.html): City of Jacksonville Beach, City of Neptune Beach
+- [Escambia County governments](https://bgraham1214.github.io/open-civic/escambia-county.html): Escambia County, City of Pensacola
+- [Flagler County governments](https://bgraham1214.github.io/open-civic/flagler-county.html): Flagler County, City of Flagler Beach
+- [Hendry County governments](https://bgraham1214.github.io/open-civic/hendry-county.html): City of Clewiston
+- [Highlands County governments](https://bgraham1214.github.io/open-civic/highlands-county.html): Highlands County
+- [Hillsborough County governments](https://bgraham1214.github.io/open-civic/hillsborough-county.html): City of Plant City
+- [Indian River County governments](https://bgraham1214.github.io/open-civic/indianriver-county.html): Indian River County
+- [Jackson County governments](https://bgraham1214.github.io/open-civic/jackson-county.html): Jackson County
+- [Lake County governments](https://bgraham1214.github.io/open-civic/lake-county.html): Lake County, City of Clermont, City of Eustis, Town of Lady Lake, City of Leesburg, City of Mount Dora, City of Tavares
+- [Lee County governments](https://bgraham1214.github.io/open-civic/lee-county.html): Lee County, Town of Fort Myers Beach
+- [Leon County governments](https://bgraham1214.github.io/open-civic/leon-county.html): City of Tallahassee
+- [Marion County governments](https://bgraham1214.github.io/open-civic/marion-county.html): Marion County, City of Ocala
+- [Martin County governments](https://bgraham1214.github.io/open-civic/martin-county.html): Martin County, Town of Jupiter Island, City of Stuart
+- [Miami-Dade County governments](https://bgraham1214.github.io/open-civic/miamidade-county.html): Town of Bay Harbor Islands, City of Coral Gables, City of Doral, City of Miami Springs, City of Opa-locka, Village of Pinecrest
+- [Nassau County governments](https://bgraham1214.github.io/open-civic/nassau-county.html): Nassau County, City of Fernandina Beach
+- [Okaloosa County governments](https://bgraham1214.github.io/open-civic/okaloosa-county.html): City of Crestview, City of Destin, City of Mary Esther
+- [Orange County governments](https://bgraham1214.github.io/open-civic/orange-county.html): City of Apopka, City of Maitland, City of Ocoee, City of Winter Garden, City of Winter Park
+- [Osceola County governments](https://bgraham1214.github.io/open-civic/osceola-county.html): City of Kissimmee, City of St. Cloud
+- [Palm Beach County governments](https://bgraham1214.github.io/open-civic/palmbeach-county.html): City of Delray Beach, City of Greenacres, Town of Juno Beach, Town of Jupiter, Town of Loxahatchee Groves, Town of Ocean Ridge, Town of Palm Beach, Village of Palm Springs, City of South Bay, Village of Wellington
+- [Pasco County governments](https://bgraham1214.github.io/open-civic/pasco-county.html): City of Zephyrhills
+- [Pinellas County governments](https://bgraham1214.github.io/open-civic/pinellas-county.html): Pinellas County, Town of Belleair, City of Clearwater, City of Pinellas Park, City of Seminole, City of St. Pete Beach, City of Tarpon Springs
+- [Polk County governments](https://bgraham1214.github.io/open-civic/polk-county.html): Polk County, City of Bartow
+- [Putnam County governments](https://bgraham1214.github.io/open-civic/putnam-county.html): City of Palatka
+- [Santa Rosa County governments](https://bgraham1214.github.io/open-civic/santarosa-county.html): Santa Rosa County, City of Milton
+- [Sarasota County governments](https://bgraham1214.github.io/open-civic/sarasota-county.html): City of North Port, City of Venice
+- [Seminole County governments](https://bgraham1214.github.io/open-civic/seminole-county.html): Seminole County, City of Casselberry, City of Lake Mary, City of Longwood
+- [St. Johns County governments](https://bgraham1214.github.io/open-civic/stjohns-county.html): City of St. Augustine
+- [St. Lucie County governments](https://bgraham1214.github.io/open-civic/stlucie-county.html): St. Lucie County
+- [Sumter County governments](https://bgraham1214.github.io/open-civic/sumter-county.html): City of Wildwood
+- [Suwannee County governments](https://bgraham1214.github.io/open-civic/suwannee-county.html): Suwannee County
+- [Taylor County governments](https://bgraham1214.github.io/open-civic/taylor-county.html): Taylor County
+- [Volusia County governments](https://bgraham1214.github.io/open-civic/volusia-county.html): City of Daytona Beach Shores, City of DeLand, City of Deltona, City of Holly Hill, City of Port Orange
+- [Walton County governments](https://bgraham1214.github.io/open-civic/walton-county.html): City of DeFuniak Springs
+- [Public money to companies](https://bgraham1214.github.io/open-civic/companies.html): companies and organizations the governments agreed to pay (contracts, purchases, change orders, grants), decision by decision, with approved amounts (not payments) and factual flags (no competitive bidding, money added to a contract, approved over a no vote, $1 million or more on consent, conflict-of-interest abstentions)
+- [Top companies](https://bgraham1214.github.io/open-civic/top-companies.html): the ten companies with the most money approved and the ten with the most contracts since January 2025, for every government we follow with votes, each county, and each government
+- [Florida at a glance](https://bgraham1214.github.io/open-civic/at-a-glance.html): subjects coming up in many governments at once in the last 90 days (data centers, license-plate cameras, property tax rates and more), each with every government that took it up; one page per subject under issues/
+- [Spotlight](https://bgraham1214.github.io/open-civic/spotlight.html): decisions tagged by fixed rules as new restrictions (bans, moratoriums, fines) or as money, land or breaks for companies (tax breaks, incentives, land sales and leases, no-bid purchases of $100,000 or more)
+- [Temple Terrace City Council meetings](https://bgraham1214.github.io/open-civic/meetings/templeterrace.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Temple Terrace City Council members](https://bgraham1214.github.io/open-civic/council/templeterrace.html): each member's recorded votes
+- [Hillsborough County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hillsborough.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hillsborough County Commission members](https://bgraham1214.github.io/open-civic/commissioners/hillsborough.html): each member's recorded votes
+- [Pasco County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/pasco.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pasco County Commission members](https://bgraham1214.github.io/open-civic/commissioners/pasco.html): each member's recorded votes
+- [Hernando County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hernando.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hernando County Commission members](https://bgraham1214.github.io/open-civic/commissioners/hernando.html): each member's recorded votes
+- [Edgewater City Council meetings](https://bgraham1214.github.io/open-civic/meetings/edgewater.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Edgewater City Council members](https://bgraham1214.github.io/open-civic/council/edgewater.html): each member's recorded votes
+- [Oak Hill City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/oakhill.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Oak Hill City Commission members](https://bgraham1214.github.io/open-civic/commissioners/oakhill.html): each member's recorded votes
+- [Alachua City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/alachua.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Gainesville City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/gainesville.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Lynn Haven City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/lynnhaven.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Brevard County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/brevardcounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Brevard County Commission members](https://bgraham1214.github.io/open-civic/commissioners/brevardcounty.html): each member's recorded votes
+- [Cocoa City Council meetings](https://bgraham1214.github.io/open-civic/meetings/cocoa.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Cocoa Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/cocoabeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Melbourne City Council meetings](https://bgraham1214.github.io/open-civic/meetings/melbourne.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Titusville City Council meetings](https://bgraham1214.github.io/open-civic/meetings/titusville.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Broward County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/browardcounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Coconut Creek City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/coconutcreek.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Coconut Creek City Commission members](https://bgraham1214.github.io/open-civic/commissioners/coconutcreek.html): each member's recorded votes
+- [Dania Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/daniabeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Fort Lauderdale City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/fortlauderdale.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Fort Lauderdale City Commission members](https://bgraham1214.github.io/open-civic/commissioners/fortlauderdale.html): each member's recorded votes
+- [Hallandale Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hallandalebeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hillsboro Beach Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hillsborobeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hollywood City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hollywood.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Hollywood City Commission members](https://bgraham1214.github.io/open-civic/commissioners/hollywood.html): each member's recorded votes
+- [Lauderdale-by-the-Sea Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/lauderdalebythesea.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Margate City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/margate.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Margate City Commission members](https://bgraham1214.github.io/open-civic/commissioners/margate.html): each member's recorded votes
+- [Miramar City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/miramar.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Parkland City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/parkland.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pembroke Park Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/pembrokepark.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Wilton Manors City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/wiltonmanors.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Charlotte County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/charlottecounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Inverness City Council meetings](https://bgraham1214.github.io/open-civic/meetings/inverness.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Collier County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/colliercounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Marco Island City Council meetings](https://bgraham1214.github.io/open-civic/meetings/marcoisland.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Marco Island City Council members](https://bgraham1214.github.io/open-civic/council/marcoisland.html): each member's recorded votes
+- [Lake City City Council meetings](https://bgraham1214.github.io/open-civic/meetings/lakecity.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Jacksonville Beach City Council meetings](https://bgraham1214.github.io/open-civic/meetings/jacksonvillebeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Neptune Beach City Council meetings](https://bgraham1214.github.io/open-civic/meetings/neptunebeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Escambia County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/escambiacounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pensacola City Council meetings](https://bgraham1214.github.io/open-civic/meetings/pensacola.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Flagler County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/flaglercounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Flagler Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/flaglerbeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Clewiston City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/clewiston.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Highlands County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/highlandscounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Plant City City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/plantcity.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Plant City City Commission members](https://bgraham1214.github.io/open-civic/commissioners/plantcity.html): each member's recorded votes
+- [Indian River County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/indianrivercounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Jackson County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/jacksoncounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Lake County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/lakecounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Clermont City Council meetings](https://bgraham1214.github.io/open-civic/meetings/clermont.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Eustis City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/eustis.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Lady Lake Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/ladylake.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Leesburg City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/leesburg.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Mount Dora City Council meetings](https://bgraham1214.github.io/open-civic/meetings/mountdora.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Tavares City Council meetings](https://bgraham1214.github.io/open-civic/meetings/tavares.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Lee County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/leecounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Fort Myers Beach Town Council meetings](https://bgraham1214.github.io/open-civic/meetings/fortmyersbeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Tallahassee City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/tallahassee.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Marion County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/marioncounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Marion County Commission members](https://bgraham1214.github.io/open-civic/commissioners/marioncounty.html): each member's recorded votes
+- [Ocala City Council meetings](https://bgraham1214.github.io/open-civic/meetings/ocala.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Ocala City Council members](https://bgraham1214.github.io/open-civic/council/ocala.html): each member's recorded votes
+- [Martin County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/martincounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Martin County Commission members](https://bgraham1214.github.io/open-civic/commissioners/martincounty.html): each member's recorded votes
+- [Jupiter Island Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/jupiterisland.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Stuart City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/stuart.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Bay Harbor Islands Town Council meetings](https://bgraham1214.github.io/open-civic/meetings/bayharborislands.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Coral Gables City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/coralgables.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Coral Gables City Commission members](https://bgraham1214.github.io/open-civic/commissioners/coralgables.html): each member's recorded votes
+- [Doral City Council meetings](https://bgraham1214.github.io/open-civic/meetings/doral.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Miami Springs City Council meetings](https://bgraham1214.github.io/open-civic/meetings/miamisprings.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Opa-locka City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/opalocka.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pinecrest Village Council meetings](https://bgraham1214.github.io/open-civic/meetings/pinecrest.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Nassau County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/nassaucounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Fernandina Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/fernandinabeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Crestview City Council meetings](https://bgraham1214.github.io/open-civic/meetings/crestview.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Destin City Council meetings](https://bgraham1214.github.io/open-civic/meetings/destin.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Mary Esther City Council meetings](https://bgraham1214.github.io/open-civic/meetings/maryesther.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Apopka City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/apopka.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Maitland City Council meetings](https://bgraham1214.github.io/open-civic/meetings/maitland.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Ocoee City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/ocoee.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Winter Garden City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/wintergarden.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Winter Park City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/winterpark.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Kissimmee City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/kissimmee.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [St. Cloud City Council meetings](https://bgraham1214.github.io/open-civic/meetings/stcloud.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Delray Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/delraybeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Delray Beach City Commission members](https://bgraham1214.github.io/open-civic/commissioners/delraybeach.html): each member's recorded votes
+- [Greenacres City Council meetings](https://bgraham1214.github.io/open-civic/meetings/greenacres.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Jupiter Town Council meetings](https://bgraham1214.github.io/open-civic/meetings/jupiter.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Loxahatchee Groves Town Council meetings](https://bgraham1214.github.io/open-civic/meetings/loxahatcheegroves.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Ocean Ridge Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/oceanridge.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Palm Beach Town Council meetings](https://bgraham1214.github.io/open-civic/meetings/palmbeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Palm Springs Village Council meetings](https://bgraham1214.github.io/open-civic/meetings/palmsprings.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [South Bay City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/southbay.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Wellington Village Council meetings](https://bgraham1214.github.io/open-civic/meetings/wellington.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Zephyrhills City Council meetings](https://bgraham1214.github.io/open-civic/meetings/zephyrhills.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pinellas County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/pinellascounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Pinellas County Commission members](https://bgraham1214.github.io/open-civic/commissioners/pinellascounty.html): each member's recorded votes
+- [Belleair Town Commission meetings](https://bgraham1214.github.io/open-civic/meetings/belleair.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Belleair Town Commission members](https://bgraham1214.github.io/open-civic/commissioners/belleair.html): each member's recorded votes
+- [Clearwater City Council meetings](https://bgraham1214.github.io/open-civic/meetings/clearwater.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Clearwater City Council members](https://bgraham1214.github.io/open-civic/council/clearwater.html): each member's recorded votes
+- [Pinellas Park City Council meetings](https://bgraham1214.github.io/open-civic/meetings/pinellaspark.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Seminole City Council meetings](https://bgraham1214.github.io/open-civic/meetings/seminole.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [St. Pete Beach City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/stpetebeach.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Tarpon Springs City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/tarponsprings.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Polk County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/polkcounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Polk County Commission members](https://bgraham1214.github.io/open-civic/commissioners/polkcounty.html): each member's recorded votes
+- [Bartow City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/bartow.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Palatka City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/palatka.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Santa Rosa County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/santarosacounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Milton City Council meetings](https://bgraham1214.github.io/open-civic/meetings/milton.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [North Port City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/northport.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [North Port City Commission members](https://bgraham1214.github.io/open-civic/commissioners/northport.html): each member's recorded votes
+- [Venice City Council meetings](https://bgraham1214.github.io/open-civic/meetings/venice.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Venice City Council members](https://bgraham1214.github.io/open-civic/council/venice.html): each member's recorded votes
+- [Seminole County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/seminolecounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Seminole County Commission members](https://bgraham1214.github.io/open-civic/commissioners/seminolecounty.html): each member's recorded votes
+- [Casselberry City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/casselberry.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Lake Mary City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/lakemary.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Longwood City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/longwood.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [St. Augustine City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/staugustine.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [St. Lucie County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/stluciecounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Wildwood City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/wildwood.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Suwannee County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/suwanneecounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Taylor County Commission meetings](https://bgraham1214.github.io/open-civic/meetings/taylorcounty.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Daytona Beach Shores City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/daytonabeachshores.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [DeLand City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/deland.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Deltona City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/deltona.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Deltona City Commission members](https://bgraham1214.github.io/open-civic/commissioners/deltona.html): each member's recorded votes
+- [Holly Hill City Commission meetings](https://bgraham1214.github.io/open-civic/meetings/hollyhill.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [Port Orange City Council meetings](https://bgraham1214.github.io/open-civic/meetings/portorange.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+- [DeFuniak Springs City Council meetings](https://bgraham1214.github.io/open-civic/meetings/defuniaksprings.html): one page per meeting, decisions grouped by topic with plain headlines, outcomes and who voted no
+
+
+## Explanations
+
+- [Words you'll see](https://bgraham1214.github.io/open-civic/learn/index.html): defined terms with official sources
+- [How building and land decisions work](https://bgraham1214.github.io/open-civic/learn/land.html)
+- [How county money works](https://bgraham1214.github.io/open-civic/learn/money.html)
+
+## Data
+
+- [Data and downloads](https://bgraham1214.github.io/open-civic/data.html): SQLite databases, FollowTheMoney entities, RSS feeds
+- [Public money to companies, as CSV](https://bgraham1214.github.io/open-civic/companies.csv): one row per company per decision
+- [Sitemap](https://bgraham1214.github.io/open-civic/sitemap.xml)
+- [Source code and raw data](https://github.com/bgraham1214/open-civic)
+
+## Optional
+
+- [Temple Terrace database (SQLite)](https://bgraham1214.github.io/open-civic/templeterrace.db)
+- [County commissions database (SQLite)](https://bgraham1214.github.io/open-civic/counties.db)
+- [Southeast Volusia cities database (SQLite)](https://bgraham1214.github.io/open-civic/volusia.db)

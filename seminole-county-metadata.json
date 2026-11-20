@@ -1,0 +1,46 @@
+{
+ "title": "Seminole County local government records",
+ "license": "Public records",
+ "about": "Open Civic Web",
+ "about_url": "https://github.com/bgraham1214/open-civic",
+ "source": "Seminole County: Board of County Commissioners meetings and other public boards, from Seminole County's Legistar records, with agenda items, actions and each member's vote where the record gives one, from 2025. Hearings about private residents' own cases (code enforcement, special magistrates, value adjustment boards) are left out. Agendas and minutes are linked on the government's own site.; City of Casselberry: City Commission meetings and other public boards, from the City of Casselberry's CivicClerk portal: meeting dates and agenda items, from 2025, linked to the official agenda. Votes aren't on this portal; they are in the minutes, which we don't read for this government yet.; City of Lake Mary: City Commission meetings and other public boards, from the City of Lake Mary's CivicClerk portal: meeting dates and agenda items, from 2025, linked to the official agenda. Votes aren't on this portal; they are in the minutes, which we don't read for this government yet.; City of Longwood: City Commission meetings and other public boards, from the City of Longwood's CivicClerk portal: meeting dates and agenda items, from 2025, linked to the official agenda. Votes aren't on this portal; they are in the minutes, which we don't read for this government yet.",
+ "databases": {
+  "seminole-county": {
+   "description": "Built 2026-11-20T17:32:00Z. Updated nightly.",
+   "tables": {
+    "meetings": {
+     "description": "Every public meeting we list, per city. agenda_link and minutes_link go to the city's own copies.",
+     "sort_desc": "date"
+    },
+    "agenda_items": {
+     "description": "Agenda items with the action taken, result, mover and seconder, as the city recorded them. votes summarises the roll call; nays names anyone voting no. Items under a consent agenda carry the consent agenda's single vote.",
+     "fts_table": "agenda_items_fts",
+     "sort_desc": "date"
+    },
+    "votes": {
+     "description": "Each council member's vote on each item, from the city's Legistar (item_title is shortened; the full wording and links are in agenda_items, matched by item_key).",
+     "sort_desc": "date"
+    },
+    "documents": {
+     "description": "City documents we archive (Oak Hill agendas and minutes). our_copy is our copy; sha256 is its fingerprint.",
+     "sort_desc": "date"
+    },
+    "pages": {
+     "description": "One row per page of every archived city document. method = ocr means machine-read from a scan.",
+     "fts_table": "pages_fts",
+     "sort_desc": "date"
+    },
+    "changes": {
+     "description": "City documents appearing, changing or disappearing.",
+     "sort_desc": "at"
+    },
+    "agenda_items_fts": {
+     "hidden": true
+    },
+    "pages_fts": {
+     "hidden": true
+    }
+   }
+  }
+ }
+}
