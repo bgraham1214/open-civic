@@ -65,7 +65,8 @@ def build(data: Path, members: list[str] | None = None) -> list[dict]:
     """FollowTheMoney entities for one region's governments (default: the counties)."""
     members = members or REGIONS["counties"]["members"]
     members = [m for m in members if not JURISDICTIONS[m].get("blocked")]
-    d = {k: [x for x in v if x.get("county") in members] for k, v in load(data).items()}
+    # region.load also returns "removed" (a dict of names per county, not records): keep only the record lists
+    d = {k: [x for x in v if x.get("county") in members] for k, v in load(data).items() if isinstance(v, list)}
     pasco = _pasco_bodies(data)
     ents: dict[str, dict] = {}
 

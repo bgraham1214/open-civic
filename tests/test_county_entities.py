@@ -53,6 +53,21 @@ class CountyEntities(unittest.TestCase):
             ce.write(data)
             self.assertEqual(ents, [json.loads(x) for x in (data / "entities" / "counties.ftm.jsonl").read_text().splitlines()])
 
+    def test_build_skips_removed_names(self):
+        # region.load returns "removed" (names per county, a dict) beside the record lists. From Nov 17 to
+        # Nov 22, 2026 build() read it as records and crashed every night once any board had removed someone,
+        # leaving 42 regions' entity files frozen; the step's `| tee` hid the failure.
+        with tempfile.TemporaryDirectory() as d:
+            data = make_data(Path(d))
+            real = ce.load
+            ce.load = lambda p: {**real(p), "removed": {"oakhill": {"Pat Example"}}}
+            try:
+                ents = ce.build(data)
+            finally:
+                ce.load = real
+            self.assertTrue(ents)
+            self.assertNotIn("Pat Example", json.dumps(ents))
+
 
 if __name__ == "__main__":
     unittest.main()

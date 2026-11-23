@@ -227,6 +227,7 @@ jobs:
       - name: Build entities
         continue-on-error: true
         run: |
+          set -o pipefail  # without it a crash here passes silently (county_entities, Nov 17-22, 2026)
           python -m opencivic.entities --data-dir data 2>&1 | tee out/entities-log.txt
           python -m opencivic.county_entities --data-dir data 2>&1 | tee -a out/entities-log.txt
       - name: Validate FollowTheMoney entities with the official library
