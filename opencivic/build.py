@@ -494,8 +494,19 @@ def main(argv: list[str] | None = None) -> int:
                 latest[m["county"]] = m["date"]
     except (OSError, ValueError):
         pass
+    health_ = None
+    try:  # governments and payment sources that went quiet, for the data page (opencivic/health.py)
+        from datetime import date as _date
+
+        from . import health
+        health_ = health.check(args.data_dir, _date.fromisoformat(today))
+        print(json.dumps({"health_flagged": health_["flagged"]}))
+    except Exception as e:  # noqa: BLE001  a broken check must not stop the site
+        import traceback
+        traceback.print_exc()
+        print(f"::warning::health check not built: {e}")
     print(json.dumps({"common": site.write_common(args.out, today=today, tt=city_summary(args.data_dir), lite=lite,
-                                                  latest=latest)}))
+                                                  latest=latest, health=health_)}))
     from . import indexnow
     print(json.dumps({"indexnow_pages": indexnow.prepare(args.out)}))
     return 0

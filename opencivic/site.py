@@ -647,8 +647,32 @@ def _size(p: Path) -> str:
     return f"{n / 1e6:.0f} MB" if n >= 1e6 else f"{max(1, round(n / 1e3))} KB"
 
 
-def data_page(out: Path, lite: dict[str, str]) -> str:
-    """lite: {database file name: its Datasette Lite URL}."""
+def health_section(out: Path, health: dict | None) -> str:
+    """Sources that went quiet in our records (opencivic/health.py), for the data page."""
+    if not health:
+        return ""
+    rows = []
+    for r in health["records"]:
+        if not r["problems"]:
+            continue
+        link = r.get("link") or ""
+        label = e(r["name"]) + (" (CSV download)" if link.endswith(".csv") else "")
+        name = f'<a href="{e(link)}">{label}</a>' if link and (out / link).exists() else e(r["name"])
+        rows.append(f'<li><p class="title">{name}</p>'
+                    + "".join(f"<p>{e(p['text'])}</p>" for p in r["problems"]) + "</li>")
+    checked = e(health["checked"])
+    head = (f'<h2 id="health">Sources that went quiet</h2>\n<p>Checked {checked} against the records we hold, for '
+            f'{health["governments"]} governments and {health["payment_sources"]} payment sources. A source is listed '
+            "when nothing new has arrived for twice its usual gap between meetings (at least four weeks), or when its "
+            "newest records arrived but couldn't be read. It's a prompt to look, not a finding: a government that "
+            "skips its summer meetings is listed too, and so is one whose collection broke.</p>")
+    if not rows:
+        return head + "\n<p>None right now.</p>"
+    return head + f'\n<ul class="records">{"".join(rows)}</ul>'
+
+
+def data_page(out: Path, lite: dict[str, str], health: dict | None = None) -> str:
+    """lite: {database file name: its Datasette Lite URL}; health: health.check()'s result, if any."""
     def dl(name: str, label: str, fmt: str, what: str, browse: str = "") -> tuple[str, dict]:
         size = _size(out / name)
         html_ = (f'<li><p class="title"><a href="{e(name)}">{e(label)}</a></p>'
@@ -714,6 +738,7 @@ SQLite opens in <a href="https://datasette.io">Datasette</a>, DB Browser for SQL
 OpenSanctions and Aleph. People appear only in their public roles (from roll-call votes), never from public comment.</p>
 <h2>Feeds</h2>
 <ul class="links">{''.join(feed_items)}</ul>
+{health_section(out, health)}
 <h2>Raw files and history</h2>
 <p>The <a href="{REPO}/tree/main/data">data folder on GitHub</a> holds every listing, the fingerprint
 log (<code>manifest.jsonl</code>: when each document appeared, changed or was removed) and the extracted
@@ -841,12 +866,12 @@ automated tools not to. Other Florida governments (see "What we cover in Florida
 
 
 def write_common(out: Path, *, today: str, tt: dict, lite: dict[str, str] | None = None,
-                 latest: dict[str, str] | None = None) -> dict:
+                 latest: dict[str, str] | None = None, health: dict | None = None) -> dict:
     """Write the front door, glossary, data page, sitemap and llms.txt. Call after every other page exists."""
     write_assets(out)
     (out / "learn").mkdir(parents=True, exist_ok=True)
     (out / "learn" / "index.html").write_text(glossary(), "utf-8")
-    (out / "data.html").write_text(data_page(out, lite or {}), "utf-8")
+    (out / "data.html").write_text(data_page(out, lite or {}, health), "utf-8")
     if florida_places():
         (out / "florida.html").write_text(florida_page(out), "utf-8")
     (out / "index.html").write_text(home(out, today, tt, latest), "utf-8")

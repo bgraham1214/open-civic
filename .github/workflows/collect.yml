@@ -42,7 +42,9 @@ jobs:
       # --- 1. Listings. Written to out/ first; copied into data/ only on success. ---
       - name: CivicClerk schema check
         continue-on-error: true
-        run: python -m opencivic.civicclerk check-schema --tenant templeterracefl 2>&1 | tee out/civicclerk-schema.txt
+        run: |
+          set -o pipefail
+          python -m opencivic.civicclerk check-schema --tenant templeterracefl 2>&1 | tee out/civicclerk-schema.txt
       - name: CivicClerk listing (agendas from Oct 2025)
         continue-on-error: true
         run: |
@@ -143,8 +145,12 @@ jobs:
         run: python -m opencivic.hillsclerk list --since 2014 -o out/hillsclerk-listing.jsonl
 
       # --- 2. Fingerprint every document and log changes (Phase 1, step 3). ---
+      # continue-on-error: a crash here shows as a failed step (and in the last step's warning) but the
+      # night's other data is still committed and published.
       - name: Fingerprint and update manifest
+        continue-on-error: true
         run: |
+          set -o pipefail
           python -m opencivic.manifest update \
             --civicclerk out/civicclerk-meetings.jsonl out/civicclerk-pascocofl-meetings.jsonl \
             --archive out/archive-items.jsonl --hillsclerk out/hillsclerk-listing.jsonl \
@@ -191,7 +197,9 @@ jobs:
 
       - name: Extract text
         continue-on-error: true
-        run: python -m opencivic.extract --data-dir data --files-dir out/files --max-ocr-pages 600 2>&1 | tee out/extract-log.txt
+        run: |
+          set -o pipefail
+          python -m opencivic.extract --data-dir data --files-dir out/files --max-ocr-pages 600 2>&1 | tee out/extract-log.txt
       - name: Pasco votes (read from the Clerk's minutes)
         continue-on-error: true
         run: |
@@ -223,6 +231,14 @@ jobs:
           set -o pipefail
           python -m opencivic.agendapayments collect --data-dir data 2>&1 | tee out/agendapayments-log.txt
 
+      # Governments and payment sources that went quiet in our records (opencivic/health.py): a warning
+      # on the run for each, and the same list on data.html. Silence was how the Nov 18 and Nov 22 breaks looked.
+      - name: Health check (sources that went quiet)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m opencivic.health check --data-dir data 2>&1 | tee out/health-log.txt
+
       # --- Who's who: officials, votes, contracts, FollowTheMoney entities. ---
       - name: Build entities
         continue-on-error: true
@@ -233,6 +249,7 @@ jobs:
       - name: Validate FollowTheMoney entities with the official library
         continue-on-error: true
         run: |
+          set -o pipefail  # without it an invalid entity's exit code 1 is lost in the pipe to tee
           sudo apt-get install -y -qq libicu-dev pkg-config >/dev/null
           pip install -q followthemoney
           python - <<'EOF' 2>&1 | tee out/ftm-validate.txt
@@ -297,10 +314,17 @@ jobs:
       - name: Tell search engines which pages changed (IndexNow)
         continue-on-error: true
         run: |
+          set -o pipefail
           python -m opencivic.indexnow submit --site site --previous out/prev-indexnow.json \
             --record out/indexnow-submitted.json \
             --site-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" \
             2>&1 | tee out/indexnow-log.txt
+
+      # A green run can hide a crash (Nov 22, 2026: county_entities failed silently for five nights).
+      # Count Python tracebacks in every log and say which logs hold them, as a warning on the run.
+      - name: Count tracebacks in the logs
+        if: always()
+        run: python -m opencivic.health tracebacks out
 
       # Results (minus the file copies) go to the live-samples branch for easy reading.
       - name: Save results to live-samples branch
