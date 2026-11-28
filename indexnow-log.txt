@@ -1,0 +1,1 @@
+{"indexnow_submitted": 25, "status": [200], "sample": ["at-a-glance.html", "collier-county.html", "data.html", "issues/affordable-housing.html", "issues/annexation.html"]}
